@@ -182,6 +182,17 @@ export const basicRoutes = [
           icon: 'mdi:database-cog-outline',
         },
       },
+      {
+        is_hidden: false,
+        keepalive: true,
+        path: 'api-token',
+        component: () => import('@/views/system/api-token/index.vue'),
+        name: 'Token设置',
+        meta: {
+          title: 'Token设置',
+          icon: 'mdi:key-variant',
+        },
+      },
 
     ],
   },

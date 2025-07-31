@@ -37,6 +37,14 @@ export default {
   updateSetting: (data = {}) => request.post('/admin/setting/update', data),
   updateMetaSetting: (data = {}) => request.post('/admin/setting/update/meta', data),
   updateContentSetting: (data = {}) => request.post('/admin/setting/update/content', data),
+  // api tokens
+  getApiTokens: () => request.get('/admin/api-token/list'),
+  createApiToken: (data = {}) => request.post('/admin/api-token/create', data),
+  updateApiToken: (id, data = {}) => request.put(`/admin/api-token/update/${id}`, data),
+  regenerateApiToken: (id) => request.post(`/admin/api-token/regenerate/${id}`),
+  toggleApiToken: (id) => request.post(`/admin/api-token/toggle/${id}`),
+  deleteApiToken: (id) => request.delete(`/admin/api-token/delete/${id}`),
+  createDefaultApiToken: () => request.post('/admin/api-token/create-default'),
   // visitor
   getOrderOptionVisitor: () => request.get('/visitor/order/list'),
   getBlogsVisitor: (params = {}) => request.get('/visitor/blog/list', { params }),
