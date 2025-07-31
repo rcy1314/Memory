@@ -13,3 +13,4 @@ boto3==1.34.58
 python-multipart==0.0.18
 starlette==0.40.0
 setuptools==68.2.2
+mangum==0.17.0

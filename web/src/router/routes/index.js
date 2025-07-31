@@ -32,7 +32,7 @@ export const basicRoutes = [
     },
   },
   {
-    name: t('views.workbench.label_workbench'),
+    name: 'WorkbenchLayout',
     path: '/admin/',
     component: Layout,
     redirect: '/admin/workbench',
@@ -40,7 +40,7 @@ export const basicRoutes = [
       {
         path: 'workbench',
         component: () => import('@/views/workbench/index.vue'),
-        name: t('views.workbench.label_workbench'),
+        name: 'WorkbenchPage',
         meta: {
           title: t('views.workbench.label_workbench'),
           icon: 'icon-park-outline:workbench',
@@ -51,15 +51,15 @@ export const basicRoutes = [
     meta: { order: 0 },
   },
   {
-    name: t('views.profile.label_profile'),
-    path: '/admin/',
+    name: 'ProfileLayout',
+    path: '/admin/profile-section',
     component: Layout,
     isHidden: true,
     children: [
       {
         path: 'profile',
         component: () => import('@/views/profile/index.vue'),
-        name: t('views.profile.label_profile'),
+        name: 'ProfilePage',
         meta: {
           title: t('views.profile.label_profile'),
           icon: 'user',
@@ -193,7 +193,6 @@ export const basicRoutes = [
           icon: 'mdi:key-variant',
         },
       },
-
     ],
   },
 ]

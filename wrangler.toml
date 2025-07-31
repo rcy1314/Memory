@@ -1,0 +1,37 @@
+name = "memory-app"
+compatibility_date = "2023-12-01"
+compatibility_flags = ["nodejs_compat"]
+
+[build]
+command = "cd web && npm install && npm run build"
+watch_dir = "web/src"
+
+[env.production]
+name = "memory-app-production"
+
+[env.preview]
+name = "memory-app-preview"
+
+# Pages配置
+[[pages_build_output_dir]]
+value = "dist"
+
+# 环境变量
+[vars]
+ENVIRONMENT = "production"
+
+# Functions配置
+[[functions]]
+name = "api"
+script = "functions/api.js"
+compatibility_date = "2023-12-01"
+compatibility_flags = ["nodejs_compat"]
+
+[functions.vars]
+PYTHONPATH = "."
+
+# 路由配置
+[[routes]]
+pattern = "/api/*"
+zone_name = "your-domain.com"
+custom_domain = true

@@ -89,6 +89,7 @@ const imageVisible = ref(false)
 const imageSrc = ref('')
 const imageTransitioning = ref(false)
 const nextImageUrl = ref('')
+const preloadedImages = ref(new Map()) // 预加载的图片缓存
 
 var page = 1
 var total = 0
@@ -135,6 +136,18 @@ function handleResize() {
 
 onMounted(() => {
     window.addEventListener('resize', handleResize)
+    
+    // 页面加载后开始预加载前几张图片
+    nextTick(() => {
+        setTimeout(() => {
+            if (blogs.value.length > 0) {
+                // 预加载前5张图片
+                for (let i = 0; i < Math.min(5, blogs.value.length); i++) {
+                    preloadImage(blogs.value[i].current_detail)
+                }
+            }
+        }, 1000) // 延迟1秒开始预加载，避免影响页面初始加载
+    })
 })
 
 function handleSwipe(blog, event) {
@@ -166,32 +179,91 @@ function next() {
         showImage(blogs.value[index + 1])
     }
 }
+// 预加载图片函数
+function preloadImage(imageUrl) {
+    if (preloadedImages.value.has(imageUrl)) {
+        return Promise.resolve(preloadedImages.value.get(imageUrl))
+    }
+    
+    return new Promise((resolve) => {
+        const img = new window.Image()
+        img.onload = () => {
+            const imageData = {
+                src: img.src,
+                width: img.width,
+                height: img.height
+            }
+            preloadedImages.value.set(imageUrl, imageData)
+            resolve(imageData)
+        }
+        img.onerror = () => {
+            resolve(null)
+        }
+        img.src = imageUrl
+    })
+}
+
+// 预加载相邻图片
+function preloadAdjacentImages(currentIndex) {
+    const preloadCount = 2 // 预加载前后各2张图片
+    for (let i = Math.max(0, currentIndex - preloadCount); i <= Math.min(blogs.value.length - 1, currentIndex + preloadCount); i++) {
+        if (i !== currentIndex && blogs.value[i]) {
+            preloadImage(blogs.value[i].current_detail)
+        }
+    }
+}
+
 function showImage(blog) {
     currentBlog.value = blog
     imageVisible.value = false
     imageTransitioning.value = true
-    setTimeout(() => {
-        imageSrc.value = nextImageUrl.value
-        imageTransitioning.value = false
-        imageVisible.value = true
-    }, 1200)
-    const img = new window.Image()
-    if (blog) {
-        img.src = blog.current_detail
-    }
-    // console.log("Loading image:", img.src)
-    img.onload = () => {
+    
+    // 检查图片是否已预加载
+    const imageUrl = blog.current_detail
+    const preloadedData = preloadedImages.value.get(imageUrl)
+    
+    if (preloadedData) {
+        // 图片已预加载，立即显示
         const maxW = Math.min(1150, window.innerWidth - 40)
         const maxH = Math.min(890, window.innerHeight - 40)
-        const ratio = Math.min(maxW / img.width, maxH / img.height, 1)
+        const ratio = Math.min(maxW / preloadedData.width, maxH / preloadedData.height, 1)
         currentSize.value = {
-            width: img.width * ratio,
-            height: img.height * ratio,
+            width: preloadedData.width * ratio,
+            height: preloadedData.height * ratio,
         }
-        nextImageUrl.value = img.src
-        // console.log("Image loaded:", img.src, "Size:", currentSize.value)
+        nextImageUrl.value = preloadedData.src
+        
+        setTimeout(() => {
+            imageSrc.value = nextImageUrl.value
+            imageTransitioning.value = false
+            imageVisible.value = true
+        }, 300) // 减少延迟时间
+    } else {
+        // 图片未预加载，正常加载
+        setTimeout(() => {
+            imageSrc.value = nextImageUrl.value
+            imageTransitioning.value = false
+            imageVisible.value = true
+        }, 1200)
+        
+        preloadImage(imageUrl).then((imageData) => {
+            if (imageData) {
+                const maxW = Math.min(1150, window.innerWidth - 40)
+                const maxH = Math.min(890, window.innerHeight - 40)
+                const ratio = Math.min(maxW / imageData.width, maxH / imageData.height, 1)
+                currentSize.value = {
+                    width: imageData.width * ratio,
+                    height: imageData.height * ratio,
+                }
+                nextImageUrl.value = imageData.src
+            }
+        })
     }
-
+    
+    // 预加载相邻图片
+    const currentIndex = blogs.value.findIndex(b => b.id === blog.id)
+    preloadAdjacentImages(currentIndex)
+    
     show.value = true
 }
 function onTransitionEnd(e) {
@@ -257,6 +329,20 @@ function formatBlogs() {
         blog.detail_time = formatDateTime(time, detail_time_format)
         updateAttr(blog)
     }
+    
+    // 格式化完成后开始预加载前几张图片
+    nextTick(() => {
+        setTimeout(() => {
+            if (blogs.value.length > 0) {
+                // 预加载前5张图片
+                for (let i = 0; i < Math.min(5, blogs.value.length); i++) {
+                    if (blogs.value[i] && blogs.value[i].current_detail) {
+                        preloadImage(blogs.value[i].current_detail)
+                    }
+                }
+            }
+        }, 500) // 延迟500ms开始预加载
+    })
 }
 async function getCategory() {
     if (isValueEmpty(current_category))

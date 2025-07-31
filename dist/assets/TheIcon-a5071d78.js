@@ -1,1 +1,0 @@
-import{P as r,Q as o,W as n,U as t}from"./index-be94632c.js";import{a as c}from"./icon-08752ca2.js";const m={__name:"TheIcon",props:{icon:{type:String,required:!0},size:{type:Number,default:14},color:{type:String,default:void 0}},setup(e){return(a,i)=>(r(),o(n(t(c)(e.icon,{size:e.size,color:e.color}))))}};export{m as _};

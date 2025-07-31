@@ -9,9 +9,11 @@ from .blog import blog_router
 from .visitor import visitor_router
 from .api_token import api_token_router
 from .test_api_token import test_api_token_router
+from .health import router as health_router
 
 v1_router = APIRouter()
 
+v1_router.include_router(health_router)  # 健康检查，无前缀
 v1_router.include_router(base_router, prefix="/admin/base")
 v1_router.include_router(
     category_router, prefix="/admin/category", dependencies=[DependPermisson]

@@ -65,7 +65,7 @@ async def create_token(
             user_id=token.user_id,
             remark=token.remark
         )
-        return SuccessExtra(data=response_data, msg="Token创建成功")
+        return SuccessExtra(data=response_data.model_dump(mode='json'), msg="Token创建成功")
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
@@ -84,7 +84,7 @@ async def regenerate_token(
             token=token.token,
             name=token.name
         )
-        return SuccessExtra(data=response_data, msg="Token重新生成成功")
+        return SuccessExtra(data=response_data.model_dump(mode='json'), msg="Token重新生成成功")
     except DoesNotExist:
         raise HTTPException(status_code=404, detail="Token不存在")
     except Exception as e:
@@ -166,6 +166,6 @@ async def create_default_token(
             user_id=token.user_id,
             remark=token.remark
         )
-        return SuccessExtra(data=response_data, msg="默认Token创建成功")
+        return SuccessExtra(data=response_data.model_dump(mode='json'), msg="默认Token创建成功")
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))

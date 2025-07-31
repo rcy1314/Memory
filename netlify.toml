@@ -1,0 +1,33 @@
+[build]
+  base = "web"
+  publish = "../dist"
+  command = "npm install && npm run build"
+
+[build.environment]
+  NODE_VERSION = "18"
+  PYTHON_VERSION = "3.11"
+
+# API路由重定向到后端函数
+[[redirects]]
+  from = "/api/*"
+  to = "/.netlify/functions/api/:splat"
+  status = 200
+
+# SPA路由处理
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
+[functions]
+  directory = "netlify/functions"
+  node_bundler = "esbuild"
+
+# 头部设置
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "DENY"
+    X-XSS-Protection = "1; mode=block"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"

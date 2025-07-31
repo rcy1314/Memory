@@ -7,12 +7,31 @@ venv/
 .ruff_cache/
 .pytest_cache/
 
-db.sqlite3
-db.sqlite3-journal
-db.sqlite3-shm
-db.sqlite3-wal
-
+# macOS
 .DS_Store
 ._.DS_Store
 .moment
-data
+
+# Database
+data/
+*.db
+*.sqlite
+*.sqlite3
+
+# Build outputs
+dist/
+build/
+
+# Uploads
+upload/
+
+# Logs
+*.log
+logs/
+
+# Temporary files
+*.tmp
+*.temp
+
+# Environment files
+.env.local
