@@ -35,8 +35,10 @@ export default {
   getContentSetting: () => request.get('/admin/setting/get/content'),
   getStorageSetting: () => request.get('/admin/setting/get/storage'),
   updateSetting: (data = {}) => request.post('/admin/setting/update', data),
+  updateGeneralSetting: (data = {}) => request.post('/admin/setting/update/general', data),
   updateMetaSetting: (data = {}) => request.post('/admin/setting/update/meta', data),
   updateContentSetting: (data = {}) => request.post('/admin/setting/update/content', data),
+  updateStorageSetting: (data = {}) => request.post('/admin/setting/update/storage', data),
   // api tokens
   getApiTokens: () => request.get('/admin/api-token/list'),
   createApiToken: (data = {}) => request.post('/admin/api-token/create', data),

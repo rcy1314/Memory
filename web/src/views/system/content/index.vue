@@ -98,32 +98,32 @@ const infoFormRules = {
             v-model="infoForm.page_size" />
         </NFormItem>
         <NFormItem :label="$t('views.setting.label_thumbnail_suffix')" path="thumbnail_suffix">
-          <NInput v-model="infoForm.thumbnail_suffix" type="text"
+          <NInput v-model:value="infoForm.thumbnail_suffix" type="text"
             :placeholder="$t('views.setting.placeholder_thumbnail_suffix')" clearable />
         </NFormItem>
         <NFormItem :label="$t('views.setting.label_detail_suffix')" path="detail_suffix">
-          <NInput v-model="infoForm.detail_suffix" type="text"
+          <NInput v-model:value="infoForm.detail_suffix" type="text"
             :placeholder="$t('views.setting.placeholder_detail_suffix')" clearable />
         </NFormItem>
 
         <NFormItem :label="$t('views.setting.label_thumbnail_show_location')" path="thumbnail_show_location">
-          <NSwitch v-model="infoForm.thumbnail_show_location" />
+          <NSwitch v-model:value="infoForm.thumbnail_show_location" />
         </NFormItem>
         <NFormItem :label="$t('views.setting.label_detail_show_location')" path="detail_show_location">
-          <NSwitch v-model="infoForm.detail_show_location" />
+          <NSwitch v-model:value="infoForm.detail_show_location" />
         </NFormItem>
         <NFormItem :label="$t('views.setting.label_thumbnail_show_time')" path="thumbnail_show_time">
-          <NSwitch v-model="infoForm.thumbnail_show_time" />
+          <NSwitch v-model:value="infoForm.thumbnail_show_time" />
         </NFormItem>
         <NFormItem :label="$t('views.setting.label_thumbnail_time_format')" path="thumbnail_time_format">
-          <NInput v-model="infoForm.thumbnail_time_format" type="text" :disabled="!infoForm.thumbnail_show_time"
+          <NInput v-model:value="infoForm.thumbnail_time_format" type="text" :disabled="!infoForm.thumbnail_show_time"
             :placeholder="$t('views.setting.placeholder_thumbnail_time_format')" clearable />
         </NFormItem>
         <NFormItem :label="$t('views.setting.label_detail_show_time')" path="detail_show_time">
-          <NSwitch v-model="infoForm.detail_show_time" />
+          <NSwitch v-model:value="infoForm.detail_show_time" />
         </NFormItem>
         <NFormItem :label="$t('views.setting.label_detail_time_format')" path="detail_time_format">
-          <NInput v-model="infoForm.detail_time_format" type="text" :disabled="!infoForm.detail_show_time"
+          <NInput v-model:value="infoForm.detail_time_format" type="text" :disabled="!infoForm.detail_show_time"
             :placeholder="$t('views.setting.placeholder_detail_time_format')" clearable />
         </NFormItem>
         <NButton type="primary" :loading="isLoading" @click="updateSetting">

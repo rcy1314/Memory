@@ -141,6 +141,7 @@
       "label_bucket": "存储桶（Bucket）",
       "label_path": "存储路径",
       "label_prefix": "URL前缀",
+      "label_suffix": "URL后缀",
       "placeholder_endpoint": "S3兼容的URL",
       "placeholder_region": "区域名称",
       "placeholder_access_id": "Access key / Access ID",
@@ -148,6 +149,7 @@
       "placeholder_bucket": "存储桶名称",
       "placeholder_path": "自定义路径{path}",
       "placeholder_prefix": "返回的URL自定义前缀，如CDN域名",
+      "placeholder_suffix": "返回的URL自定义后缀，如图片处理参数",
       "label_menu_list": "菜单列表",
       "label_new_root_menu": "新建父菜单"
     },

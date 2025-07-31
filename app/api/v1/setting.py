@@ -52,9 +52,25 @@ async def update_content(
     return Success(msg="Content Settings Updated Successfully")
 
 
+@setting_router.post("/update/general", summary="更新通用设置", dependencies=[DependPermisson])
+async def update_general(
+    setting_in: SettingUpdateGeneral,
+):
+    await setting_controller.update(id=1, obj_in=setting_in)
+    return Success(msg="General Settings Updated Successfully")
+
+
 @setting_router.post("/update/meta", summary="更新网站设置", dependencies=[DependPermisson])
 async def update_meta(
     setting_in: SettingUpdateMeta,
 ):
     await setting_controller.update(id=1, obj_in=setting_in)
     return Success(msg="Meta Settings Updated Successfully")
+
+
+@setting_router.post("/update/storage", summary="更新存储设置", dependencies=[DependPermisson])
+async def update_storage(
+    setting_in: SettingUpdateStorage,
+):
+    await setting_controller.update(id=1, obj_in=setting_in)
+    return Success(msg="Storage Settings Updated Successfully")

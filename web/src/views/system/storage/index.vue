@@ -16,8 +16,8 @@ const isLoading = ref(false)
 const infoFormRef = ref(null)
 const infoForm = ref({
   enable_storage: false,
-  max_size: '',
-  timeout_time: '',
+  max_size: 0,
+  timeout_time: 0,
   endpoint: '',
   region: '',
   access_id: '',
@@ -30,10 +30,11 @@ const infoForm = ref({
 
 // 初始化表单数据
 function initFormData() {
-  infoForm.value = {
+  // 使用Object.assign保持响应式
+  Object.assign(infoForm.value, {
     enable_storage: settingStore.storageSetting.enable_storage || false,
-    max_size: settingStore.storageSetting.max_size || '',
-    timeout_time: settingStore.storageSetting.timeout_time || '',
+    max_size: settingStore.storageSetting.max_size || 0,
+    timeout_time: settingStore.storageSetting.timeout_time || 0,
     endpoint: settingStore.storageSetting.endpoint || '',
     region: settingStore.storageSetting.region || '',
     access_id: settingStore.storageSetting.access_id || '',
@@ -42,7 +43,7 @@ function initFormData() {
     path: settingStore.storageSetting.path || '',
     prefix: settingStore.storageSetting.prefix || '',
     suffix: settingStore.storageSetting.suffix || '',
-  }
+  })
 }
 
 // 页面挂载时加载数据
@@ -52,7 +53,7 @@ onMounted(async () => {
   console.log('Storage setting loaded:', settingStore.storageSetting)
   // 初始化表单数据
   initFormData()
-  console.log('Form initialized:', infoForm.value)
+  console.log('Storage form data initialized:', infoForm.value)
 })
 
 async function updateSetting(verbose) {
@@ -62,10 +63,12 @@ async function updateSetting(verbose) {
       isLoading.value = false
       return
     }
-    var setting = settingStore.totalSetting
-    setting['storage'] = infoForm.value
+    // 使用专用的存储设置更新API
+    const setting = {
+      storage: infoForm.value
+    }
     await api
-      .updateSetting(setting)
+      .updateStorageSetting(setting)
       .then(() => {
         settingStore.setStorageSetting(infoForm.value)
         isLoading.value = false
@@ -92,11 +95,11 @@ function handleChange(value) {
       <NForm ref="infoFormRef" label-placement="top" label-align="left" label-width="100" :model="infoForm"
         :rules="infoFormRules" class="w-500">
         <NFormItem :label="$t('views.setting.label_enable_storage')" path="enable_storage">
-          <NSwitch v-model="infoForm.enable_storage" clearable @update:value="handleChange" />
+          <NSwitch v-model:value="infoForm.enable_storage" clearable @update:value="handleChange" />
         </NFormItem>
         <NFormItem :label="$t('views.setting.label_max_size')" path="max_size">
           <NInputNumber :precision="2" :disabled="!infoForm.enable_storage"
-            :placeholder="$t('views.setting.placeholder_max_size')" v-model="infoForm.max_size" w-500>
+            :placeholder="$t('views.setting.placeholder_max_size')" v-model:value="infoForm.max_size" w-500>
             <template #suffix>
               MB
             </template>
@@ -104,39 +107,43 @@ function handleChange(value) {
         </NFormItem>
         <NFormItem :label="$t('views.setting.label_timeout_time')" path="timeout_time">
           <NInputNumber :precision="0" :disabled="!infoForm.enable_storage"
-            :placeholder="$t('views.setting.placeholder_timeout_time')" v-model="infoForm.timeout_time" w-500>
+            :placeholder="$t('views.setting.placeholder_timeout_time')" v-model:value="infoForm.timeout_time" w-500>
             <template #suffix>
               秒
             </template>
           </NInputNumber>
         </NFormItem>
         <NFormItem :label="$t('views.setting.label_endpoint')" path="endpoint">
-          <NInput v-model="infoForm.endpoint" type="text" :placeholder="$t('views.setting.placeholder_endpoint')"
+          <NInput v-model:value="infoForm.endpoint" type="text" :placeholder="$t('views.setting.placeholder_endpoint')"
             :disabled="!infoForm.enable_storage" clearable />
         </NFormItem>
         <NFormItem :label="$t('views.setting.label_region')" path="region">
-          <NInput v-model="infoForm.region" type="text" :placeholder="$t('views.setting.placeholder_region')"
+          <NInput v-model:value="infoForm.region" type="text" :placeholder="$t('views.setting.placeholder_region')"
             :disabled="!infoForm.enable_storage" clearable />
         </NFormItem>
         <NFormItem :label="$t('views.setting.label_access_id')" path="access_id">
-          <NInput v-model="infoForm.access_id" type="text"
+          <NInput v-model:value="infoForm.access_id" type="text"
             :placeholder="$t('views.setting.placeholder_access_id')" :disabled="!infoForm.enable_storage" clearable />
         </NFormItem>
         <NFormItem :label="$t('views.setting.label_secret_key')" path="secret_key">
-          <NInput v-model="infoForm.secret_key" type="text"
+          <NInput v-model:value="infoForm.secret_key" type="text"
             :placeholder="$t('views.setting.placeholder_secret_key')" :disabled="!infoForm.enable_storage" clearable />
         </NFormItem>
         <NFormItem :label="$t('views.setting.label_bucket')" path="bucket">
-          <NInput v-model="infoForm.bucket" type="text" :placeholder="$t('views.setting.placeholder_bucket')"
+          <NInput v-model:value="infoForm.bucket" type="text" :placeholder="$t('views.setting.placeholder_bucket')"
             :disabled="!infoForm.enable_storage" clearable />
         </NFormItem>
         <NFormItem :label="$t('views.setting.label_path')" path="path">
-          <NInput v-model="infoForm.path" type="text"
+          <NInput v-model:value="infoForm.path" type="text"
             :placeholder="$t('views.setting.placeholder_path', { path: '/{year}/{month}/{timestamp}_{filename}' })"
             :disabled="!infoForm.enable_storage" clearable />
         </NFormItem>
         <NFormItem :label="$t('views.setting.label_prefix')" path="prefix">
-          <NInput v-model="infoForm.prefix" type="text" :placeholder="$t('views.setting.placeholder_prefix')"
+          <NInput v-model:value="infoForm.prefix" type="text" :placeholder="$t('views.setting.placeholder_prefix')"
+            :disabled="!infoForm.enable_storage" clearable />
+        </NFormItem>
+        <NFormItem :label="$t('views.setting.label_suffix')" path="suffix">
+          <NInput v-model:value="infoForm.suffix" type="text" :placeholder="$t('views.setting.placeholder_suffix')"
             :disabled="!infoForm.enable_storage" clearable />
         </NFormItem>
         <NButton type="primary" :loading="isLoading" @click="updateSetting(true)">

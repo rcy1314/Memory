@@ -61,10 +61,12 @@ async function updateSetting() {
   isLoading.value = true
   infoFormRef.value?.validate(async (err) => {
     if (err) return
-    var setting = settingStore.totalSetting
-    setting['meta'] = infoForm.value
+    // 使用专用的网站设置更新API
+    const setting = {
+      meta: infoForm.value
+    }
     await api
-      .updateSetting(setting)
+      .updateMetaSetting(setting)
       .then(() => {
         settingStore.setMetaSetting(infoForm.value)
         isLoading.value = false

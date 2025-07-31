@@ -44,6 +44,7 @@ export const useSettingStore = defineStore('setting', {
         this._generalSetting = { custom_css, custom_js, workbench_desc, workbench_title }
         return res.data
       } catch (error) {
+        console.error('获取通用设置失败:', error)
         return error
       }
     },
@@ -93,7 +94,9 @@ export const useSettingStore = defineStore('setting', {
     },
     async getStorageSetting() {
       try {
+        console.log('Calling getStorageSetting API...')
         const res = await api.getStorageSetting()
+        console.log('getStorageSetting API response:', res)
         if (res.code === 401) {
           this.logout()
           return
@@ -124,8 +127,10 @@ export const useSettingStore = defineStore('setting', {
           prefix,
           suffix,
         }
+        console.log('Storage setting updated:', this._storageSetting)
         return res.data
       } catch (error) {
+        console.error('获取存储设置失败:', error)
         return error
       }
     },

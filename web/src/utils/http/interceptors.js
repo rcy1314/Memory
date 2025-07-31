@@ -54,5 +54,8 @@ export async function resReject(error) {
   const code = data?.code ?? status
   const message = resolveResError(code, data?.msg ?? error.message)
   window.$message?.error(message, { keepAliveOnHover: true })
-  return Promise.reject({ code, message, error: error.response?.data || error.response })
+
+  // 只返回有用的错误信息，避免包含HTML内容
+  const errorInfo = typeof data === 'object' && data !== null ? data : { message: error.message }
+  return Promise.reject({ code, message, error: errorInfo })
 }
