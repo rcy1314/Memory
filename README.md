@@ -1,82 +1,68 @@
-# Moment
+# 🚀 Memory App - 一键部署指南
 
-## 简介
+## 快速开始
 
-- 移植自[TimePlus](https://github.com/zhheo/TimePlus)和[time](https://github.com/wclk/time)的相册博客主题
-- 脱离 Typecho 和 Mysql，基于[vue-fastapi-admin](https://github.com/mizhexiaoxiao/vue-fastapi-admin)使用 Vue+FastAPI 开发
-- 随意发布你的图片、分类、地点
-- 高程度自定义你的网站，自由管理网站 Meta、内容设置、菜单设置
-- 快捷发布所见所闻，支持将图片上传至符合 S3 标准的存储桶中
-- 预览在线效果：[时刻](https://moment.cloudchewie.com/)
-
-## 部署
-
-- 使用 Docker-compose 部署
-
-  ```yaml
-  services:
-    moment:
-      image: ruida/moment:latest
-      container_name: moment
-      volumes:
-        - .moment:/app/data
-      ports:
-        - 9999:9999
-  ```
-
-## 迁移指南
-
-### 从 v1.x 迁移至 v2.x
-
-1. 为避免迁移失败，请**务必备份**你在 v1.x 版本的数据（容器内的`/opt/moment/app/data`目录）
-2. 将你的数据目录（如.moment）挂载到 v2.x 版本的容器中（容器内的`/app/data`目录）
-3. 运行 v2.x 版本的容器
-4. 查看容器日志，确认是否有迁移错误（容器迁移日志示例如下）
-
-```plaintext
-2025-06-27 23:52:39 - Moment - INFO - 正在初始化应用...
-2025-06-27 23:52:39 - Moment - INFO - 执行迁移: migrations_001.py for ./migrations/migrations_001.py
-开始数据库迁移...
-BlogImage表不存在，开始创建...
-表结构创建完成
-检测到 44 篇博客但没有图片记录，开始迁移...
-✅ 已为博客 '测试' (ID: 1) 创建图片记录
-✅ 已为博客 '咳咳' (ID: 2) 创建图片记录
-...
-✅ 已为博客 '小桥' (ID: 12) 创建图片记录
-开始删除Blog表中的image字段...
-image字段已删除
-迁移完成
-2025-06-28 22:48:26 - Moment - INFO - 迁移完成: migrations_001.py
-2025-06-27 23:52:39 - Moment - INFO - 应用初始化完成
+```bash
+# 选择你的部署平台，一键部署
+./deploy.sh vercel     # 推荐：Vercel (支持Python + 静态文件)
+./deploy.sh netlify    # Netlify (Serverless Functions)
+./deploy.sh cloudflare # Cloudflare Pages (需要单独部署后端)
+./deploy.sh fly        # Fly.io (Docker全栈部署)
 ```
 
-1. 如果没有错误，访问`<服务器IP地址>:9999/admin/workbench`
-   > 如果迁移过程中出现错误，请提交 Issue，附上容器运行日志
+## 平台对比
 
-## 使用指南
+| 平台 | 前端 | 后端 | 数据库 | 免费额度 | 推荐度 |
+|------|------|------|--------|----------|--------|
+| **Vercel** | ✅ | ✅ Python | 外部 | 慷慨 | ⭐⭐⭐⭐⭐ |
+| **Netlify** | ✅ | ✅ Functions | 外部 | 良好 | ⭐⭐⭐⭐ |
+| **Cloudflare** | ✅ | 需单独部署 | 外部 | 优秀 | ⭐⭐⭐ |
+| **Fly.io** | ✅ | ✅ Docker | ✅ 内置 | 有限 | ⭐⭐⭐⭐⭐ |
 
-- 使用`<服务器IP地址>:9999`或`域名`访问相册
-- 使用`<服务器IP地址>:9999/admin/workbench`或`<域名>/admin/workbench`访问后台管理
-- 默认管理员账号：`admin`，密码：`123456`，请登录后及时修改用户名和密码
-- 其他指南见[Wiki](https://github.com/Robert-Stackflow/Moment/wiki)
+## 部署前准备
 
-## 演示
+1. **安装依赖**
+   ```bash
+   # 前端依赖
+   cd web && npm install
+   
+   # 后端依赖
+   pip install -r requirements.txt
+   ```
 
-![web](./img/web.png)
+2. **环境变量** (可选)
+   ```bash
+   # 创建 .env 文件
+   JWT_SECRET_KEY=your-secret-key
+   DATABASE_URL=sqlite:///./data/db.sqlite3
+   ```
 
-![admin-workbench](./img/admin-workbench.png)
+3. **安装平台CLI** (按需)
+   ```bash
+   npm i -g vercel          # Vercel
+   npm i -g netlify-cli     # Netlify
+   npm i -g wrangler        # Cloudflare
+   # Fly.io: https://fly.io/docs/hands-on/install-flyctl/
+   ```
 
-![admin-blogs](./img/admin-blogs.png)
+## 自动化部署 (GitHub Actions)
 
-![admin-categories](./img/admin-categories.png)
+推送代码到GitHub后，可以使用GitHub Actions自动部署：
 
-![admin-general-setting](./img/admin-general-setting.png)
+1. 在仓库设置中添加必要的Secrets
+2. 手动触发工作流选择部署平台
+3. 或推送到main分支自动部署到Vercel
 
-![admin-meta-setting](./img/admin-meta-setting.png)
+## 故障排除
 
-![admin-content-setting](./img/admin-content-setting.png)
+- **构建失败**: 清理缓存 `rm -rf web/node_modules && cd web && npm install`
+- **API不通**: 检查路由配置和CORS设置
+- **部署超时**: 尝试手动部署或检查平台状态
 
-![admin-storage-setting](./img/admin-storage-setting.png)
+## 详细文档
 
-![admin-menu-setting](./img/admin-menu-setting.png)
+查看 [DEPLOYMENT.md](./DEPLOYMENT.md) 获取完整的部署说明和配置详情。
+
+---
+
+**一键部署，立即上线！** 🎉
