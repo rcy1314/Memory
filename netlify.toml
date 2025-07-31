@@ -4,7 +4,7 @@
   command = "npm install && npm run build && cd .. && pip install -r netlify-requirements.txt"
 
 [build.environment]
-  NODE_VERSION = "last"
+  NODE_VERSION = "22"
   PYTHON_VERSION = "3.11"
   PIP_CACHE_DIR = "/opt/buildhome/.cache/pip"
   # 避免 Rust 编译，使用预编译包
