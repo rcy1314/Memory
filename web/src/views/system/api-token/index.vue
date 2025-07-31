@@ -65,7 +65,7 @@ const columns = [
     render(row) {
       const maskedToken = row.token.substring(0, 8) + '...' + row.token.substring(row.token.length - 8)
       return h('div', { class: 'flex items-center gap-2' }, [
-        h('span', { class: 'font-mono text-sm' }, maskedToken),
+        h('span', { class: 'font-mono overflow-x-auto whitespace-nowrap max-w-full' }, maskedToken),
         h(NButton, {
           size: 'small',
           type: 'primary',
@@ -351,11 +351,11 @@ onMounted(() => {
       <NModal v-model:show="showModal" preset="dialog" :title="modalType === 'create' ? '新建Token' : '编辑Token'">
         <NForm ref="formRef" :model="formData" :rules="formRules" label-placement="top">
           <NFormItem label="Token名称" path="name">
-            <NInput v-model="formData.name" placeholder="请输入Token名称" />
+            <NInput v-model:value="formData.name" placeholder="请输入Token名称" />
           </NFormItem>
           
           <NFormItem label="Token类型">
-            <NSwitch v-model="formData.is_permanent">
+            <NSwitch v-model:value="formData.is_permanent">
               <template #checked>永久有效</template>
               <template #unchecked>临时Token</template>
             </NSwitch>
@@ -363,7 +363,7 @@ onMounted(() => {
           
           <NFormItem v-if="!formData.is_permanent" label="过期时间" path="expires_at">
             <NDatePicker
-              v-model="formData.expires_at"
+              v-model:value="formData.expires_at"
               type="datetime"
               placeholder="请选择过期时间"
               style="width: 100%"
@@ -372,7 +372,7 @@ onMounted(() => {
           
           <NFormItem label="备注">
             <NInput
-              v-model="formData.remark"
+              v-model:value="formData.remark"
               type="textarea"
               placeholder="请输入备注信息（可选）"
               :rows="3"

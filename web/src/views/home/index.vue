@@ -731,9 +731,9 @@ body {
 }
 
 .action-btn {
-  background: rgba(10,10,10,0.5);
-  backdrop-filter: blur(20px);
-  border: 1px solid rgba(255,255,255,0.2);
+  background: transparent;
+  backdrop-filter: none;
+  border: 1px solid transparent;
   color: #e0e0e0;
   padding: 8px 16px;
   border-radius: 20px;
@@ -744,7 +744,9 @@ body {
   letter-spacing: 0.3px;
 }
 
-.action-btn:hover {
+.action-btn:hover,
+.action-btn:focus,
+.action-btn:active {
   background: rgba(255,255,255,0.12);
   border-color: rgba(255,255,255,0.4);
   color: white;
