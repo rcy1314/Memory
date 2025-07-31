@@ -29,7 +29,9 @@
 
 [functions]
   directory = "netlify/functions"
-  python_runtime = "3.11"
+  
+[functions."*"]
+  runtime = "python3.11"
 
 [[headers]]
   for = "/*"
