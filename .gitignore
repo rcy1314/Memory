@@ -12,11 +12,11 @@ venv/
 ._.DS_Store
 .moment
 
-# Database
-data/
-*.db
-*.sqlite
-*.sqlite3
+# Database (keep data folder for deployment)
+# data/
+# *.db
+# *.sqlite
+# *.sqlite3
 
 # Build outputs
 dist/
