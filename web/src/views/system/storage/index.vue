@@ -49,8 +49,10 @@ function initFormData() {
 onMounted(async () => {
   // 确保获取最新的设置数据
   await settingStore.getStorageSetting()
+  console.log('Storage setting loaded:', settingStore.storageSetting)
   // 初始化表单数据
   initFormData()
+  console.log('Form initialized:', infoForm.value)
 })
 
 async function updateSetting(verbose) {

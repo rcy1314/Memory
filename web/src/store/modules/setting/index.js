@@ -109,6 +109,7 @@ export const useSettingStore = defineStore('setting', {
           bucket,
           path,
           prefix,
+          suffix,
         } = res.data
         this._storageSetting = {
           endpoint,
@@ -121,6 +122,7 @@ export const useSettingStore = defineStore('setting', {
           bucket,
           path,
           prefix,
+          suffix,
         }
         return res.data
       } catch (error) {

@@ -26,3 +26,17 @@ class Setting(BaseModel, TimestampMixin):
 
     class Meta:
         table = "setting"
+
+
+class ApiToken(BaseModel, TimestampMixin):
+    name = fields.CharField(max_length=100, description="Token名称")
+    token = fields.CharField(max_length=255, unique=True, description="Token值")
+    is_permanent = fields.BooleanField(default=False, description="是否永久有效")
+    expires_at = fields.DatetimeField(null=True, description="过期时间")
+    is_active = fields.BooleanField(default=True, description="是否启用")
+    last_used = fields.DatetimeField(null=True, description="最后使用时间")
+    user = fields.ForeignKeyField("models.User", related_name="api_tokens", description="所属用户")
+    remark = fields.TextField(null=True, description="备注")
+
+    class Meta:
+        table = "api_token"
