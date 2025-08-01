@@ -1,9 +1,7 @@
 {
   "version": 2,
   "functions": {
-    "api/run.py": {
-      "runtime": "python@3.9"
-    }
+    "api/run.py": {}
   },
   "rewrites": [
     {
