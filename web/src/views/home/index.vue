@@ -1,5 +1,15 @@
 <template>
   <div class="home-container">
+    <!-- 页面加载状态 -->
+    <div v-if="isPageLoading" class="page-loading">
+      <div class="loading-spinner">
+        <div class="spinner"></div>
+        <p class="loading-text">加载中...</p>
+      </div>
+    </div>
+    
+    <!-- 主要内容 -->
+    <div v-show="!isPageLoading" class="main-content">
     <!-- 封面轮播图区域 -->
     <div class="hero-section">
       <div class="hero-carousel">
@@ -98,6 +108,7 @@
         <path d="M17 14L12 9L7 14" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
       </svg>
     </div>
+    </div>
   </div>
 </template>
 
@@ -115,6 +126,7 @@ const categories = ref([])
 const heroSlides = ref([])
 const currentSlide = ref(0)
 const fullScreenText = ref("全屏")
+const isPageLoading = ref(true)
 let slideInterval = null
 
 // 当前选中的分类
@@ -336,22 +348,29 @@ const loadHeroSlides = async () => {
 }
 
 onMounted(async () => {
-  await loadCategories()
-  await loadHeroSlides()
-  if (heroSlides.value.length > 1) {
-    startAutoSlide()
+  try {
+    await loadCategories()
+    await loadHeroSlides()
+    if (heroSlides.value.length > 1) {
+      startAutoSlide()
+    }
+    
+    // 应用动态样式
+    const style = document.createElement('style')
+    style.textContent = `:root { --moment-theme: ${primary_color.value} !important; }`
+    document.head.appendChild(style)
+    
+    // 设置页面标题
+    document.title = `${site_name.value}${site_splitter.value}${site_desc.value}`
+    
+    // 添加滚动监听
+    window.addEventListener('scroll', handleScroll, { passive: true })
+  } finally {
+    // 数据加载完成，隐藏loading
+    setTimeout(() => {
+      isPageLoading.value = false
+    }, 300)
   }
-  
-  // 应用动态样式
-  const style = document.createElement('style')
-  style.textContent = `:root { --moment-theme: ${primary_color.value} !important; }`
-  document.head.appendChild(style)
-  
-  // 设置页面标题
-  document.title = `${site_name.value}${site_splitter.value}${site_desc.value}`
-  
-  // 添加滚动监听
-  window.addEventListener('scroll', handleScroll, { passive: true })
 })
 
 onUnmounted(() => {
@@ -380,6 +399,52 @@ body {
   min-height: 100vh;
   background: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 100%);
   padding-top: 0;
+  position: relative;
+}
+
+/* 页面加载样式 */
+.page-loading {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+}
+
+.loading-spinner {
+  text-align: center;
+}
+
+.spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid rgba(255, 255, 255, 0.1);
+  border-top: 3px solid #ffffff;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin: 0 auto 20px;
+}
+
+.loading-text {
+  color: #ffffff;
+  font-size: 16px;
+  margin: 0;
+  opacity: 0.8;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.main-content {
+  opacity: 1;
+  transition: opacity 0.3s ease-in-out;
 }
 
 /* 封面轮播图样式 */

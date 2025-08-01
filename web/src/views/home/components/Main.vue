@@ -432,7 +432,7 @@ scrollToload(null, loadMore)
 }
 
 .lightbox-content {
-    background: rgba(31, 34, 36, .925);
+    background: transparent;
     box-shadow: 0 1em 3em .5em #00000040;
     cursor: default;
     border-radius: 12px;
