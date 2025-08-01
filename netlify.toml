@@ -1,7 +1,7 @@
 [build]
-  base = "web"
-  publish = "../dist"
-  command = "npm install && npm run build && cd .. && cp -r data dist/ && pip install -r netlify-requirements.txt"
+  base = "."
+  publish = "dist"
+  command = "cd web && npm install && npm run build && cd .. && cp -r data dist/ && pip install -r netlify-requirements.txt"
 
 [build.environment]
   NODE_VERSION = "22"
@@ -12,7 +12,7 @@
   PIP_PREFER_BINARY = "1"
   # 设置环境变量
   PYTHONPATH = "/opt/buildhome/repo"
-  DATABASE_URL = "sqlite:///opt/build/repo/dist/data/db.sqlite3"
+  DATABASE_URL = "sqlite:///opt/buildhome/repo/dist/data/db.sqlite3"
   # 调试环境变量
   DEBUG = "true"
   NETLIFY_FUNCTIONS_DEBUG = "true"

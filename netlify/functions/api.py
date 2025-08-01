@@ -53,6 +53,7 @@ db_path = os.environ.get('DATABASE_URL', '').replace('sqlite:///', '')
 if not db_path or not os.path.exists(db_path):
     # 尝试多个可能的路径
     possible_paths = [
+        '/opt/buildhome/repo/dist/data/db.sqlite3',
         '/opt/build/repo/dist/data/db.sqlite3',
         os.path.join(os.path.dirname(__file__), '../../data/db.sqlite3'),
         './data/db.sqlite3',
