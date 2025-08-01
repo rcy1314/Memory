@@ -1,4 +1,38 @@
-# 🚀 Memory App - 一键部署指南
+# 🚀 Memory 
+
+## docker运行
+
+```
+docker run -d \
+  --name Memory-Noise \
+  --platform linux/amd64 \
+  -p 9573:9999 \
+  -v /opt/data:/app/data \
+  noise233/memory:latest
+```
+
+
+
+```
+docker run -d \
+  --name Memory-Noise \
+  --platform linux/amd64 \
+  -p 1314:9999 \
+  -v /Library/Github/Memory/data:/app/data \
+  noise233/memory:latest
+```
+
+发布
+
+```
+docker buildx build --platform linux/amd64,linux/arm64 -t noise233/memory:latest --push --no-cache .
+```
+
+
+
+
+
+#  一键部署指南
 
 ## 快速开始
 

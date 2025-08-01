@@ -124,20 +124,25 @@ async def _init_default_settings():
                 meta={
                     "hero_images": [
                         {
-                            "url": "/assets/20200212-38ce26bb0bd0d.gif",
-                            "title": "欢迎来到时光工作室",
-                            "description": "记录生活中的美好瞬间"
-                        },
-                        {
-                            "url": "/assets/20200212-6dafa53ecf4e3.gif",
-                            "title": "摄影作品集",
-                            "description": "用镜头捕捉世界的精彩"
-                        },
-                        {
-                            "url": "/assets/20200212-e056a5f2914d6.gif",
-                            "title": "创意无限",
-                            "description": "探索视觉艺术的无限可能"
-                        }
+                        "url": "/assets/Cover/1.jpg",
+                        "title": "欢迎来到时光工作室",
+                        "description": "记录生活中的美好瞬间"
+                    },
+                    {
+                        "url": "/assets/Cover/2.jpg",
+                        "title": "摄影作品集",
+                        "description": "用镜头捕捉世界的精彩"
+                    },
+                    {
+                        "url": "/assets/Cover/3.jpg",
+                        "title": "摄影作品集",
+                        "description": "用镜头捕捉世界的精彩"
+                    },
+                    {
+                        "url": "/assets/20200212-e056a5f2914d6.gif",
+                        "title": "创意无限",
+                        "description": "探索视觉艺术的无限可能"
+                    }
                     ],
                     "site_title": "时光工作室",
                     "site_desc": "记录生活中的美好瞬间"
@@ -174,12 +179,17 @@ async def _init_default_settings():
             if "hero_images" not in meta:
                 meta["hero_images"] = [
                     {
-                        "url": "/assets/20200212-38ce26bb0bd0d.gif",
+                        "url": "/assets/Cover/1.jpg",
                         "title": "欢迎来到时光工作室",
                         "description": "记录生活中的美好瞬间"
                     },
                     {
-                        "url": "/assets/20200212-6dafa53ecf4e3.gif",
+                        "url": "/assets/Cover/2.jpg",
+                        "title": "摄影作品集",
+                        "description": "用镜头捕捉世界的精彩"
+                    },
+                    {
+                        "url": "/assets/Cover/3.jpg",
                         "title": "摄影作品集",
                         "description": "用镜头捕捉世界的精彩"
                     },

@@ -1,12 +1,12 @@
 services:
-  moment:
+  memory:
     build:
       context: .
       dockerfile: Dockerfile
-    image: ruida/moment:latest
-    container_name: moment
+    image: noise233/memory:latest
+    container_name: memory
     restart: always
     volumes:
-      - .moment:/app/data
+      - ./.moment:/app/data
     ports:
-      - 9999:9999
+      - 9573:9999
