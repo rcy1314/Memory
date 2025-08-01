@@ -45,17 +45,37 @@ netlify_app = FastAPI(
 )
 
 # 为 Netlify 环境配置数据库
-# 在 Netlify 中使用内存数据库或临时文件
-import tempfile
+# 使用构建时复制的数据库文件
+import os
 
-# 创建临时数据库文件
-temp_db = tempfile.NamedTemporaryFile(suffix='.db', delete=False)
-temp_db_path = temp_db.name
-temp_db.close()
+# 获取数据库文件路径（优先使用环境变量）
+db_path = os.environ.get('DATABASE_URL', '').replace('sqlite:///', '')
+if not db_path or not os.path.exists(db_path):
+    # 尝试多个可能的路径
+    possible_paths = [
+        '/opt/build/repo/dist/data/db.sqlite3',
+        os.path.join(os.path.dirname(__file__), '../../data/db.sqlite3'),
+        './data/db.sqlite3',
+        '/tmp/data/db.sqlite3'
+    ]
+    
+    for path in possible_paths:
+        if os.path.exists(path):
+            db_path = path
+            break
+    else:
+        # 如果都找不到，使用默认路径并记录错误
+        db_path = '/opt/build/repo/dist/data/db.sqlite3'
+        print(f"Warning: Database file not found. Using default path: {db_path}")
+        print(f"Current working directory: {os.getcwd()}")
+        print(f"Files in current directory: {os.listdir('.')}")
 
-# Netlify 专用数据库配置
+print(f"Using database path: {db_path}")
+print(f"Database exists: {os.path.exists(db_path)}")
+
+# Netlify 数据库配置
 netlify_db_config = {
-    "connections": {"default": f"sqlite://{temp_db_path}"},
+    "connections": {"default": f"sqlite://{db_path}"},
     "apps": {
         "models": {
             "models": ["app.models"],
@@ -90,4 +110,28 @@ async def health_check():
     return {"status": "ok", "message": "Netlify Functions is running", "version": settings.VERSION}
 
 # 创建Mangum处理器 - Netlify Functions 入口点
-handler = Mangum(netlify_app, lifespan="off")
+mangum_handler = Mangum(netlify_app, lifespan="off")
+
+# Netlify Functions 处理函数
+def handler(event, context):
+    try:
+        print(f"Event: {event}")
+        print(f"Context: {context}")
+        print(f"HTTP Method: {event.get('httpMethod', 'Unknown')}")
+        print(f"Path: {event.get('path', 'Unknown')}")
+        
+        result = mangum_handler(event, context)
+        print(f"Response status: {result.get('statusCode', 'Unknown')}")
+        return result
+    except Exception as e:
+        print(f"Error in handler: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return {
+            'statusCode': 500,
+            'body': f'Internal server error: {str(e)}',
+            'headers': {
+                'Content-Type': 'application/json',
+                'Access-Control-Allow-Origin': '*'
+            }
+        }
