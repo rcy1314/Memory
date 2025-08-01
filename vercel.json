@@ -1,8 +1,6 @@
 {
   "version": 2,
-  "functions": {
-    "api/run.py": {}
-  },
+
   "rewrites": [
     {
       "source": "/api/(.*)",
