@@ -1,29 +1,26 @@
 {
   "version": 2,
-  "builds": [
+  "functions": {
+    "api/run.py": {
+      "runtime": "python3.9"
+    }
+  },
+  "rewrites": [
     {
-      "src": "run.py",
-      "use": "@vercel/python"
-    },
-    {
-      "src": "web/package.json",
-      "use": "@vercel/node"
+      "source": "/api/(.*)",
+      "destination": "/api/run.py"
     }
   ],
-  "routes": [
+  "redirects": [
     {
-      "src": "/api/(.*)",
-      "dest": "/run.py"
-    },
-    {
-      "src": "/(.*)",
-      "dest": "/dist/$1"
+      "source": "/((?!api|_next|static|favicon.ico).*)",
+      "destination": "/index.html",
+      "statusCode": 200
     }
   ],
   "env": {
     "PYTHONPATH": "."
   },
-  "installCommand": "cd web && npm install && npm run build && cd .. && pip install -r requirements.txt",
-  "buildCommand": "echo 'Build completed'",
-  "outputDirectory": "dist"
+  "buildCommand": "cd web && npm install && npm run build && cd .. && pip install -r requirements.txt",
+  "outputDirectory": "web/dist"
 }
