@@ -8,6 +8,7 @@ export const useSettingStore = defineStore('setting', {
       _metaSetting: {},
       _contentSetting: {},
       _storageSetting: {},
+      _databaseSetting: {},
     }
   },
   getters: {
@@ -23,12 +24,16 @@ export const useSettingStore = defineStore('setting', {
     storageSetting() {
       return this._storageSetting
     },
+    databaseSetting() {
+      return this._databaseSetting
+    },
     totalSetting() {
       return {
         general: this._generalSetting,
         meta: this._metaSetting,
         content: this._contentSetting,
         storage: this._storageSetting,
+        database: this._databaseSetting,
       }
     },
   },
@@ -136,6 +141,49 @@ export const useSettingStore = defineStore('setting', {
     },
     setStorageSetting(storageSetting = {}) {
       this._storageSetting = { ...this._storageSetting, ...storageSetting }
+    },
+    async getDatabaseSetting() {
+      try {
+        console.log('Calling getDatabaseSetting API...')
+        const res = await api.getDatabaseSetting()
+        console.log('getDatabaseSetting API response:', res)
+        if (res.code === 401) {
+          this.logout()
+          return
+        }
+        const {
+          db_type,
+          db_path,
+          host,
+          port,
+          database,
+          username,
+          password,
+          ssl,
+          pool_size,
+          timeout,
+        } = res.data || {}
+        this._databaseSetting = {
+          db_type: db_type || 'sqlite',
+          db_path: db_path || '/Library/Github/Memory/data/db.sqlite3',
+          host: host || '',
+          port: port || 5432,
+          database: database || '',
+          username: username || '',
+          password: password || '',
+          ssl: ssl !== undefined ? ssl : true,
+          pool_size: pool_size || 10,
+          timeout: timeout || 30,
+        }
+        console.log('Database setting updated:', this._databaseSetting)
+        return res.data
+      } catch (error) {
+        console.error('获取数据库设置失败:', error)
+        return error
+      }
+    },
+    setDatabaseSetting(databaseSetting = {}) {
+      this._databaseSetting = { ...this._databaseSetting, ...databaseSetting }
     },
   },
 })

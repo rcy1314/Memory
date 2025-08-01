@@ -1,5 +1,5 @@
 <template>
-  <n-dropdown :options="options" @select="handleChangeLocale" :title="$t('header.label_language')">
+  <n-dropdown :options="options" :title="$t('header.label_language')" @select="handleChangeLocale">
     <n-icon mr-20 size="18" style="cursor: pointer">
       <icon-mdi:globe />
     </n-icon>

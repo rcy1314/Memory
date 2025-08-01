@@ -7,12 +7,14 @@ class BaseSetting(BaseModel):
     content:Optional[dict]
     meta:Optional[dict]
     storage:Optional[dict]
+    database:Optional[dict]
 
 class SettingCreate(BaseModel):
     general: Optional[dict]= Field(example={})
     content: Optional[dict]= Field(example={})
     meta: Optional[dict]= Field(example={})
     storage: Optional[dict]= Field(example={})
+    database: Optional[dict]= Field(example={})
     def create_dict(self):
         return self.model_dump(exclude_unset=True)
 
@@ -21,6 +23,7 @@ class SettingUpdate(BaseModel):
     content: Optional[dict]= Field(example={})
     meta: Optional[dict]= Field(example={})
     storage: Optional[dict]= Field(example={})
+    database: Optional[dict]= Field(example={})
 
     def update_dict(self):
         return self.model_dump(exclude_unset=True, exclude={"id"})
@@ -76,6 +79,23 @@ class SettingUpdateContent(BaseModel):
     
 class SettingUpdateStorage(BaseModel):
     storage: Optional[dict]= Field(example={})
+
+    def update_dict(self):
+        return self.model_dump(exclude_unset=True, exclude={"id"})
+
+class SettingUpdateDatabase(BaseModel):
+    database: Optional[dict]= Field(example={
+        "db_type": "sqlite",
+        "db_path": "/Library/Github/Memory/data/db.sqlite3",
+        "host": "",
+        "port": 5432,
+        "database": "",
+        "username": "",
+        "password": "",
+        "ssl": True,
+        "pool_size": 10,
+        "timeout": 30
+    })
 
     def update_dict(self):
         return self.model_dump(exclude_unset=True, exclude={"id"})

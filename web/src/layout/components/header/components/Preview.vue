@@ -1,5 +1,11 @@
 <template>
-  <n-icon mr-20 size="18" style="cursor: pointer" @click="handleLinkClick" :title="$t('header.label_preview')">
+  <n-icon
+    mr-20
+    size="18"
+    style="cursor: pointer"
+    :title="$t('header.label_preview')"
+    @click="handleLinkClick"
+  >
     <icon-mdi:navigation-variant-outline />
   </n-icon>
 </template>

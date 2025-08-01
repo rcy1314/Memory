@@ -23,6 +23,7 @@ class Setting(BaseModel, TimestampMixin):
     meta = fields.JSONField(description="网站设置")
     content = fields.JSONField(description="内容设置")
     storage = fields.JSONField(description="存储设置")
+    database = fields.JSONField(null=True, description="数据库设置")
 
     class Meta:
         table = "setting"

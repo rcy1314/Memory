@@ -93,9 +93,9 @@ const columns = [
                 handleAdd()
               },
             },
-            { default: () => '子分类', icon: renderIcon('material-symbols:add', { size: 16 }) },
+            { default: () => '子分类', icon: renderIcon('material-symbols:add', { size: 16 }) }
           ),
-          [[vPermission, 'post/api/v1/category/create']],
+          [[vPermission, 'post/api/v1/category/create']]
         ),
         withDirectives(
           h(
@@ -103,7 +103,7 @@ const columns = [
             {
               size: 'tiny',
               type: 'info',
-              style: "margin-left:5px;",
+              style: 'margin-left:5px;',
               onClick: () => {
                 showCategoryType.value = false
                 handleEdit(row)
@@ -112,9 +112,9 @@ const columns = [
             {
               default: () => '编辑',
               icon: renderIcon('material-symbols:edit-outline', { size: 16 }),
-            },
+            }
           ),
-          [[vPermission, 'post/api/v1/category/update']],
+          [[vPermission, 'post/api/v1/category/update']]
         ),
         h(
           NPopconfirm,
@@ -129,17 +129,19 @@ const columns = [
                   {
                     size: 'tiny',
                     type: 'error',
-                    style: `display: ${row.children && row.children.length > 0 ? 'none' : ''};margin-left:5px;`, //有子分类不允许删除
+                    style: `display: ${
+                      row.children && row.children.length > 0 ? 'none' : ''
+                    };margin-left:5px;`, //有子分类不允许删除
                   },
                   {
                     default: () => '删除',
                     icon: renderIcon('material-symbols:delete-outline', { size: 16 }),
-                  },
+                  }
                 ),
-                [[vPermission, 'delete/api/v1/category/delete']],
+                [[vPermission, 'delete/api/v1/category/delete']]
               ),
             default: () => h('div', {}, '确定删除该分类吗?'),
-          },
+          }
         ),
       ]
     },
@@ -165,7 +167,9 @@ async function getTreeSelect() {
   <CommonPage show-footer :title="$t('views.content.label_category_list')">
     <template #action>
       <NButton v-permission="'post/api/v1/category/create'" type="primary" @click="handleClickAdd">
-        <TheIcon icon="material-symbols:add" :size="18" class="mr-5" />{{ $t('views.content.label_new_root_category') }}
+        <TheIcon icon="material-symbols:add" :size="18" class="mr-5" />{{
+          $t('views.content.label_new_root_category')
+        }}
       </NButton>
     </template>
 
@@ -213,7 +217,13 @@ async function getTreeSelect() {
             trigger: ['input', 'blur'],
           }"
         >
-          <NInput v-model:value="modalForm.name" placeholder="请输入分类名称，不能与现有分类名称重复" maxlength="30" show-count clearable/>
+          <NInput
+            v-model:value="modalForm.name"
+            placeholder="请输入分类名称，不能与现有分类名称重复"
+            maxlength="30"
+            show-count
+            clearable
+          />
         </NFormItem>
         <NFormItem
           label="分类别名"
@@ -224,14 +234,16 @@ async function getTreeSelect() {
             trigger: ['input', 'blur'],
           }"
         >
-          <NInput v-model:value="modalForm.alias" placeholder="请输入分类别名，用于生成分类URL，不能与现有分类别名重复" maxlength="50" show-count clearable/>
+          <NInput
+            v-model:value="modalForm.alias"
+            placeholder="请输入分类别名，用于生成分类URL，不能与现有分类别名重复"
+            maxlength="50"
+            show-count
+            clearable
+          />
         </NFormItem>
         <NFormItem label="分类描述" path="desc">
-          <NInput
-            v-model:value="modalForm.desc"
-            type="textarea"
-            placeholder="请输入分类描述"
-          />
+          <NInput v-model:value="modalForm.desc" type="textarea" placeholder="请输入分类描述" />
         </NFormItem>
         <NFormItem label="显示排序" path="order">
           <NInputNumber v-model:value="modalForm.order" :min="1" />

@@ -29,10 +29,14 @@ export async function resetRouter() {
 
 export async function addDynamicRoutes() {
   const settingStore = useSettingStore()
-  await settingStore.getGeneralSetting()
-  await settingStore.getContentSetting()
-  await settingStore.getMetaSetting()
-  await settingStore.getStorageSetting()
+  // 并行执行所有设置API调用以提升加载速度
+  await Promise.all([
+     settingStore.getGeneralSetting(),
+     settingStore.getContentSetting(),
+     settingStore.getMetaSetting(),
+     settingStore.getStorageSetting(),
+     settingStore.getDatabaseSetting(),
+   ])
   const token = getToken()
 
   // 没有token情况

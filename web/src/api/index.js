@@ -1,4 +1,10 @@
-import { request } from '@/utils'
+import { request, createAxios } from '@/utils'
+
+// 为数据迁移创建专用的长超时axios实例
+const longTimeoutRequest = createAxios({
+  baseURL: import.meta.env.VITE_BASE_API,
+  timeout: 60000, // 60秒超时
+})
 
 export default {
   uploadApi: import.meta.env.VITE_BASE_API + '/admin/base/upload',
@@ -47,6 +53,11 @@ export default {
   toggleApiToken: (id) => request.post(`/admin/api-token/toggle/${id}`),
   deleteApiToken: (id) => request.delete(`/admin/api-token/delete/${id}`),
   createDefaultApiToken: () => request.post('/admin/api-token/create-default'),
+  // database settings
+  getDatabaseSetting: () => request.get('/admin/setting/get/database'),
+  updateDatabaseSetting: (data = {}) => request.post('/admin/setting/update/database', data),
+  testDatabaseConnection: (data = {}) => request.post('/admin/database/test-connection', data),
+  migrateDatabaseData: (data = {}) => longTimeoutRequest.post('/admin/database/migrate', data),
   // visitor
   getOrderOptionVisitor: () => request.get('/visitor/order/list'),
   getBlogsVisitor: (params = {}) => request.get('/visitor/blog/list', { params }),

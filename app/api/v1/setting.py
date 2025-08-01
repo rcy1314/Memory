@@ -36,6 +36,12 @@ async def get_storage():
     return Success(data=result.storage)
 
 
+@setting_router.get("/get/database", summary="查看数据库设置")
+async def get_database():
+    result = await setting_controller.get(id=1)
+    return Success(data=result.database)
+
+
 @setting_router.post("/update", summary="更新设置", dependencies=[DependPermisson])
 async def update(
     setting_in: SettingUpdate,
@@ -74,3 +80,11 @@ async def update_storage(
 ):
     await setting_controller.update(id=1, obj_in=setting_in)
     return Success(msg="Storage Settings Updated Successfully")
+
+
+@setting_router.post("/update/database", summary="更新数据库设置", dependencies=[DependPermisson])
+async def update_database(
+    setting_in: SettingUpdateDatabase,
+):
+    await setting_controller.update(id=1, obj_in=setting_in)
+    return Success(msg="Database Settings Updated Successfully")

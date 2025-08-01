@@ -1,6 +1,19 @@
 <script setup>
 import { ref, onMounted, nextTick } from 'vue'
-import { NButton, NForm, NFormItem, NInput, NTabPane, NTabs, NImage, NGrid, NInputNumber, NSwitch, NSelect, useMessage } from 'naive-ui'
+import {
+  NButton,
+  NForm,
+  NFormItem,
+  NInput,
+  NTabPane,
+  NTabs,
+  NImage,
+  NGrid,
+  NInputNumber,
+  NSwitch,
+  NSelect,
+  useMessage,
+} from 'naive-ui'
 import { useI18n } from 'vue-i18n'
 import CommonPage from '@/components/page/CommonPage.vue'
 import { useSettingStore } from '@/store'
@@ -64,12 +77,12 @@ async function updateSetting() {
     }
     // 只发送内容设置数据
     const setting = {
-      content: infoForm.value
+      content: infoForm.value,
     }
-    
+
     console.log('准备发送的内容设置数据:', setting)
     console.log('表单数据:', infoForm.value)
-    
+
     try {
       const response = await api.updateContentSetting(setting)
       console.log('保存成功响应:', response)
@@ -83,48 +96,87 @@ async function updateSetting() {
     }
   })
 }
-const infoFormRules = {
-
-}
+const infoFormRules = {}
 </script>
 
 <template>
   <CommonPage :title="$t('views.setting.label_content_setting')">
     <div class="m-30 flex items-center">
-      <NForm ref="infoFormRef" label-placement="top" label-align="left" label-width="100" :model="infoForm"
-        :rules="infoFormRules" class="w-500">
+      <NForm
+        ref="infoFormRef"
+        label-placement="top"
+        label-align="left"
+        label-width="100"
+        :model="infoForm"
+        :rules="infoFormRules"
+        class="w-500"
+      >
         <NFormItem :label="$t('views.setting.label_page_size')" path="page_size">
-          <NInputNumber clearable :precision="0" :placeholder="$t('views.setting.placeholder_page_size')"
-            v-model="infoForm.page_size" />
+          <NInputNumber
+            v-model="infoForm.page_size"
+            clearable
+            :precision="0"
+            :placeholder="$t('views.setting.placeholder_page_size')"
+          />
         </NFormItem>
         <NFormItem :label="$t('views.setting.label_thumbnail_suffix')" path="thumbnail_suffix">
-          <NInput v-model:value="infoForm.thumbnail_suffix" type="text"
-            :placeholder="$t('views.setting.placeholder_thumbnail_suffix')" clearable />
+          <NInput
+            v-model:value="infoForm.thumbnail_suffix"
+            type="text"
+            :placeholder="$t('views.setting.placeholder_thumbnail_suffix')"
+            clearable
+          />
         </NFormItem>
         <NFormItem :label="$t('views.setting.label_detail_suffix')" path="detail_suffix">
-          <NInput v-model:value="infoForm.detail_suffix" type="text"
-            :placeholder="$t('views.setting.placeholder_detail_suffix')" clearable />
+          <NInput
+            v-model:value="infoForm.detail_suffix"
+            type="text"
+            :placeholder="$t('views.setting.placeholder_detail_suffix')"
+            clearable
+          />
         </NFormItem>
 
-        <NFormItem :label="$t('views.setting.label_thumbnail_show_location')" path="thumbnail_show_location">
+        <NFormItem
+          :label="$t('views.setting.label_thumbnail_show_location')"
+          path="thumbnail_show_location"
+        >
           <NSwitch v-model:value="infoForm.thumbnail_show_location" />
         </NFormItem>
-        <NFormItem :label="$t('views.setting.label_detail_show_location')" path="detail_show_location">
+        <NFormItem
+          :label="$t('views.setting.label_detail_show_location')"
+          path="detail_show_location"
+        >
           <NSwitch v-model:value="infoForm.detail_show_location" />
         </NFormItem>
-        <NFormItem :label="$t('views.setting.label_thumbnail_show_time')" path="thumbnail_show_time">
+        <NFormItem
+          :label="$t('views.setting.label_thumbnail_show_time')"
+          path="thumbnail_show_time"
+        >
           <NSwitch v-model:value="infoForm.thumbnail_show_time" />
         </NFormItem>
-        <NFormItem :label="$t('views.setting.label_thumbnail_time_format')" path="thumbnail_time_format">
-          <NInput v-model:value="infoForm.thumbnail_time_format" type="text" :disabled="!infoForm.thumbnail_show_time"
-            :placeholder="$t('views.setting.placeholder_thumbnail_time_format')" clearable />
+        <NFormItem
+          :label="$t('views.setting.label_thumbnail_time_format')"
+          path="thumbnail_time_format"
+        >
+          <NInput
+            v-model:value="infoForm.thumbnail_time_format"
+            type="text"
+            :disabled="!infoForm.thumbnail_show_time"
+            :placeholder="$t('views.setting.placeholder_thumbnail_time_format')"
+            clearable
+          />
         </NFormItem>
         <NFormItem :label="$t('views.setting.label_detail_show_time')" path="detail_show_time">
           <NSwitch v-model:value="infoForm.detail_show_time" />
         </NFormItem>
         <NFormItem :label="$t('views.setting.label_detail_time_format')" path="detail_time_format">
-          <NInput v-model:value="infoForm.detail_time_format" type="text" :disabled="!infoForm.detail_show_time"
-            :placeholder="$t('views.setting.placeholder_detail_time_format')" clearable />
+          <NInput
+            v-model:value="infoForm.detail_time_format"
+            type="text"
+            :disabled="!infoForm.detail_show_time"
+            :placeholder="$t('views.setting.placeholder_detail_time_format')"
+            clearable
+          />
         </NFormItem>
         <NButton type="primary" :loading="isLoading" @click="updateSetting">
           {{ $t('common.buttons.save') }}

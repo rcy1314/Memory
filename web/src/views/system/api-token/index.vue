@@ -15,7 +15,7 @@ import {
   NPopconfirm,
   NTooltip,
   useMessage,
-  useDialog
+  useDialog,
 } from 'naive-ui'
 import { useI18n } from 'vue-i18n'
 import CommonPage from '@/components/page/CommonPage.vue'
@@ -39,7 +39,7 @@ const formData = ref({
   name: '',
   is_permanent: true,
   expires_at: null,
-  remark: ''
+  remark: '',
 })
 
 // 表单验证规则
@@ -47,8 +47,8 @@ const formRules = {
   name: {
     required: true,
     message: '请输入Token名称',
-    trigger: ['input', 'blur']
-  }
+    trigger: ['input', 'blur'],
+  },
 }
 
 // 表格列定义
@@ -56,37 +56,46 @@ const columns = [
   {
     title: 'Token名称',
     key: 'name',
-    width: 150
+    width: 150,
   },
   {
     title: 'Token值',
     key: 'token',
     width: 200,
     render(row) {
-      const maskedToken = row.token.substring(0, 8) + '...' + row.token.substring(row.token.length - 8)
+      const maskedToken =
+        row.token.substring(0, 8) + '...' + row.token.substring(row.token.length - 8)
       return h('div', { class: 'flex items-center gap-2' }, [
         h('span', { class: 'font-mono overflow-x-auto whitespace-nowrap max-w-full' }, maskedToken),
-        h(NButton, {
-          size: 'small',
-          type: 'primary',
-          ghost: true,
-          onClick: () => copyToClipboard(row.token)
-        }, { default: () => '复制' })
+        h(
+          NButton,
+          {
+            size: 'small',
+            type: 'primary',
+            ghost: true,
+            onClick: () => copyToClipboard(row.token),
+          },
+          { default: () => '复制' }
+        ),
       ])
-    }
+    },
   },
   {
     title: '类型',
     key: 'is_permanent',
     width: 100,
     render(row) {
-      return h(NTag, {
-        type: row.is_permanent ? 'success' : 'warning',
-        size: 'small'
-      }, {
-        default: () => row.is_permanent ? '永久' : '临时'
-      })
-    }
+      return h(
+        NTag,
+        {
+          type: row.is_permanent ? 'success' : 'warning',
+          size: 'small',
+        },
+        {
+          default: () => (row.is_permanent ? '永久' : '临时'),
+        }
+      )
+    },
   },
   {
     title: '过期时间',
@@ -97,7 +106,7 @@ const columns = [
         return '永不过期'
       }
       return row.expires_at ? formatDateTime(row.expires_at) : '-'
-    }
+    },
   },
   {
     title: '状态',
@@ -106,9 +115,9 @@ const columns = [
     render(row) {
       return h(NSwitch, {
         value: row.is_active,
-        onUpdateValue: () => toggleTokenStatus(row)
+        onUpdateValue: () => toggleTokenStatus(row),
       })
-    }
+    },
   },
   {
     title: '最后使用',
@@ -116,7 +125,7 @@ const columns = [
     width: 180,
     render(row) {
       return row.last_used ? formatDateTime(row.last_used) : '从未使用'
-    }
+    },
   },
   {
     title: '创建时间',
@@ -124,7 +133,7 @@ const columns = [
     width: 180,
     render(row) {
       return formatDateTime(row.created_at)
-    }
+    },
   },
   {
     title: '操作',
@@ -132,31 +141,48 @@ const columns = [
     width: 200,
     render(row) {
       return h('div', { class: 'flex gap-2' }, [
-        h(NButton, {
-          size: 'small',
-          type: 'primary',
-          ghost: true,
-          onClick: () => editToken(row)
-        }, { default: () => '编辑' }),
-        h(NButton, {
-          size: 'small',
-          type: 'warning',
-          ghost: true,
-          onClick: () => regenerateToken(row)
-        }, { default: () => '重新生成' }),
-        h(NPopconfirm, {
-          onPositiveClick: () => deleteToken(row)
-        }, {
-          default: () => '确定删除这个Token吗？',
-          trigger: () => h(NButton, {
+        h(
+          NButton,
+          {
             size: 'small',
-            type: 'error',
-            ghost: true
-          }, { default: () => '删除' })
-        })
+            type: 'primary',
+            ghost: true,
+            onClick: () => editToken(row),
+          },
+          { default: () => '编辑' }
+        ),
+        h(
+          NButton,
+          {
+            size: 'small',
+            type: 'warning',
+            ghost: true,
+            onClick: () => regenerateToken(row),
+          },
+          { default: () => '重新生成' }
+        ),
+        h(
+          NPopconfirm,
+          {
+            onPositiveClick: () => deleteToken(row),
+          },
+          {
+            default: () => '确定删除这个Token吗？',
+            trigger: () =>
+              h(
+                NButton,
+                {
+                  size: 'small',
+                  type: 'error',
+                  ghost: true,
+                },
+                { default: () => '删除' }
+              ),
+          }
+        ),
       ])
-    }
-  }
+    },
+  },
 ]
 
 // 获取Token列表
@@ -182,7 +208,7 @@ function openCreateModal() {
     name: '',
     is_permanent: true,
     expires_at: null,
-    remark: ''
+    remark: '',
   }
   showModal.value = true
 }
@@ -195,7 +221,7 @@ function editToken(token) {
     name: token.name,
     is_permanent: token.is_permanent,
     expires_at: token.expires_at ? new Date(token.expires_at).getTime() : null,
-    remark: token.remark || ''
+    remark: token.remark || '',
   }
   showModal.value = true
 }
@@ -204,12 +230,14 @@ function editToken(token) {
 async function handleSubmit() {
   try {
     await formRef.value?.validate()
-    
+
     const submitData = {
       ...formData.value,
-      expires_at: formData.value.expires_at ? new Date(formData.value.expires_at).toISOString() : null
+      expires_at: formData.value.expires_at
+        ? new Date(formData.value.expires_at).toISOString()
+        : null,
     }
-    
+
     if (modalType.value === 'create') {
       const res = await api.createApiToken(submitData)
       if (res.code === 200) {
@@ -248,7 +276,7 @@ async function regenerateToken(token) {
         message.error('Token重新生成失败')
         console.error(error)
       }
-    }
+    },
   })
 }
 
@@ -296,18 +324,21 @@ async function createDefaultToken() {
 
 // 复制到剪贴板
 function copyToClipboard(text) {
-  navigator.clipboard.writeText(text).then(() => {
-    message.success('Token已复制到剪贴板')
-  }).catch(() => {
-    // 降级方案
-    const textArea = document.createElement('textarea')
-    textArea.value = text
-    document.body.appendChild(textArea)
-    textArea.select()
-    document.execCommand('copy')
-    document.body.removeChild(textArea)
-    message.success('Token已复制到剪贴板')
-  })
+  navigator.clipboard
+    .writeText(text)
+    .then(() => {
+      message.success('Token已复制到剪贴板')
+    })
+    .catch(() => {
+      // 降级方案
+      const textArea = document.createElement('textarea')
+      textArea.value = text
+      document.body.appendChild(textArea)
+      textArea.select()
+      document.execCommand('copy')
+      document.body.removeChild(textArea)
+      message.success('Token已复制到剪贴板')
+    })
 }
 
 // 页面挂载时获取数据
@@ -348,19 +379,23 @@ onMounted(() => {
       </NCard>
 
       <!-- 创建/编辑模态框 -->
-      <NModal v-model:show="showModal" preset="dialog" :title="modalType === 'create' ? '新建Token' : '编辑Token'">
+      <NModal
+        v-model:show="showModal"
+        preset="dialog"
+        :title="modalType === 'create' ? '新建Token' : '编辑Token'"
+      >
         <NForm ref="formRef" :model="formData" :rules="formRules" label-placement="top">
           <NFormItem label="Token名称" path="name">
             <NInput v-model:value="formData.name" placeholder="请输入Token名称" />
           </NFormItem>
-          
+
           <NFormItem label="Token类型">
             <NSwitch v-model:value="formData.is_permanent">
               <template #checked>永久有效</template>
               <template #unchecked>临时Token</template>
             </NSwitch>
           </NFormItem>
-          
+
           <NFormItem v-if="!formData.is_permanent" label="过期时间" path="expires_at">
             <NDatePicker
               v-model:value="formData.expires_at"
@@ -369,7 +404,7 @@ onMounted(() => {
               style="width: 100%"
             />
           </NFormItem>
-          
+
           <NFormItem label="备注">
             <NInput
               v-model:value="formData.remark"
@@ -379,7 +414,7 @@ onMounted(() => {
             />
           </NFormItem>
         </NForm>
-        
+
         <template #action>
           <NSpace>
             <NButton @click="showModal = false">取消</NButton>

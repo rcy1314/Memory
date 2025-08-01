@@ -1,8 +1,8 @@
-from typing import Optional, Union, Dict, Any
+from typing import Optional, Union, Dict, Any, List
 
 from app.core.crud import CRUDBase
 from app.models.admin import Setting
-from app.schemas.setting import SettingCreate, SettingUpdate, SettingUpdateMeta, SettingUpdateGeneral, SettingUpdateContent, SettingUpdateStorage
+from app.schemas.setting import SettingCreate, SettingUpdate, SettingUpdateMeta, SettingUpdateGeneral, SettingUpdateContent, SettingUpdateStorage, SettingUpdateDatabase
 
 
 class SettingController(CRUDBase[Setting, SettingCreate, SettingUpdate]):
@@ -13,8 +13,64 @@ class SettingController(CRUDBase[Setting, SettingCreate, SettingUpdate]):
         obj = await super().create(obj_in.create_dict())
         return obj
 
+    async def get(
+        self, id: int, prefetch_fields: Optional[List[Union[str, Any]]] = None
+    ) -> Setting:
+        try:
+            query = self.model.get(id=id)
+            if prefetch_fields:
+                query = query.prefetch_related(*prefetch_fields)
+            return await query
+        except Exception as e:
+            # 如果记录不存在，创建默认记录
+            if id == 1:
+                from app.models.admin import Setting
+                default_setting = await Setting.create(
+                    general={},
+                    content={
+                        "page_size": 80,
+                        "thumbnail_suffix": "",
+                        "detail_suffix": "",
+                        "thumbnail_show_location": False,
+                        "detail_show_location": False,
+                        "thumbnail_show_time": True,
+                        "thumbnail_time_format": "YYYY-MM-DD",
+                        "detail_show_time": False,
+                        "detail_time_format": ""
+                    },
+                    storage={},
+                    meta={
+                        "hero_images": [
+                            {
+                                "url": "/assets/Cover/1.jpg",
+                                "title": "欢迎来到时光工作室",
+                                "description": "记录生活中的美好瞬间"
+                            },
+                            {
+                                "url": "/assets/Cover/2.jpg",
+                                "title": "摄影作品集",
+                                "description": "用镜头捕捉世界的精彩"
+                            },
+                            {
+                                "url": "/assets/Cover/3.jpg",
+                                "title": "摄影作品集",
+                                "description": "用镜头捕捉世界的精彩"
+                            },
+                            {
+                                "url": "/assets/20200212-e056a5f2914d6.gif",
+                                "title": "创意无限",
+                                "description": "探索视觉艺术的无限可能"
+                            }
+                        ],
+                        "site_title": "时光工作室",
+                        "site_desc": "记录生活中的美好瞬间"
+                    }
+                )
+                return default_setting
+            raise e
+
     async def update(
-        self, id: int, obj_in: Union[SettingUpdate, SettingUpdateMeta, SettingUpdateGeneral, SettingUpdateContent, SettingUpdateStorage, Dict[str, Any]]
+        self, id: int, obj_in: Union[SettingUpdate, SettingUpdateMeta, SettingUpdateGeneral, SettingUpdateContent, SettingUpdateStorage, SettingUpdateDatabase, Dict[str, Any]]
     ) -> Setting:
         print(f"[DEBUG] 接收到的obj_in类型: {type(obj_in)}")
         print(f"[DEBUG] 接收到的obj_in内容: {obj_in}")
@@ -30,9 +86,9 @@ class SettingController(CRUDBase[Setting, SettingCreate, SettingUpdate]):
         obj = await self.get(id=id)
         print(f"[DEBUG] 更新前的obj.meta: {obj.meta}")
         
-        # 对于JSON字段（meta, general, content, storage），进行合并更新而不是直接替换
+        # 对于JSON字段（meta, general, content, storage, database），进行合并更新而不是直接替换
         for key, value in obj_dict.items():
-            if key in ['meta', 'general', 'content', 'storage'] and value is not None:
+            if key in ['meta', 'general', 'content', 'storage', 'database'] and value is not None:
                 # 获取当前字段值，如果为None则初始化为空字典
                 current_value = getattr(obj, key) or {}
                 # 合并新值到现有值中

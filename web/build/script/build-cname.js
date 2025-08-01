@@ -9,6 +9,5 @@ export function runBuildCNAME() {
   if (!VITE_CNAME) return
   try {
     writeFileSync(resolve(getRootPath(), `${OUTPUT_DIR}/CNAME`), VITE_CNAME)
-  } catch (error) {
-  }
+  } catch (error) {}
 }

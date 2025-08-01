@@ -7,107 +7,149 @@
         <p class="loading-text">加载中...</p>
       </div>
     </div>
-    
+
     <!-- 主要内容 -->
     <div v-show="!isPageLoading" class="main-content">
-    <!-- 封面轮播图区域 -->
-    <div class="hero-section">
-      <div class="hero-carousel">
-        <div class="hero-slide" v-for="(slide, index) in heroSlides" :key="index" 
-             :class="{ active: currentSlide === index }">
-          <img :src="slide.image" :alt="slide.title" class="hero-image" />
-          <div class="hero-overlay">
-            <div class="hero-content">
-              <h1 class="hero-title">{{ slide.title }}</h1>
-              <p class="hero-description">{{ slide.description }}</p>
+      <!-- 封面轮播图区域 -->
+      <div class="hero-section">
+        <div class="hero-carousel">
+          <div
+            v-for="(slide, index) in heroSlides"
+            :key="index"
+            class="hero-slide"
+            :class="{ active: currentSlide === index }"
+          >
+            <img :src="slide.image" :alt="slide.title" class="hero-image" />
+            <div class="hero-overlay">
+              <div class="hero-content">
+                <h1 class="hero-title">{{ slide.title }}</h1>
+                <p class="hero-description">{{ slide.description }}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div v-if="heroSettings.showControls" class="hero-controls">
+          <button class="hero-prev" @click="prevSlide">‹</button>
+          <button class="hero-next" @click="nextSlide">›</button>
+        </div>
+        <div v-if="heroSettings.showIndicators" class="hero-indicators">
+          <span
+            v-for="(slide, index) in heroSlides"
+            :key="index"
+            :class="{ active: currentSlide === index }"
+            @click="goToSlide(index)"
+          ></span>
+        </div>
+        <!-- 向下滑动指示箭头 -->
+        <div v-show="showScrollIndicator" class="scroll-indicator" @click="scrollToGallery">
+          <div class="scroll-arrow">
+            <svg
+              width="24"
+              height="24"
+              viewBox="0 0 24 24"
+              fill="none"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="M7 10L12 15L17 10"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              />
+            </svg>
+          </div>
+        </div>
+      </div>
+
+      <!-- 左上角品牌logo -->
+      <div class="top-brand" :class="{ hidden: isNavHidden }">
+        <div class="brand-content">
+          <router-link :to="'/'" class="brand-link">
+            <img class="site-logo" :src="bottom_icon" alt="Logo" />
+            <h2 class="site-name">{{ site_name }}</h2>
+          </router-link>
+          <div v-if="bottom_desc" class="brand-description">{{ bottom_desc }}</div>
+        </div>
+      </div>
+
+      <!-- 右上角操作按钮 -->
+      <div class="top-actions" :class="{ hidden: isNavHidden }">
+        <button class="action-btn" @click="toggleFullScreen">{{ fullScreenText }}</button>
+        <button class="action-btn" @click="showAboutModal">关于</button>
+      </div>
+
+      <!-- 分类导航 -->
+      <div class="categories-nav-section">
+        <div class="categories-container">
+          <div class="categories-scroll">
+            <div
+              class="category-item"
+              :class="{ active: currentCategory === null }"
+              @click="handleCategoryClick(null)"
+            >
+              全部
+            </div>
+            <div
+              v-for="category in categories"
+              :key="category.id"
+              class="category-item"
+              :class="{ active: currentCategory === category.alias }"
+              @click="handleCategoryClick(category.alias)"
+            >
+              {{ category.name }}
             </div>
           </div>
         </div>
       </div>
-      <div class="hero-controls" v-if="heroSettings.showControls">
-        <button class="hero-prev" @click="prevSlide">‹</button>
-        <button class="hero-next" @click="nextSlide">›</button>
+
+      <!-- 瀑布流相册 -->
+      <div class="gallery-section">
+        <Main :current-category="currentCategory" />
       </div>
-      <div class="hero-indicators" v-if="heroSettings.showIndicators">
-        <span v-for="(slide, index) in heroSlides" :key="index" 
-              :class="{ active: currentSlide === index }"
-              @click="goToSlide(index)"></span>
-      </div>
-      <!-- 向下滑动指示箭头 -->
-      <div v-show="showScrollIndicator" class="scroll-indicator" @click="scrollToGallery">
-        <div class="scroll-arrow">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M7 10L12 15L17 10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-          </svg>
+
+      <Footer />
+
+      <!-- 关于弹窗 -->
+      <div v-if="showAbout" class="about-modal" @click="closeAboutModal">
+        <div class="about-content" @click.stop>
+          <button class="close-btn" @click="closeAboutModal">×</button>
+          <h2>关于{{ site_name }}</h2>
+          <div class="about-info">
+            <p>{{ site_desc }}</p>
+          </div>
+          <section v-if="entries.length > 0" class="about-shortcuts">
+            <h3>快捷入口</h3>
+            <ul class="about-shortcuts-list">
+              <li v-for="entry in entries" :key="entry.id || entry.name" class="about-shortcut">
+                <a :href="entry.url" target="_blank" rel="noopener nofollow">
+                  <TheIcon :icon="entry.icon" :size="20" />
+                  <span class="about-shortcut-label">{{ entry.name }}</span>
+                </a>
+              </li>
+            </ul>
+          </section>
         </div>
       </div>
-    </div>
 
-    <!-- 左上角品牌logo -->
-    <div class="top-brand" :class="{ hidden: isNavHidden }">
-      <div class="brand-content">
-        <router-link :to="'/'" class="brand-link">
-          <img class="site-logo" :src="bottom_icon" alt="Logo">
-          <h2 class="site-name">{{ site_name }}</h2>
-        </router-link>
-        <div class="brand-description" v-if="bottom_desc">{{ bottom_desc }}</div>
+      <!-- 回到顶部按钮 -->
+      <div v-show="showBackToTop" class="back-to-top" @click="scrollToTop">
+        <svg
+          width="24"
+          height="24"
+          viewBox="0 0 24 24"
+          fill="none"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path
+            d="M17 14L12 9L7 14"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          />
+        </svg>
       </div>
-    </div>
-
-    <!-- 右上角操作按钮 -->
-    <div class="top-actions" :class="{ hidden: isNavHidden }">
-      <button @click="toggleFullScreen" class="action-btn">{{ fullScreenText }}</button>
-      <button @click="showAboutModal" class="action-btn">关于</button>
-    </div>
-
-    <!-- 分类导航 -->
-    <div class="categories-nav-section">
-      <div class="categories-container">
-        <div class="categories-scroll">
-          <div class="category-item" :class="{ active: currentCategory === null }" @click="handleCategoryClick(null)">全部</div>
-          <div v-for="category in categories" :key="category.id" 
-               class="category-item"
-               :class="{ active: currentCategory === category.alias }"
-               @click="handleCategoryClick(category.alias)">{{ category.name }}</div>
-        </div>
-      </div>
-    </div>
-
-    <!-- 瀑布流相册 -->
-    <div class="gallery-section">
-      <Main :current-category="currentCategory" />
-    </div>
-
-    <Footer />
-
-    <!-- 关于弹窗 -->
-    <div v-if="showAbout" class="about-modal" @click="closeAboutModal">
-      <div class="about-content" @click.stop>
-        <button class="close-btn" @click="closeAboutModal">×</button>
-        <h2>关于{{ site_name }}</h2>
-        <div class="about-info">
-          <p>{{ site_desc }}</p>
-        </div>
-        <section v-if="entries.length > 0" class="about-shortcuts">
-          <h3>快捷入口</h3>
-          <ul class="about-shortcuts-list">
-            <li v-for="entry in entries" :key="entry.id || entry.name" class="about-shortcut">
-              <a :href="entry.url" target="_blank" rel="noopener nofollow">
-                <TheIcon :icon="entry.icon" :size="20" />
-                <span class="about-shortcut-label">{{ entry.name }}</span>
-              </a>
-            </li>
-          </ul>
-        </section>
-      </div>
-    </div>
-
-    <!-- 回到顶部按钮 -->
-    <div v-show="showBackToTop" class="back-to-top" @click="scrollToTop">
-      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <path d="M17 14L12 9L7 14" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-      </svg>
-    </div>
     </div>
   </div>
 </template>
@@ -125,7 +167,7 @@ const settingStore = useSettingStore()
 const categories = ref([])
 const heroSlides = ref([])
 const currentSlide = ref(0)
-const fullScreenText = ref("全屏")
+const fullScreenText = ref('全屏')
 const isPageLoading = ref(true)
 let slideInterval = null
 
@@ -146,29 +188,48 @@ const handleCategoryClick = (categoryAlias = null) => {
 
 // 网站配置 - 使用响应式计算属性
 const site_name = computed(() => {
-  return isValueNotEmpty(settingStore.metaSetting?.site_name) ? settingStore.metaSetting?.site_name : import.meta.env.VITE_TITLE
+  return isValueNotEmpty(settingStore.metaSetting?.site_name)
+    ? settingStore.metaSetting?.site_name
+    : import.meta.env.VITE_TITLE
 })
 const site_desc = computed(() => {
-  return isValueNotEmpty(settingStore.metaSetting?.site_desc) ? settingStore.metaSetting?.site_desc : import.meta.env.VITE_DESC
+  return isValueNotEmpty(settingStore.metaSetting?.site_desc)
+    ? settingStore.metaSetting?.site_desc
+    : import.meta.env.VITE_DESC
 })
 const bottom_icon = computed(() => {
-  return isValueNotEmpty(settingStore.metaSetting?.bottom_icon) ? settingStore.metaSetting?.bottom_icon : import.meta.env.VITE_ICON
+  return isValueNotEmpty(settingStore.metaSetting?.bottom_icon)
+    ? settingStore.metaSetting?.bottom_icon
+    : import.meta.env.VITE_ICON
 })
 const bottom_desc = computed(() => {
-  return isValueNotEmpty(settingStore.metaSetting?.bottom_desc) ? settingStore.metaSetting?.bottom_desc : ''
+  return isValueNotEmpty(settingStore.metaSetting?.bottom_desc)
+    ? settingStore.metaSetting?.bottom_desc
+    : ''
 })
 const entries = computed(() => {
-  const rawEntries = isValueNotEmpty(settingStore.metaSetting?.entries) ? settingStore.metaSetting?.entries : []
-  return rawEntries.filter(entry => entry && entry.name && entry.name.trim() !== '' && entry.url && entry.url.trim() !== '')
+  const rawEntries = isValueNotEmpty(settingStore.metaSetting?.entries)
+    ? settingStore.metaSetting?.entries
+    : []
+  return rawEntries.filter(
+    (entry) =>
+      entry && entry.name && entry.name.trim() !== '' && entry.url && entry.url.trim() !== ''
+  )
 })
 const site_url = computed(() => {
-  return isValueNotEmpty(settingStore.metaSetting?.site_url) ? settingStore.metaSetting?.site_url : window.location.origin
+  return isValueNotEmpty(settingStore.metaSetting?.site_url)
+    ? settingStore.metaSetting?.site_url
+    : window.location.origin
 })
 const primary_color = computed(() => {
-  return isValueNotEmpty(settingStore.metaSetting?.primary_color) ? settingStore.metaSetting?.primary_color : import.meta.env.VITE_PRIMARY_COLOR
+  return isValueNotEmpty(settingStore.metaSetting?.primary_color)
+    ? settingStore.metaSetting?.primary_color
+    : import.meta.env.VITE_PRIMARY_COLOR
 })
 const site_splitter = computed(() => {
-  return isValueNotEmpty(settingStore.metaSetting?.site_splitter) ? settingStore.metaSetting?.site_splitter : import.meta.env.VITE_TITLE_SPLITTER
+  return isValueNotEmpty(settingStore.metaSetting?.site_splitter)
+    ? settingStore.metaSetting?.site_splitter
+    : import.meta.env.VITE_TITLE_SPLITTER
 })
 
 // 轮播图控制
@@ -177,7 +238,8 @@ const nextSlide = () => {
 }
 
 const prevSlide = () => {
-  currentSlide.value = currentSlide.value === 0 ? heroSlides.value.length - 1 : currentSlide.value - 1
+  currentSlide.value =
+    currentSlide.value === 0 ? heroSlides.value.length - 1 : currentSlide.value - 1
 }
 
 const goToSlide = (index) => {
@@ -206,10 +268,10 @@ const isFullScreen = () => {
 const toggleFullScreen = () => {
   if (isFullScreen()) {
     document.exitFullscreen()
-    fullScreenText.value = "全屏"
+    fullScreenText.value = '全屏'
   } else {
     document.documentElement.requestFullscreen()
-    fullScreenText.value = "退出全屏"
+    fullScreenText.value = '退出全屏'
   }
 }
 
@@ -247,10 +309,10 @@ const showBackToTop = ref(false)
 // 滚动监听函数
 const handleScroll = () => {
   const currentScrollY = window.scrollY
-  
+
   // 滚动指示器逻辑
   showScrollIndicator.value = currentScrollY < 50 // 滚动超过50px时隐藏
-  
+
   // 导航栏隐藏逻辑
   if (currentScrollY > lastScrollY && currentScrollY > 100) {
     // 向下滚动且超过100px时隐藏导航栏
@@ -259,10 +321,10 @@ const handleScroll = () => {
     // 向上滚动时显示导航栏
     isNavHidden.value = false
   }
-  
+
   // 回到顶部按钮显示逻辑
   showBackToTop.value = currentScrollY > 300 // 滚动超过300px时显示
-  
+
   lastScrollY = currentScrollY
 }
 
@@ -270,7 +332,7 @@ const handleScroll = () => {
 const scrollToTop = () => {
   window.scrollTo({
     top: 0,
-    behavior: 'smooth'
+    behavior: 'smooth',
   })
 }
 
@@ -291,7 +353,7 @@ const heroSettings = ref({
   autoplay: true,
   interval: 5000,
   showIndicators: true,
-  showControls: true
+  showControls: true,
 })
 
 const loadHeroSlides = async () => {
@@ -299,20 +361,20 @@ const loadHeroSlides = async () => {
     // 确保获取最新的meta设置
     await settingStore.getMetaSetting()
     const metaSetting = settingStore.metaSetting || {}
-    
+
     // 更新封面设置
     heroSettings.value = {
       autoplay: metaSetting.hero_autoplay ?? true,
       interval: metaSetting.hero_interval ?? 5000,
       showIndicators: metaSetting.hero_show_indicators ?? true,
-      showControls: metaSetting.hero_show_controls ?? true
+      showControls: metaSetting.hero_show_controls ?? true,
     }
-    
+
     if (metaSetting.hero_images && metaSetting.hero_images.length > 0) {
-      heroSlides.value = metaSetting.hero_images.map(item => ({
+      heroSlides.value = metaSetting.hero_images.map((item) => ({
         image: item.url,
         title: item.title,
-        description: item.description
+        description: item.description,
       }))
     } else {
       // 默认封面图
@@ -320,18 +382,18 @@ const loadHeroSlides = async () => {
         {
           image: '/assets/20200212-38ce26bb0bd0d.gif',
           title: '欢迎来到时光工作室',
-          description: '记录生活中的美好瞬间'
+          description: '记录生活中的美好瞬间',
         },
         {
           image: '/assets/20200212-6dafa53ecf4e3.gif',
           title: '摄影作品集',
-          description: '用镜头捕捉世界的精彩'
+          description: '用镜头捕捉世界的精彩',
         },
         {
           image: '/assets/20200212-e056a5f2914d6.gif',
           title: '创意无限',
-          description: '探索视觉艺术的无限可能'
-        }
+          description: '探索视觉艺术的无限可能',
+        },
       ]
     }
   } catch (error) {
@@ -341,8 +403,8 @@ const loadHeroSlides = async () => {
       {
         image: '/assets/20200212-38ce26bb0bd0d.gif',
         title: '欢迎来到时光工作室',
-        description: '记录生活中的美好瞬间'
-      }
+        description: '记录生活中的美好瞬间',
+      },
     ]
   }
 }
@@ -354,15 +416,15 @@ onMounted(async () => {
     if (heroSlides.value.length > 1) {
       startAutoSlide()
     }
-    
+
     // 应用动态样式
     const style = document.createElement('style')
     style.textContent = `:root { --moment-theme: ${primary_color.value} !important; }`
     document.head.appendChild(style)
-    
+
     // 设置页面标题
     document.title = `${site_name.value}${site_splitter.value}${site_desc.value}`
-    
+
     // 添加滚动监听
     window.addEventListener('scroll', handleScroll, { passive: true })
   } finally {
@@ -438,8 +500,12 @@ body {
 }
 
 @keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
 }
 
 .main-content {
@@ -487,7 +553,12 @@ body {
   left: 0;
   width: 100%;
   height: 100%;
-  background: linear-gradient(180deg, rgba(0,0,0,0.3) 0%, rgba(0,0,0,0.2) 60%, rgba(10,10,10,0.95) 100%);
+  background: linear-gradient(
+    180deg,
+    rgba(0, 0, 0, 0.3) 0%,
+    rgba(0, 0, 0, 0.2) 60%,
+    rgba(10, 10, 10, 0.95) 100%
+  );
   display: flex;
   align-items: center;
   justify-content: center;
@@ -504,7 +575,7 @@ body {
   font-size: 8.5rem;
   font-weight: 700;
   margin-bottom: 1rem;
-  text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
   animation: fadeInUp 1s ease-out;
 }
 
@@ -512,7 +583,7 @@ body {
   font-size: 6.5rem;
   font-weight: 300;
   opacity: 0.9;
-  text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
   animation: fadeInUp 1s ease-out 0.3s both;
 }
 
@@ -553,7 +624,7 @@ body {
 
 .hero-prev:hover,
 .hero-next:hover {
-  background: rgba(255,255,255,0.3);
+  background: rgba(255, 255, 255, 0.3);
   transform: scale(1.1);
 }
 
@@ -570,7 +641,7 @@ body {
   width: 12px;
   height: 12px;
   border-radius: 50%;
-  background: rgba(255,255,255,0.4);
+  background: rgba(255, 255, 255, 0.4);
   cursor: pointer;
   transition: all 0.3s ease;
 }
@@ -610,7 +681,11 @@ body {
 }
 
 @keyframes bounce {
-  0%, 20%, 50%, 80%, 100% {
+  0%,
+  20%,
+  50%,
+  80%,
+  100% {
     transform: translateY(0);
   }
   40% {
@@ -661,7 +736,7 @@ body {
 
 /* 分类导航区域样式 */
 .categories-nav-section {
-  background: linear-gradient(180deg, rgba(10,10,10,0.95) 0%, rgba(10,10,10,0.98) 100%);
+  background: linear-gradient(180deg, rgba(10, 10, 10, 0.95) 0%, rgba(10, 10, 10, 0.98) 100%);
   backdrop-filter: blur(20px);
   border: none;
   padding: 10px 0;
@@ -773,7 +848,7 @@ body {
   left: -100%;
   width: 100%;
   height: 100%;
-  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
   transition: left 0.6s ease;
 }
 
@@ -785,14 +860,14 @@ body {
   border-color: transparent;
   color: white;
   transform: translateY(-2px) scale(1.02);
-  box-shadow: 0 8px 25px rgba(0,0,0,0.2);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
 }
 
 .category-item.active {
   border-color: transparent;
   color: white;
   transform: scale(1.05);
-  box-shadow: 0 6px 20px rgba(0,0,0,0.25);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
 }
 
 .action-btn {
@@ -812,11 +887,11 @@ body {
 .action-btn:hover,
 .action-btn:focus,
 .action-btn:active {
-  background: rgba(255,255,255,0.12);
-  border-color: rgba(255,255,255,0.4);
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.4);
   color: white;
   transform: translateY(-2px);
-  box-shadow: 0 8px 25px rgba(0,0,0,0.3);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
 }
 
 /* 关于弹窗样式 */
@@ -936,8 +1011,12 @@ body {
 }
 
 @keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 @keyframes slideUp {
@@ -976,45 +1055,45 @@ body {
   .hero-title {
     font-size: 10.5rem;
   }
-  
+
   .hero-description {
     font-size: 6rem;
   }
-  
+
   .top-brand {
     top: 20px;
     left: 20px;
   }
-  
+
   .top-actions {
     top: 20px;
     right: 20px;
     gap: 10px;
   }
-  
+
   .action-btn {
     padding: 6px 14px;
     font-size: 15px;
   }
-  
+
   .categories-nav-section {
     padding: 15px 0;
   }
-  
+
   .site-logo {
     width: 35px;
     height: 35px;
     margin-right: 15px;
   }
-  
+
   .site-name {
     font-size: 16px;
   }
-  
+
   .categories-container {
     padding: 0 15px;
   }
-  
+
   .category-item {
     padding: 6px 12px;
     font-size: 16px;
@@ -1025,71 +1104,71 @@ body {
   .hero-title {
     font-size: 7.5rem;
   }
-  
+
   .hero-description {
     font-size: 4.5rem;
   }
-  
+
   .top-brand {
     top: 15px;
     left: 15px;
   }
-  
+
   .top-actions {
     top: 15px;
     right: 15px;
     gap: 8px;
   }
-  
+
   .action-btn {
     padding: 6px 12px;
     font-size: 12px;
   }
-  
+
   .categories-nav-section {
     padding: 10px 0;
   }
-  
+
   .site-logo {
     width: 30px;
     height: 30px;
     margin-right: 10px;
   }
-  
+
   .site-name {
     font-size: 11px;
   }
-  
+
   .categories-container {
     padding: 0 10px;
   }
-  
+
   .category-item {
     padding: 5px 10px;
     font-size: 10px;
   }
-  
+
   .about-content {
     padding: 30px 20px;
     margin: 20px;
   }
-  
+
   .about-content h2 {
     font-size: 20px;
   }
-  
+
   .hero-title {
     font-size: 2rem;
   }
-  
+
   .hero-description {
     font-size: 1rem;
   }
-  
+
   .hero-controls {
     padding: 0 15px;
   }
-  
+
   .hero-prev,
   .hero-next {
     width: 45px;
@@ -1097,8 +1176,6 @@ body {
     font-size: 1.5rem;
   }
 }
-
-
 
 /* 隐藏滚动条 */
 ::-webkit-scrollbar {
@@ -1116,7 +1193,7 @@ body {
 
 /* 选择文本样式 */
 ::selection {
-  background: rgba(255,255,255,0.2);
+  background: rgba(255, 255, 255, 0.2);
   color: white;
 }
 
@@ -1132,13 +1209,19 @@ a:hover {
 }
 
 /* 标题样式 */
-h1, h2, h3, h4, h5, h6 {
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
   color: white;
   margin: 0;
   line-height: 1.2;
 }
 
-strong, b {
+strong,
+b {
   color: white;
   font-weight: 600;
 }

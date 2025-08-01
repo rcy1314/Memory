@@ -193,6 +193,17 @@ export const basicRoutes = [
           icon: 'mdi:key-variant',
         },
       },
+      {
+        is_hidden: false,
+        keepalive: true,
+        path: 'database',
+        component: () => import('@/views/system/database/index.vue'),
+        name: '数据库设置',
+        meta: {
+          title: '数据库设置',
+          icon: 'mdi:database-settings',
+        },
+      },
     ],
   },
 ]

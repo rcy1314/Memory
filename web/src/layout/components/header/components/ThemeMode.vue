@@ -11,7 +11,13 @@ const toggleDark = () => {
 </script>
 
 <template>
-  <n-icon mr-20 cursor-pointer size="18" @click="toggleDark" :title="$t(isDark?'header.label_lightmode':'header.label_darkmode')">
+  <n-icon
+    mr-20
+    cursor-pointer
+    size="18"
+    :title="$t(isDark ? 'header.label_lightmode' : 'header.label_darkmode')"
+    @click="toggleDark"
+  >
     <icon-mdi-moon-waning-crescent v-if="isDark" />
     <icon-mdi-white-balance-sunny v-else />
   </n-icon>

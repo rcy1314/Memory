@@ -1,61 +1,93 @@
 <template>
-    <div id="blog-main" ref="listRef" :class="{ 'loading': isLoading }">
-        <transition-group name="fade-slide" tag="div" class="images-container">
-            <Image v-for="blog in blogs" :key="blog.id" :data="blog" @click="showImage(blog)" />
-        </transition-group>
-        <VueFinalModal v-model="show" content-class="lightbox" :overlay-transition="'vfm-fade'"
-            :content-transition="'vfm-fade'" @before-close="close" @click-outside="close">
-            <div style="display:inline-block;height:100%;vertical-align:middle;"></div>
-            <div class="lightbox-content" :style="{
-                width: currentSize.width + 'px',
-                height: currentSize.height + 'px',
-                transition: 'width 1s ease-in-out, height 1s ease-in-out',
-                overflow: 'hidden',
-                transformOrigin: 'center center',
-            }" @transitionend="onTransitionEnd">
-                <div class="loader" v-if="!imageVisible"></div>
-                <transition name="fade" mode="out-in">
-                    <div class="pic" style="display: block; text-indent: 0px;">
-                        <img :src="imageSrc" :key="imageSrc" alt="" :style="['vertical-align: bottom;',
-                            imageVisible ? '' : 'display: none;',
-                        ]" @load="onImageLoad" class="img" />
-                    </div>
-                </transition>
-                <div class="caption" style="display: flex;" v-if="imageVisible">
-                    <h2 class="thumb-title">{{ currentBlog.current_title }}</h2>
-                    <p class="thumb-desc">{{ currentBlog.current_desc }}</p>
-                    <ul class="tag-meta">
-                        <router-link class="tag-location detail-tag"
-                            v-if="detail_show_location && isValueNotEmpty(currentBlog.current_location)"
-                            :to="'/location/' + currentBlog.current_location">
-                            <i class="iconfont icon-map-pin-2-line"></i>
-                            {{ currentBlog.current_full_location }}
-                        </router-link>
-                        <a class="tag-time detail-tag"
-                            v-if="detail_show_time && isValueNotEmpty(currentBlog.current_metadata)">{{
-                                currentBlog.current_metadata }}</a>
-                        <a class="tag-time detail-tag"
-                            v-if="detail_show_time && isValueNotEmpty(currentBlog.current_detail_time)">{{
-                                currentBlog.current_detail_time }}</a>
-                    </ul>
-                    <ul class="tags">
-                        <li class="tag-categories">
-                            <router-link v-for="category in currentBlog.categories" :key="category.alias"
-                                :to="'/category/' + category.alias">{{ category.name }}</router-link>
-                        </li>
-                    </ul>
-                    <div class="breadcrumb-nav" v-if="currentBlog.images.length > 1">
-                        <span v-for="(item, index) in currentBlog.images" :key="index" class="nav-dot"
-                            @mouseenter="(e) => handleSwipe(currentBlog, e)"
-                            :class="{ 'active': currentBlog.currentIndex === index }" :data-index="index"></span>
-                    </div>
-                </div>
-                <span class="closer" style="cursor: pointer; display: block;" @click="close"></span>
-                <div class="nav-previous" style="display: block;" @click.stop="prev"></div>
-                <div class="nav-next" style="display: block;" @click.stop="next"></div>
-            </div>
-        </VueFinalModal>
-    </div>
+  <div id="blog-main" ref="listRef" :class="{ loading: isLoading }">
+    <transition-group name="fade-slide" tag="div" class="images-container">
+      <Image v-for="blog in blogs" :key="blog.id" :data="blog" @click="showImage(blog)" />
+    </transition-group>
+    <VueFinalModal
+      v-model="show"
+      content-class="lightbox"
+      :overlay-transition="'vfm-fade'"
+      :content-transition="'vfm-fade'"
+      @before-close="close"
+      @click-outside="close"
+    >
+      <div style="display: inline-block; height: 100%; vertical-align: middle"></div>
+      <div
+        class="lightbox-content"
+        :style="{
+          width: currentSize.width + 'px',
+          height: currentSize.height + 'px',
+          transition: 'width 1s ease-in-out, height 1s ease-in-out',
+          overflow: 'hidden',
+          transformOrigin: 'center center',
+        }"
+        @transitionend="onTransitionEnd"
+      >
+        <div v-if="!imageVisible" class="loader"></div>
+        <transition name="fade" mode="out-in">
+          <div class="pic" style="display: block; text-indent: 0px">
+            <img
+              :key="imageSrc"
+              :src="imageSrc"
+              alt=""
+              :style="['vertical-align: bottom;', imageVisible ? '' : 'display: none;']"
+              class="img"
+              @load="onImageLoad"
+            />
+          </div>
+        </transition>
+        <div v-if="imageVisible" class="caption" style="display: flex">
+          <h2 class="thumb-title">{{ currentBlog.current_title }}</h2>
+          <p class="thumb-desc">{{ currentBlog.current_desc }}</p>
+          <ul class="tag-meta">
+            <router-link
+              v-if="detail_show_location && isValueNotEmpty(currentBlog.current_location)"
+                            class="tag-location detail-tag"
+              :to="'/location/' + currentBlog.current_location"
+            >
+              <i class="iconfont icon-map-pin-2-line"></i>
+              {{ currentBlog.current_full_location }}
+            </router-link>
+            <a
+              v-if="detail_show_time && isValueNotEmpty(currentBlog.current_metadata)"
+              class="tag-time detail-tag"
+            >
+              {{ currentBlog.current_metadata }}
+            </a>
+            <a
+              v-if="detail_show_time && isValueNotEmpty(currentBlog.current_detail_time)"
+              class="tag-time detail-tag"
+            >
+              {{ currentBlog.current_detail_time }}
+            </a>
+          </ul>
+          <ul class="tags">
+            <li class="tag-categories">
+              <router-link
+                v-for="category in currentBlog.categories"
+                :key="category.alias"
+                :to="'/category/' + category.alias"
+                >{{ category.name }}</router-link
+              >
+            </li>
+          </ul>
+          <div v-if="currentBlog.images.length > 1" class="breadcrumb-nav">
+            <span
+              v-for="(item, index) in currentBlog.images"
+              :key="index"
+              class="nav-dot"
+              :class="{ 'active': currentBlog.currentIndex === index }"
+              :data-index="index"
+              @mouseenter="(e) => handleSwipe(currentBlog, e)"
+            ></span>
+          </div>
+        </div>
+        <span class="closer" style="cursor: pointer; display: block" @click="close"></span>
+        <div class="nav-previous" style="display: block" @click.stop="prev"></div>
+        <div class="nav-next" style="display: block" @click.stop="next"></div>
+      </div>
+    </VueFinalModal>
+  </div>
 </template>
 
 <script setup>
@@ -71,8 +103,8 @@ import { VueFinalModal } from 'vue-final-modal'
 const props = defineProps({
   currentCategory: {
     type: String,
-    default: null
-  }
+    default: null,
+  },
 })
 
 const router = useRouter()
@@ -82,7 +114,10 @@ const blogs = ref([])
 const listRef = ref(null)
 const isLoading = ref(false)
 const currentBlog = ref(null)
-const currentSize = ref({ width: Math.min(400, window.innerWidth - 40), height: Math.min(300, window.innerHeight - 40) })
+const currentSize = ref({
+  width: Math.min(400, window.innerWidth - 40),
+  height: Math.min(300, window.innerHeight - 40),
+})
 
 const show = ref(false)
 const imageVisible = ref(false)
@@ -94,294 +129,328 @@ const preloadedImages = ref(new Map()) // 预加载的图片缓存
 var page = 1
 var total = 0
 const settingStore = useSettingStore()
-const baseTitle = isValueNotEmpty(settingStore.metaSetting?.site_name) ? settingStore.metaSetting?.site_name : import.meta.env.VITE_TITLE
-const splitter = isValueNotEmpty(settingStore.metaSetting?.site_splitter) ? settingStore.metaSetting?.site_splitter : import.meta.env.VITE_TITLE_SPLITTER
-const page_size = isValueNotEmpty(settingStore.contentSetting?.page_size) ? settingStore.contentSetting?.page_size : import.meta.env.VITE_PAGE_SIZE
-var thumbnail_suffix = isValueNotEmpty(settingStore.contentSetting?.thumbnail_suffix) ? settingStore.contentSetting?.thumbnail_suffix : ""
-var detail_suffix = isValueNotEmpty(settingStore.contentSetting?.detail_suffix) ? settingStore.contentSetting?.detail_suffix : ""
-var detail_show_location = isValueNotEmpty(settingStore.contentSetting.detail_show_location) ? settingStore.contentSetting.detail_show_location : true
-var thumbnail_time_format = settingStore.contentSetting.thumbnail_time_format && settingStore.contentSetting.thumbnail_time_format != "" ? settingStore.contentSetting.thumbnail_time_format : "YYYY年M月D日"
-var detail_show_time = isValueNotEmpty(settingStore.contentSetting.detail_show_time) ? settingStore.contentSetting.detail_show_time : true
-var detail_time_format = settingStore.contentSetting.detail_time_format && settingStore.contentSetting.detail_time_format != "" ? settingStore.contentSetting.detail_time_format : "YYYY-MM-DD HH:mm"
+const baseTitle = isValueNotEmpty(settingStore.metaSetting?.site_name)
+  ? settingStore.metaSetting?.site_name
+  : import.meta.env.VITE_TITLE
+const splitter = isValueNotEmpty(settingStore.metaSetting?.site_splitter)
+  ? settingStore.metaSetting?.site_splitter
+  : import.meta.env.VITE_TITLE_SPLITTER
+const page_size = isValueNotEmpty(settingStore.contentSetting?.page_size)
+  ? settingStore.contentSetting?.page_size
+  : import.meta.env.VITE_PAGE_SIZE
+var thumbnail_suffix = isValueNotEmpty(settingStore.contentSetting?.thumbnail_suffix)
+  ? settingStore.contentSetting?.thumbnail_suffix
+  : ''
+var detail_suffix = isValueNotEmpty(settingStore.contentSetting?.detail_suffix)
+  ? settingStore.contentSetting?.detail_suffix
+  : ''
+var detail_show_location = isValueNotEmpty(settingStore.contentSetting.detail_show_location)
+  ? settingStore.contentSetting.detail_show_location
+  : true
+var thumbnail_time_format =
+  settingStore.contentSetting.thumbnail_time_format &&
+  settingStore.contentSetting.thumbnail_time_format != ''
+    ? settingStore.contentSetting.thumbnail_time_format
+    : 'YYYY年M月D日'
+var detail_show_time = isValueNotEmpty(settingStore.contentSetting.detail_show_time)
+  ? settingStore.contentSetting.detail_show_time
+  : true
+var detail_time_format =
+  settingStore.contentSetting.detail_time_format &&
+  settingStore.contentSetting.detail_time_format != ''
+    ? settingStore.contentSetting.detail_time_format
+    : 'YYYY-MM-DD HH:mm'
 
 function updateAttr(blog) {
-    blog.current_thumbnail = blog.images[0].thumbnail
-    blog.current_detail = blog.images[blog.currentIndex].detail
-    blog.current_desc = blog.images[blog.currentIndex].desc || blog.desc
-    blog.current_title = blog.images[blog.currentIndex].title || blog.title
-    blog.current_detail_time = blog.images[blog.currentIndex].detail_time || blog.detail_time
-    blog.current_location = blog.images[blog.currentIndex].location || blog.location
-    blog.current_metadata = blog.images[blog.currentIndex].metadata
-    if (isValueNotEmpty(blog.location)) {
-        if (isValueNotEmpty(blog.images[blog.currentIndex].location)) {
-            blog.current_full_location = `${blog.location} - ${blog.images[blog.currentIndex].location}`;
-        } else {
-            blog.current_full_location = blog.location
-        }
+  blog.current_thumbnail = blog.images[0].thumbnail
+  blog.current_detail = blog.images[blog.currentIndex].detail
+  blog.current_desc = blog.images[blog.currentIndex].desc || blog.desc
+  blog.current_title = blog.images[blog.currentIndex].title || blog.title
+  blog.current_detail_time = blog.images[blog.currentIndex].detail_time || blog.detail_time
+  blog.current_location = blog.images[blog.currentIndex].location || blog.location
+  blog.current_metadata = blog.images[blog.currentIndex].metadata
+  if (isValueNotEmpty(blog.location)) {
+    if (isValueNotEmpty(blog.images[blog.currentIndex].location)) {
+      blog.current_full_location = `${blog.location} - ${blog.images[blog.currentIndex].location}`
     } else {
-        if (isValueNotEmpty(blog.images[blog.currentIndex].location)) {
-            blog.current_full_location = blog.images[blog.currentIndex].location;
-        } else {
-            blog.current_full_location = null
-        }
+      blog.current_full_location = blog.location
     }
+  } else {
+    if (isValueNotEmpty(blog.images[blog.currentIndex].location)) {
+      blog.current_full_location = blog.images[blog.currentIndex].location
+    } else {
+      blog.current_full_location = null
+    }
+  }
 }
 
 function handleResize() {
-    throttle(() => {
-        if (currentBlog.value == null) return
-        showImage(currentBlog.value)
-    }, 300)()
+  throttle(() => {
+    if (currentBlog.value == null) return
+    showImage(currentBlog.value)
+  }, 300)()
 }
 
 onMounted(() => {
-    window.addEventListener('resize', handleResize)
-    
-    // 页面加载后开始预加载前几张图片
-    nextTick(() => {
-        setTimeout(() => {
-            if (blogs.value.length > 0) {
-                // 预加载前5张图片
-                for (let i = 0; i < Math.min(5, blogs.value.length); i++) {
-                    preloadImage(blogs.value[i].current_detail)
-                }
-            }
-        }, 1000) // 延迟1秒开始预加载，避免影响页面初始加载
-    })
+  window.addEventListener('resize', handleResize)
+
+  // 页面加载后开始预加载前几张图片
+  nextTick(() => {
+    setTimeout(() => {
+      if (blogs.value.length > 0) {
+        // 预加载前5张图片
+        for (let i = 0; i < Math.min(5, blogs.value.length); i++) {
+          preloadImage(blogs.value[i].current_detail)
+        }
+      }
+    }, 1000) // 延迟1秒开始预加载，避免影响页面初始加载
+  })
 })
 
 function handleSwipe(blog, event) {
-    const index = Number(event.target.dataset.index)
-    if (!isNaN(index)) {
-        blog.currentIndex = index
-        updateAttr(blog)
-        showImage(blog)
-    }
+  const index = Number(event.target.dataset.index)
+  if (!isNaN(index)) {
+    blog.currentIndex = index
+    updateAttr(blog)
+    showImage(blog)
+  }
 }
 function close() {
-    show.value = false
-    imageVisible.value = false
-    imageTransitioning.value = false
-    currentBlog.value = null
-    currentSize.value = { width: Math.min(400, window.innerWidth - 40), height: Math.min(300, window.innerHeight - 40) }
-    imageSrc.value = ''
-    nextImageUrl.value = ''
+  show.value = false
+  imageVisible.value = false
+  imageTransitioning.value = false
+  currentBlog.value = null
+  currentSize.value = {
+    width: Math.min(400, window.innerWidth - 40),
+    height: Math.min(300, window.innerHeight - 40),
+  }
+  imageSrc.value = ''
+  nextImageUrl.value = ''
 }
 function prev() {
-    const index = blogs.value.findIndex(b => b.id === currentBlog.value.id)
-    if (index > 0) {
-        showImage(blogs.value[index - 1])
-    }
+  const index = blogs.value.findIndex((b) => b.id === currentBlog.value.id)
+  if (index > 0) {
+    showImage(blogs.value[index - 1])
+  }
 }
 function next() {
-    const index = blogs.value.findIndex(b => b.id === currentBlog.value.id)
-    if (index < blogs.value.length - 1) {
-        showImage(blogs.value[index + 1])
-    }
+  const index = blogs.value.findIndex((b) => b.id === currentBlog.value.id)
+  if (index < blogs.value.length - 1) {
+    showImage(blogs.value[index + 1])
+  }
 }
 // 预加载图片函数
 function preloadImage(imageUrl) {
-    if (preloadedImages.value.has(imageUrl)) {
-        return Promise.resolve(preloadedImages.value.get(imageUrl))
+  if (preloadedImages.value.has(imageUrl)) {
+    return Promise.resolve(preloadedImages.value.get(imageUrl))
+  }
+
+  return new Promise((resolve) => {
+    const img = new window.Image()
+    img.onload = () => {
+      const imageData = {
+        src: img.src,
+        width: img.width,
+        height: img.height,
+      }
+      preloadedImages.value.set(imageUrl, imageData)
+      resolve(imageData)
     }
-    
-    return new Promise((resolve) => {
-        const img = new window.Image()
-        img.onload = () => {
-            const imageData = {
-                src: img.src,
-                width: img.width,
-                height: img.height
-            }
-            preloadedImages.value.set(imageUrl, imageData)
-            resolve(imageData)
-        }
-        img.onerror = () => {
-            resolve(null)
-        }
-        img.src = imageUrl
-    })
+    img.onerror = () => {
+      resolve(null)
+    }
+    img.src = imageUrl
+  })
 }
 
 // 预加载相邻图片
 function preloadAdjacentImages(currentIndex) {
-    const preloadCount = 2 // 预加载前后各2张图片
-    for (let i = Math.max(0, currentIndex - preloadCount); i <= Math.min(blogs.value.length - 1, currentIndex + preloadCount); i++) {
-        if (i !== currentIndex && blogs.value[i]) {
-            preloadImage(blogs.value[i].current_detail)
-        }
+  const preloadCount = 2 // 预加载前后各2张图片
+  for (
+    let i = Math.max(0, currentIndex - preloadCount);
+    i <= Math.min(blogs.value.length - 1, currentIndex + preloadCount);
+    i++
+  ) {
+    if (i !== currentIndex && blogs.value[i]) {
+      preloadImage(blogs.value[i].current_detail)
     }
+  }
 }
 
 function showImage(blog) {
-    currentBlog.value = blog
-    imageVisible.value = false
-    imageTransitioning.value = true
-    
-    // 检查图片是否已预加载
-    const imageUrl = blog.current_detail
-    const preloadedData = preloadedImages.value.get(imageUrl)
-    
-    if (preloadedData) {
-        // 图片已预加载，立即显示
+  currentBlog.value = blog
+  imageVisible.value = false
+  imageTransitioning.value = true
+
+  // 检查图片是否已预加载
+  const imageUrl = blog.current_detail
+  const preloadedData = preloadedImages.value.get(imageUrl)
+
+  if (preloadedData) {
+    // 图片已预加载，立即显示
+    const maxW = Math.min(1150, window.innerWidth - 40)
+    const maxH = Math.min(890, window.innerHeight - 40)
+    const ratio = Math.min(maxW / preloadedData.width, maxH / preloadedData.height, 1)
+    currentSize.value = {
+      width: preloadedData.width * ratio,
+      height: preloadedData.height * ratio,
+    }
+    nextImageUrl.value = preloadedData.src
+
+    setTimeout(() => {
+      imageSrc.value = nextImageUrl.value
+      imageTransitioning.value = false
+      imageVisible.value = true
+    }, 300) // 减少延迟时间
+  } else {
+    // 图片未预加载，正常加载
+    setTimeout(() => {
+      imageSrc.value = nextImageUrl.value
+      imageTransitioning.value = false
+      imageVisible.value = true
+    }, 1200)
+
+    preloadImage(imageUrl).then((imageData) => {
+      if (imageData) {
         const maxW = Math.min(1150, window.innerWidth - 40)
         const maxH = Math.min(890, window.innerHeight - 40)
-        const ratio = Math.min(maxW / preloadedData.width, maxH / preloadedData.height, 1)
+        const ratio = Math.min(maxW / imageData.width, maxH / imageData.height, 1)
         currentSize.value = {
-            width: preloadedData.width * ratio,
-            height: preloadedData.height * ratio,
+          width: imageData.width * ratio,
+          height: imageData.height * ratio,
         }
-        nextImageUrl.value = preloadedData.src
-        
-        setTimeout(() => {
-            imageSrc.value = nextImageUrl.value
-            imageTransitioning.value = false
-            imageVisible.value = true
-        }, 300) // 减少延迟时间
-    } else {
-        // 图片未预加载，正常加载
-        setTimeout(() => {
-            imageSrc.value = nextImageUrl.value
-            imageTransitioning.value = false
-            imageVisible.value = true
-        }, 1200)
-        
-        preloadImage(imageUrl).then((imageData) => {
-            if (imageData) {
-                const maxW = Math.min(1150, window.innerWidth - 40)
-                const maxH = Math.min(890, window.innerHeight - 40)
-                const ratio = Math.min(maxW / imageData.width, maxH / imageData.height, 1)
-                currentSize.value = {
-                    width: imageData.width * ratio,
-                    height: imageData.height * ratio,
-                }
-                nextImageUrl.value = imageData.src
-            }
-        })
-    }
-    
-    // 预加载相邻图片
-    const currentIndex = blogs.value.findIndex(b => b.id === blog.id)
-    preloadAdjacentImages(currentIndex)
-    
-    show.value = true
+        nextImageUrl.value = imageData.src
+      }
+    })
+  }
+
+  // 预加载相邻图片
+  const currentIndex = blogs.value.findIndex((b) => b.id === blog.id)
+  preloadAdjacentImages(currentIndex)
+
+  show.value = true
 }
 function onTransitionEnd(e) {
-    // console.log("Transition ended for property:", e.propertyName);
-    if ((e == null || e.propertyName === 'width' || e.propertyName === 'height') && imageTransitioning.value) {
-        imageSrc.value = nextImageUrl.value
-        imageTransitioning.value = false
-    }
+  // console.log("Transition ended for property:", e.propertyName);
+  if (
+    (e == null || e.propertyName === 'width' || e.propertyName === 'height') &&
+    imageTransitioning.value
+  ) {
+    imageSrc.value = nextImageUrl.value
+    imageTransitioning.value = false
+  }
 }
 function onImageLoad() {
-    imageVisible.value = true
+  imageVisible.value = true
 }
 async function getBlogs() {
-    try {
-        if (page === 1) {
-            isLoading.value = true
-        }
-        
-        var params = { page: page, page_size: page_size }
-        if (isValueNotEmpty(current_category))
-            params.category = current_category
-        if (isValueNotEmpty(current_location))
-            params.location = current_location
-        const res = await api.getBlogsVisitor(params)
-        
-        if (res.code == 200) {
-            // 添加延迟以实现平滑过渡
-            await new Promise(resolve => setTimeout(resolve, page === 1 ? 300 : 0))
-            
-            if (page === 1) {
-                // 首次加载或分类切换时，替换数据
-                blogs.value = [...res.data]
-                isLoading.value = false
-            } else {
-                // 加载更多时，追加数据
-                res.data.forEach(e => blogs.value.push(e))
-            }
-            formatBlogs();
-            page = res.page;
-            total = res.total;
-        }
-    } catch (e) {
-        console.log(e)
-        isLoading.value = false
+  try {
+    if (page === 1) {
+      isLoading.value = true
     }
+
+    var params = { page: page, page_size: page_size }
+    if (isValueNotEmpty(current_category)) params.category = current_category
+    if (isValueNotEmpty(current_location)) params.location = current_location
+    const res = await api.getBlogsVisitor(params)
+
+    if (res.code == 200) {
+      // 添加延迟以实现平滑过渡
+      await new Promise((resolve) => setTimeout(resolve, page === 1 ? 300 : 0))
+
+      if (page === 1) {
+        // 首次加载或分类切换时，替换数据
+        blogs.value = [...res.data]
+        isLoading.value = false
+      } else {
+        // 加载更多时，追加数据
+        res.data.forEach((e) => blogs.value.push(e))
+      }
+      formatBlogs()
+      page = res.page
+      total = res.total
+    }
+  } catch (e) {
+    console.log(e)
+    isLoading.value = false
+  }
 }
 function formatBlogs() {
-    for (let i = 0; i < blogs.value.length; i++) {
-        var blog = blogs.value[i]
-        blog.currentIndex = 0
-        blog.detail_image_urls = []
-        for (var index in blog.images) {
-            var image = blog.images[index]
-            image.thumbnail = image.image_url + thumbnail_suffix
-            image.detail = image.image_url + detail_suffix
-            if (image.time) {
-                image.detail_time = formatDateTime(parseDateTime(image.time), detail_time_format)
-            }
-            blog.detail_image_urls.push(image.detail)
-        }
-        var time = parseDateTime(blog.time)
-        blog.thumbnail_time = formatDateTime(time, thumbnail_time_format)
-        blog.detail_time = formatDateTime(time, detail_time_format)
-        updateAttr(blog)
+  for (let i = 0; i < blogs.value.length; i++) {
+    var blog = blogs.value[i]
+    blog.currentIndex = 0
+    blog.detail_image_urls = []
+    for (var index in blog.images) {
+      var image = blog.images[index]
+      image.thumbnail = image.image_url + thumbnail_suffix
+      image.detail = image.image_url + detail_suffix
+      if (image.time) {
+        image.detail_time = formatDateTime(parseDateTime(image.time), detail_time_format)
+      }
+      blog.detail_image_urls.push(image.detail)
     }
-    
-    // 格式化完成后开始预加载前几张图片
-    nextTick(() => {
-        setTimeout(() => {
-            if (blogs.value.length > 0) {
-                // 预加载前5张图片
-                for (let i = 0; i < Math.min(5, blogs.value.length); i++) {
-                    if (blogs.value[i] && blogs.value[i].current_detail) {
-                        preloadImage(blogs.value[i].current_detail)
-                    }
-                }
-            }
-        }, 500) // 延迟500ms开始预加载
-    })
+    var time = parseDateTime(blog.time)
+    blog.thumbnail_time = formatDateTime(time, thumbnail_time_format)
+    blog.detail_time = formatDateTime(time, detail_time_format)
+    updateAttr(blog)
+  }
+
+  // 格式化完成后开始预加载前几张图片
+  nextTick(() => {
+    setTimeout(() => {
+      if (blogs.value.length > 0) {
+        // 预加载前5张图片
+        for (let i = 0; i < Math.min(5, blogs.value.length); i++) {
+          if (blogs.value[i] && blogs.value[i].current_detail) {
+            preloadImage(blogs.value[i].current_detail)
+          }
+        }
+      }
+    }, 500) // 延迟500ms开始预加载
+  })
 }
 async function getCategory() {
-    if (isValueEmpty(current_category))
-        return []
-    try {
-        var params = {}
-        params.alias = current_category
-        const res = await api.getCategoryByAliasVisitor(params)
-        if (res.code == 200) {
-            document.title = `${res.data.name} ${splitter} ${baseTitle}`
-        }
-    } catch (e) {
+  if (isValueEmpty(current_category)) return []
+  try {
+    var params = {}
+    params.alias = current_category
+    const res = await api.getCategoryByAliasVisitor(params)
+    if (res.code == 200) {
+      document.title = `${res.data.name} ${splitter} ${baseTitle}`
     }
-    return []
+  } catch (e) {}
+  return []
 }
 function loadMore() {
-    if (page * page_size < total) {
-        page++;
-        getBlogs()
-    }
+  if (page * page_size < total) {
+    page++
+    getBlogs()
+  }
 }
 // 监听当前分类变化
-watch(() => props.currentCategory, async (newCategory) => {
+watch(
+  () => props.currentCategory,
+  async (newCategory) => {
     current_category = newCategory
     close()
     page = 1
     total = 0
-    
+
     // 延迟清空数据，先显示加载状态
     isLoading.value = true
-    await new Promise(resolve => setTimeout(resolve, 150))
+    await new Promise((resolve) => setTimeout(resolve, 150))
     blogs.value = []
-    
+
     getBlogs()
     getCategory()
-}, { immediate: true })
+  },
+  { immediate: true }
+)
 
 // 监听路由变化（仅处理location参数）
-watch(() => router.currentRoute.value.params.location, (newLocation) => {
+watch(
+  () => router.currentRoute.value.params.location,
+  (newLocation) => {
     current_location = newLocation
     close()
     blogs.value = []
@@ -389,277 +458,279 @@ watch(() => router.currentRoute.value.params.location, (newLocation) => {
     total = 0
     getBlogs()
     if (isValueNotEmpty(current_location)) {
-        document.title = `${current_location} ${splitter} ${baseTitle}`
+      document.title = `${current_location} ${splitter} ${baseTitle}`
     }
-}, { immediate: true })
+  },
+  { immediate: true }
+)
 scrollToload(listRef, loadMore)
 scrollToload(null, loadMore)
 </script>
 <style>
 .img {
-    max-width: 100%;
-    max-height: 100%;
+  max-width: 100%;
+  max-height: 100%;
 }
 
 .img {
-    object-fit: contain;
-    display: block;
+  object-fit: contain;
+  display: block;
 }
 
 .fade-enter-active,
 .fade-leave-active {
-    transition: opacity 0.4s ease;
+  transition: opacity 0.4s ease;
 }
 
 .fade-enter-from,
 .fade-leave-to {
-    opacity: 0;
+  opacity: 0;
 }
 
 .lightbox {
-    backdrop-filter: saturate(180%) blur(10px);
-    background: var(--moment-maskbgdeep);
-    position: fixed;
-    left: 0px;
-    top: 0px;
-    z-index: 20000;
-    width: 100%;
-    height: 100%;
-    text-align: center;
-    cursor: pointer;
-    display: block;
-    opacity: 1;
+  backdrop-filter: saturate(180%) blur(10px);
+  background: var(--moment-maskbgdeep);
+  position: fixed;
+  left: 0px;
+  top: 0px;
+  z-index: 20000;
+  width: 100%;
+  height: 100%;
+  text-align: center;
+  cursor: pointer;
+  display: block;
+  opacity: 1;
 }
 
 .lightbox-content {
-    background: transparent;
-    box-shadow: 0 1em 3em .5em #00000040;
-    cursor: default;
-    border-radius: 12px;
-    overflow: hidden;
-    display: inline-block;
-    vertical-align: middle;
-    position: relative;
-    z-index: 1;
-    cursor: pointer;
-    min-width: 150px;
-    min-height: 150px;
-    width: auto;
-    height: auto;
-    overflow: hidden;
-    /* max-width: 1150px;
+  background: transparent;
+  box-shadow: 0 1em 3em 0.5em #00000040;
+  cursor: default;
+  border-radius: 12px;
+  overflow: hidden;
+  display: inline-block;
+  vertical-align: middle;
+  position: relative;
+  z-index: 1;
+  cursor: pointer;
+  min-width: 150px;
+  min-height: 150px;
+  width: auto;
+  height: auto;
+  overflow: hidden;
+  /* max-width: 1150px;
     max-height: 890px; */
 }
 
 .lightbox-content:before {
-    transition: opacity .2s ease-in-out;
-    content: "";
-    display: block;
-    height: 100%;
-    left: 0;
-    position: absolute;
-    top: 0;
-    width: 100%;
-    z-index: 1;
-    opacity: 1;
+  transition: opacity 0.2s ease-in-out;
+  content: '';
+  display: block;
+  height: 100%;
+  left: 0;
+  position: absolute;
+  top: 0;
+  width: 100%;
+  z-index: 1;
+  opacity: 1;
 }
 
 .lightbox-content .loader {
-    animation: spinner 1s infinite linear !important;
-    background-image: url(/assets/spinner.svg);
-    background-position: center;
-    background-repeat: no-repeat;
-    background-size: contain;
-    display: block;
-    font-size: 2em;
-    height: 2em;
-    left: 50%;
-    line-height: 2em;
-    margin: -1em 0 0 -1em;
-    opacity: .25;
-    position: absolute;
-    text-align: center;
-    top: 50%;
-    width: 2em;
+  animation: spinner 1s infinite linear !important;
+  background-image: url(/assets/spinner.svg);
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: contain;
+  display: block;
+  font-size: 2em;
+  height: 2em;
+  left: 50%;
+  line-height: 2em;
+  margin: -1em 0 0 -1em;
+  opacity: 0.25;
+  position: absolute;
+  text-align: center;
+  top: 50%;
+  width: 2em;
 }
 
 .lightbox-content .nav-previous,
 .lightbox-content .nav-next {
-    transition: opacity .2s ease-in-out;
-    background-image: url(/assets/arrow.svg);
-    background-position: center;
-    background-repeat: no-repeat;
-    background-size: 5em;
-    cursor: pointer;
-    height: 8em;
-    margin-top: -4em;
-    opacity: 0;
-    position: absolute;
-    top: 50%;
-    width: 6em;
-    z-index: 2;
+  transition: opacity 0.2s ease-in-out;
+  background-image: url(/assets/arrow.svg);
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: 5em;
+  cursor: pointer;
+  height: 8em;
+  margin-top: -4em;
+  opacity: 0;
+  position: absolute;
+  top: 50%;
+  width: 6em;
+  z-index: 2;
 }
 
 .lightbox-content .nav-previous {
-    transform: scaleX(-1);
-    left: 0;
+  transform: scaleX(-1);
+  left: 0;
 }
 
 .lightbox-content .nav-next {
-    right: 0;
+  right: 0;
 }
 
 .lightbox-content:hover .closer,
 .lightbox-content:hover .nav-previous,
 .lightbox-content:hover .nav-next {
-    opacity: .5;
+  opacity: 0.5;
 }
 
 .lightbox-content:hover .closer:hover,
 .lightbox-content:hover .nav-previous:hover,
 .lightbox-content:hover .nav-next:hover {
-    opacity: 1;
+  opacity: 1;
 }
 
 .lightbox-content .closer {
-    transition: opacity .2s ease-in-out;
-    background-image: url(/assets/close.svg);
-    background-position: center;
-    background-repeat: no-repeat;
-    background-size: 3em;
-    height: 5em;
-    opacity: 0;
-    position: absolute;
-    right: 0;
-    top: 0;
-    width: 5em;
-    z-index: 2;
+  transition: opacity 0.2s ease-in-out;
+  background-image: url(/assets/close.svg);
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: 3em;
+  height: 5em;
+  opacity: 0;
+  position: absolute;
+  right: 0;
+  top: 0;
+  width: 5em;
+  z-index: 2;
 }
 
 .lightbox-content .caption {
-    padding: 2em 2em .1em;
-    background-image: linear-gradient(to top, rgba(16, 16, 16, .45) 25%, rgba(16, 16, 16, 0) 100%);
-    bottom: 0rem;
-    cursor: default;
-    left: 0;
-    position: absolute;
-    text-align: left;
-    width: 100%;
-    z-index: 2;
-    padding-bottom: 2rem;
-    display: flex;
-    flex-direction: column;
+  padding: 2em 2em 0.1em;
+  background-image: linear-gradient(to top, rgba(16, 16, 16, 0.45) 25%, rgba(16, 16, 16, 0) 100%);
+  bottom: 0rem;
+  cursor: default;
+  left: 0;
+  position: absolute;
+  text-align: left;
+  width: 100%;
+  z-index: 2;
+  padding-bottom: 2rem;
+  display: flex;
+  flex-direction: column;
 }
 
 #blog-main {
-    transition: filter 0.2s ease, opacity 0.2s ease;
-    column-count: 4;
-    column-gap: 4px;
-    overflow: auto;
-    width: 100%;
-    padding: 0;
-    margin: 0;
-    box-sizing: border-box;
-    position: relative;
+  transition: filter 0.2s ease, opacity 0.2s ease;
+  column-count: 4;
+  column-gap: 4px;
+  overflow: auto;
+  width: 100%;
+  padding: 0;
+  margin: 0;
+  box-sizing: border-box;
+  position: relative;
 }
 
 #blog-main.loading {
-    opacity: 0.3;
-    pointer-events: none;
+  opacity: 0.3;
+  pointer-events: none;
 }
 
 .images-container {
-    width: 100%;
+  width: 100%;
 }
 
 /* 过渡动画 */
 .fade-slide-enter-active {
-    transition: all 0.4s ease;
+  transition: all 0.4s ease;
 }
 
 .fade-slide-leave-active {
-    transition: all 0.3s ease;
+  transition: all 0.3s ease;
 }
 
 .fade-slide-enter-from {
-    opacity: 0;
-    transform: translateY(20px) scale(0.95);
+  opacity: 0;
+  transform: translateY(20px) scale(0.95);
 }
 
 .fade-slide-leave-to {
-    opacity: 0;
-    transform: translateY(-10px) scale(0.98);
+  opacity: 0;
+  transform: translateY(-10px) scale(0.98);
 }
 
 .fade-slide-move {
-    transition: transform 0.4s ease;
+  transition: transform 0.4s ease;
 }
 
 @media screen and (max-width: 1280px) {
-    #blog-main {
-        column-count: 3;
-    }
+  #blog-main {
+    column-count: 3;
+  }
 }
 
 @media screen and (max-width: 768px) {
-    #blog-main {
-        column-count: 2;
-    }
+  #blog-main {
+    column-count: 2;
+  }
 }
 
 @media screen and (max-width: 480px) {
-    #blog-main {
-        column-count: 1;
-    }
+  #blog-main {
+    column-count: 1;
+  }
 }
 
 body {
-    padding-bottom: 80px;
+  padding-bottom: 80px;
 }
 
 @media screen and (max-width: 736px) {
-    body {
-        padding-top: 60px;
-    }
+  body {
+    padding-top: 60px;
+  }
 }
 
 #blog-main:after {
-    pointer-events: none;
-    transition: opacity 0.5s ease, visibility 0.5s;
-    background: rgba(36, 38, 41, 0.25);
-    content: '';
-    display: block;
-    height: 100%;
-    left: 0;
-    opacity: 0;
-    position: absolute;
-    top: 0;
-    visibility: hidden;
-    width: 100%;
-    z-index: 1;
+  pointer-events: none;
+  transition: opacity 0.5s ease, visibility 0.5s;
+  background: rgba(36, 38, 41, 0.25);
+  content: '';
+  display: block;
+  height: 100%;
+  left: 0;
+  opacity: 0;
+  position: absolute;
+  top: 0;
+  visibility: hidden;
+  width: 100%;
+  z-index: 1;
 }
 
 body.content-active #blog-main:after {
-    pointer-events: auto;
-    opacity: 1;
-    visibility: visible;
-    backdrop-filter: saturate(180%) blur(20px);
-    background: var(--moment-maskbgdeep);
+  pointer-events: auto;
+  opacity: 1;
+  visibility: visible;
+  backdrop-filter: saturate(180%) blur(20px);
+  background: var(--moment-maskbgdeep);
 }
 
 .lightbox-content .caption {
-    padding: 2em 2em 0.1em 2em;
-    background-image: linear-gradient(to top, rgba(16, 16, 16, 0.45) 25%, rgba(16, 16, 16, 0) 100%);
-    bottom: 0rem;
-    cursor: default;
-    left: 0;
-    position: absolute;
-    text-align: left;
-    width: 100%;
-    z-index: 2;
-    padding-bottom: 2rem;
-    display: flex;
-    flex-direction: column;
+  padding: 2em 2em 0.1em 2em;
+  background-image: linear-gradient(to top, rgba(16, 16, 16, 0.45) 25%, rgba(16, 16, 16, 0) 100%);
+  bottom: 0rem;
+  cursor: default;
+  left: 0;
+  position: absolute;
+  text-align: left;
+  width: 100%;
+  z-index: 2;
+  padding-bottom: 2rem;
+  display: flex;
+  flex-direction: column;
 }
 
 .lightbox-content .caption h2,
@@ -667,254 +738,253 @@ body.content-active #blog-main:after {
 .lightbox-content .caption h4,
 .lightbox-content .caption h5,
 .lightbox-content .caption h6 {
-    margin: 0;
-    font-weight: bold;
+  margin: 0;
+  font-weight: bold;
 }
 
 .lightbox-content .caption .thumb-desc {
-    color: #ffffff;
-    font-size: 15px;
-    margin: 4px 0;
+  color: #ffffff;
+  font-size: 15px;
+  margin: 4px 0;
 }
 
 .lightbox-content:hover .closer,
 .lightbox-content:hover .nav-previous,
 .lightbox-content:hover .nav-next {
-    opacity: 0.5;
+  opacity: 0.5;
 }
 
 .lightbox-content:hover .closer:hover,
 .lightbox-content:hover .nav-previous:hover,
 .lightbox-content:hover .nav-next:hover {
-    opacity: 1.0;
+  opacity: 1;
 }
 
 .lightbox-content.loading:before {
-    opacity: 0;
+  opacity: 0;
 }
 
 body.touch .lightbox-content .closer,
 body.touch .lightbox-content .nav-previous,
 body.touch .lightbox-content .nav-next {
-    opacity: 1.0 !important;
+  opacity: 1 !important;
 }
 
 ul.tags {
-    display: flex;
-    padding-left: 0px;
-    flex-wrap: wrap;
+  display: flex;
+  padding-left: 0px;
+  flex-wrap: wrap;
 }
 
 #blog-main ul.tags {
-    padding-left: 12px;
+  padding-left: 12px;
 }
 
 .tag-categories,
 .tag-meta {
-    display: flex;
-    flex-wrap: wrap;
+  display: flex;
+  flex-wrap: wrap;
 }
 
-.tag-meta a[data-content=""] {
-    display: none;
+.tag-meta a[data-content=''] {
+  display: none;
 }
 
 #blog-main .tag-meta {
-    display: none;
+  display: none;
 }
 
-.lightbox-content .tag-meta a[data-show-detail=""] {
-    display: none;
+.lightbox-content .tag-meta a[data-show-detail=''] {
+  display: none;
 }
 
 .tag-categories a,
 .tag-meta a {
-    padding: 4px 6px;
-    border-radius: 8px;
-    background: var(--moment-black-op);
-    font-size: 12px;
-    color: var(--moment-fontcolor);
-    transition: 0.3s;
-    z-index: 1;
-    margin: 12px 12px 0 0px;
-    backdrop-filter: saturate(180%) blur(20px);
+  padding: 4px 6px;
+  border-radius: 8px;
+  background: var(--moment-black-op);
+  font-size: 12px;
+  color: var(--moment-fontcolor);
+  transition: 0.3s;
+  z-index: 1;
+  margin: 12px 12px 0 0px;
+  backdrop-filter: saturate(180%) blur(20px);
 }
 
 .tag-categories a:hover,
 .tag-location:hover {
-    background: var(--moment-theme);
-    color: var(--moment-white);
+  background: var(--moment-theme);
+  color: var(--moment-white);
 }
 
 .lightbox-content .tag-categories a {
-    background: var(--moment-black-op);
+  background: var(--moment-black-op);
 }
 
 .lightbox-content .tag-categories a:hover {
-    background: var(--moment-theme);
+  background: var(--moment-theme);
 }
 
 @media screen and (max-width: 980px) {
-    .lightbox-content .closer {
-        background-size: 3em;
-    }
+  .lightbox-content .closer {
+    background-size: 3em;
+  }
 
-    .lightbox-content .nav-previous,
-    .lightbox-content .nav-next {
-        background-size: 4em;
-    }
+  .lightbox-content .nav-previous,
+  .lightbox-content .nav-next {
+    background-size: 4em;
+  }
 }
 
 @media screen and (max-width: 736px) {
+  .lightbox-content:before {
+    display: none;
+  }
 
-    .lightbox-content:before {
-        display: none;
-    }
+  .lightbox-content .caption .thumb-desc {
+    margin: 10px 0px 0px 0px;
+  }
 
-    .lightbox-content .caption .thumb-desc {
-        margin: 10px 0px 0px 0px
-    }
+  .lightbox-content .caption {
+    bottom: 10px;
+    position: fixed;
+  }
 
-    .lightbox-content .caption {
-        bottom: 10px;
-        position: fixed;
-    }
-
-    /* .lightbox-content .closer,
+  /* .lightbox-content .closer,
     .lightbox-content .nav-previous,
     .lightbox-content .nav-next {
         display: none !important;
     } */
 
-    .nav-item .nav-item-child {
-        top: 30px;
-    }
+  .nav-item .nav-item-child {
+    top: 30px;
+  }
 }
 
 /* Wrapper */
 #wrapper {
-    transition: filter 0.5s ease;
-    position: relative;
+  transition: filter 0.5s ease;
+  position: relative;
 }
 
 #wrapper:after {
-    pointer-events: none;
-    transition: opacity 0.5s ease, visibility 0.5s;
-    background: rgba(36, 38, 41, 0.5);
-    content: '';
-    display: block;
-    height: 100%;
-    left: 0;
-    opacity: 0;
-    position: absolute;
-    top: 0;
-    visibility: hidden;
-    width: 100%;
-    z-index: 1;
+  pointer-events: none;
+  transition: opacity 0.5s ease, visibility 0.5s;
+  background: rgba(36, 38, 41, 0.5);
+  content: '';
+  display: block;
+  height: 100%;
+  left: 0;
+  opacity: 0;
+  position: absolute;
+  top: 0;
+  visibility: hidden;
+  width: 100%;
+  z-index: 1;
 }
 
 body.ie #wrapper:after {
-    background: rgba(36, 38, 41, 0.8);
+  background: rgba(36, 38, 41, 0.8);
 }
 
 body.modal-active #wrapper:after {
-    pointer-events: auto;
-    opacity: 0;
-    visibility: visible;
-    z-index: 10003;
+  pointer-events: auto;
+  opacity: 0;
+  visibility: visible;
+  z-index: 10003;
 }
 
 @-moz-keyframes spinner {
-    0% {
-        -moz-transform: rotate(0deg);
-        -webkit-transform: rotate(0deg);
-        -ms-transform: rotate(0deg);
-        transform: rotate(0deg);
-    }
+  0% {
+    -moz-transform: rotate(0deg);
+    -webkit-transform: rotate(0deg);
+    -ms-transform: rotate(0deg);
+    transform: rotate(0deg);
+  }
 
-    100% {
-        -moz-transform: rotate(359deg);
-        -webkit-transform: rotate(359deg);
-        -ms-transform: rotate(359deg);
-        transform: rotate(359deg);
-    }
+  100% {
+    -moz-transform: rotate(359deg);
+    -webkit-transform: rotate(359deg);
+    -ms-transform: rotate(359deg);
+    transform: rotate(359deg);
+  }
 }
 
 @-webkit-keyframes spinner {
-    0% {
-        -moz-transform: rotate(0deg);
-        -webkit-transform: rotate(0deg);
-        -ms-transform: rotate(0deg);
-        transform: rotate(0deg);
-    }
+  0% {
+    -moz-transform: rotate(0deg);
+    -webkit-transform: rotate(0deg);
+    -ms-transform: rotate(0deg);
+    transform: rotate(0deg);
+  }
 
-    100% {
-        -moz-transform: rotate(359deg);
-        -webkit-transform: rotate(359deg);
-        -ms-transform: rotate(359deg);
-        transform: rotate(359deg);
-    }
+  100% {
+    -moz-transform: rotate(359deg);
+    -webkit-transform: rotate(359deg);
+    -ms-transform: rotate(359deg);
+    transform: rotate(359deg);
+  }
 }
 
 @-ms-keyframes spinner {
-    0% {
-        -moz-transform: rotate(0deg);
-        -webkit-transform: rotate(0deg);
-        -ms-transform: rotate(0deg);
-        transform: rotate(0deg);
-    }
+  0% {
+    -moz-transform: rotate(0deg);
+    -webkit-transform: rotate(0deg);
+    -ms-transform: rotate(0deg);
+    transform: rotate(0deg);
+  }
 
-    100% {
-        -moz-transform: rotate(359deg);
-        -webkit-transform: rotate(359deg);
-        -ms-transform: rotate(359deg);
-        transform: rotate(359deg);
-    }
+  100% {
+    -moz-transform: rotate(359deg);
+    -webkit-transform: rotate(359deg);
+    -ms-transform: rotate(359deg);
+    transform: rotate(359deg);
+  }
 }
 
 @keyframes spinner {
-    0% {
-        -moz-transform: rotate(0deg);
-        -webkit-transform: rotate(0deg);
-        -ms-transform: rotate(0deg);
-        transform: rotate(0deg);
-    }
+  0% {
+    -moz-transform: rotate(0deg);
+    -webkit-transform: rotate(0deg);
+    -ms-transform: rotate(0deg);
+    transform: rotate(0deg);
+  }
 
-    100% {
-        -moz-transform: rotate(359deg);
-        -webkit-transform: rotate(359deg);
-        -ms-transform: rotate(359deg);
-        transform: rotate(359deg);
-    }
+  100% {
+    -moz-transform: rotate(359deg);
+    -webkit-transform: rotate(359deg);
+    -ms-transform: rotate(359deg);
+    transform: rotate(359deg);
+  }
 }
 
 #wrapper:before {
-    -moz-animation: spinner 1s infinite linear !important;
-    -webkit-animation: spinner 1s infinite linear !important;
-    -ms-animation: spinner 1s infinite linear !important;
-    animation: spinner 1s infinite linear !important;
-    pointer-events: none;
-    -moz-transition: top 0.75s ease-in-out, opacity 0.35s ease-out, visibility 0.35s;
-    -webkit-transition: top 0.75s ease-in-out, opacity 0.35s ease-out, visibility 0.35s;
-    -ms-transition: top 0.75s ease-in-out, opacity 0.35s ease-out, visibility 0.35s;
-    transition: top 0.75s ease-in-out, opacity 0.35s ease-out, visibility 0.35s;
-    background-image: url("/assets/spinner.svg");
-    background-position: center;
-    background-repeat: no-repeat;
-    background-size: contain;
-    content: '';
-    display: block;
-    font-size: 2em;
-    height: 2em;
-    left: 50%;
-    line-height: 2em;
-    margin: -1em 0 0 -1em;
-    opacity: 0;
-    position: fixed;
-    text-align: center;
-    top: 75%;
-    visibility: hidden;
-    width: 2em;
+  -moz-animation: spinner 1s infinite linear !important;
+  -webkit-animation: spinner 1s infinite linear !important;
+  -ms-animation: spinner 1s infinite linear !important;
+  animation: spinner 1s infinite linear !important;
+  pointer-events: none;
+  -moz-transition: top 0.75s ease-in-out, opacity 0.35s ease-out, visibility 0.35s;
+  -webkit-transition: top 0.75s ease-in-out, opacity 0.35s ease-out, visibility 0.35s;
+  -ms-transition: top 0.75s ease-in-out, opacity 0.35s ease-out, visibility 0.35s;
+  transition: top 0.75s ease-in-out, opacity 0.35s ease-out, visibility 0.35s;
+  background-image: url('/assets/spinner.svg');
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: contain;
+  content: '';
+  display: block;
+  font-size: 2em;
+  height: 2em;
+  left: 50%;
+  line-height: 2em;
+  margin: -1em 0 0 -1em;
+  opacity: 0;
+  position: fixed;
+  text-align: center;
+  top: 75%;
+  visibility: hidden;
+  width: 2em;
 }
 
 /* 面包屑导航样式 */
@@ -924,30 +994,30 @@ body.modal-active #wrapper:after {
 
 /* 只在弹出层中显示面包屑，并调整位置到底部 */
 .lightbox-content .breadcrumb-nav {
-    display: flex;
-    gap: 10px;
-    justify-content: center;
-    order: 999;
-    /* 确保在caption内容的最后面 */
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  order: 999;
+  /* 确保在caption内容的最后面 */
 }
 
 .nav-dot {
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    background-color: rgba(255, 255, 255, 0.5);
-    cursor: pointer;
-    transition: all 0.3s ease;
-    z-index: 999;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: rgba(255, 255, 255, 0.5);
+  cursor: pointer;
+  transition: all 0.3s ease;
+  z-index: 999;
 }
 
 .nav-dot:hover {
-    background-color: rgba(255, 255, 255, 0.8);
-    transform: scale(1.2);
+  background-color: rgba(255, 255, 255, 0.8);
+  transform: scale(1.2);
 }
 
 .nav-dot.active {
-    background-color: #fff;
-    transform: scale(1.2);
+  background-color: #fff;
+  transform: scale(1.2);
 }
 </style>

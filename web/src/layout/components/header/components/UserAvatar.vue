@@ -34,8 +34,8 @@ const options = [
 
 function handleSelect(key) {
   if (key === 'profile') {
-    router.push('/admin/profile')
-  }else if (key === 'logout') {
+    router.push('/admin/profile-section/profile')
+  } else if (key === 'logout') {
     $dialog.confirm({
       title: t('header.label_logout_dialog_title'),
       type: 'warning',

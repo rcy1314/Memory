@@ -9,10 +9,15 @@
       </div>
     </template>
 
-    <div ref="content" v-resize="refreshIsOverflow" class="content" :class="{ overflow: isOverflow && showArrow }"
+    <div
+      ref="content"
+      v-resize="refreshIsOverflow"
+      class="content"
+      :class="{ overflow: isOverflow && showArrow }"
       :style="{
-    transform: `translateX(${translateX}px)`,
-  }">
+        transform: `translateX(${translateX}px)`,
+      }"
+    >
       <slot />
     </div>
   </div>

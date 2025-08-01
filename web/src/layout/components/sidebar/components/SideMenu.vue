@@ -1,7 +1,16 @@
 <template>
-  <n-menu ref="menu" class="side-menu" accordion :indent="18" :collapsed-icon-size="22" :collapsed-width="64"
-    :options="menuOptions" :value="activeKey" @update:value="handleMenuSelect"
-    :default-expanded-keys='["内容管理", "系统管理"]' />
+  <n-menu
+    ref="menu"
+    class="side-menu"
+    accordion
+    :indent="18"
+    :collapsed-icon-size="22"
+    :collapsed-width="64"
+    :options="menuOptions"
+    :value="activeKey"
+    :default-expanded-keys="['内容管理', '系统管理']"
+    @update:value="handleMenuSelect"
+  />
 </template>
 
 <script setup>

@@ -120,7 +120,16 @@ function validatePasswordSame(rule, value) {
 }
 
 async function beforeUploadImage(data) {
-  var types = ['image/avif', 'image/vnd.microsoft.icon', 'image/jpeg', 'image/tiff', 'image/bmp', 'image/svg+xml', 'image/webp', 'image/png']
+  var types = [
+    'image/avif',
+    'image/vnd.microsoft.icon',
+    'image/jpeg',
+    'image/tiff',
+    'image/bmp',
+    'image/svg+xml',
+    'image/webp',
+    'image/png',
+  ]
   if (types.indexOf(data.file.file?.type) == -1) {
     $message.error('只能上传图片文件，请重新上传')
     return false
@@ -136,32 +145,30 @@ const customRequest = ({
   action,
   onFinish,
   onError,
-  onProgress
+  onProgress,
 }) => {
-  const formData = new FormData();
+  const formData = new FormData()
   if (data) {
     Object.keys(data).forEach((key) => {
-      formData.append(
-        key,
-        data[key]
-      );
-    });
+      formData.append(key, data[key])
+    })
   }
-  formData.append("file", file.file);
-  api.uploadImage(formData, headers, (progressEvent) => {
-    var percent = Math.round((progressEvent.loaded * 100) / progressEvent.total)
-    onProgress({ percent: Math.ceil(percent) });
-    $message.loading(t('views.content.label_uploading') + ` ${Math.ceil(percent)}%`);
-  }
-  ).then((response) => {
-    $message.success(response.msg);
-    infoForm.value.avatar = response.data
-    onFinish();
-  }).catch((error) => {
-    onError();
-  });
-};
-
+  formData.append('file', file.file)
+  api
+    .uploadImage(formData, headers, (progressEvent) => {
+      var percent = Math.round((progressEvent.loaded * 100) / progressEvent.total)
+      onProgress({ percent: Math.ceil(percent) })
+      $message.loading(t('views.content.label_uploading') + ` ${Math.ceil(percent)}%`)
+    })
+    .then((response) => {
+      $message.success(response.msg)
+      infoForm.value.avatar = response.data
+      onFinish()
+    })
+    .catch((error) => {
+      onError()
+    })
+}
 </script>
 
 <template>
@@ -169,25 +176,52 @@ const customRequest = ({
     <NTabs type="line" animated>
       <NTabPane name="website" :tab="$t('views.profile.label_modify_information')">
         <div class="m-30 flex items-center">
-          <NForm ref="infoFormRef" label-placement="top" label-align="left" label-width="100" :model="infoForm"
-            :rules="infoFormRules" class="w-500">
+          <NForm
+            ref="infoFormRef"
+            label-placement="top"
+            label-align="left"
+            label-width="100"
+            :model="infoForm"
+            :rules="infoFormRules"
+            class="w-500"
+          >
             <NFormItem :label="$t('views.profile.label_avatar')" path="avatar">
-              <NInput v-model:value="infoForm.avatar" type="text"
-                :placeholder="$t('views.profile.placeholder_avatar')" />
+              <NInput
+                v-model:value="infoForm.avatar"
+                type="text"
+                :placeholder="$t('views.profile.placeholder_avatar')"
+              />
             </NFormItem>
-            <n-upload :action="api.uploadApi" :custom-request="customRequest" class="upload-button"
-              v-if="settingStore.storageSetting.enable_storage" @before-upload="beforeUploadImage"
-              accept=".tif,.jpg,.jpeg,.ico,.tiff,.gif,.svg,.jfif,.webp,.png,.bmp,.jpeg,.avif" :show-file-list="false">
+            <n-upload
+              v-if="settingStore.storageSetting.enable_storage"
+              :action="api.uploadApi"
+              :custom-request="customRequest"
+              class="upload-button"
+              accept=".tif,.jpg,.jpeg,.ico,.tiff,.gif,.svg,.jfif,.webp,.png,.bmp,.jpeg,.avif"
+              :show-file-list="false"
+              @before-upload="beforeUploadImage"
+            >
               <n-button>上传图片</n-button>
             </n-upload>
-            <NImage width="100" :src="infoForm.avatar" v-if="infoForm.avatar != undefined && infoForm.avatar != ''"
-              id="preview-avatar"></NImage>
+            <NImage
+              v-if="infoForm.avatar != undefined && infoForm.avatar != ''"
+              id="preview-avatar"
+              width="100"
+              :src="infoForm.avatar"
+            ></NImage>
             <NFormItem :label="$t('views.profile.label_username')" path="username">
-              <NInput v-model:value="infoForm.username" type="text"
-                :placeholder="$t('views.profile.placeholder_username')" />
+              <NInput
+                v-model:value="infoForm.username"
+                type="text"
+                :placeholder="$t('views.profile.placeholder_username')"
+              />
             </NFormItem>
             <NFormItem :label="$t('views.profile.label_email')" path="email">
-              <NInput v-model:value="infoForm.email" type="text" :placeholder="$t('views.profile.placeholder_email')" />
+              <NInput
+                v-model:value="infoForm.email"
+                type="text"
+                :placeholder="$t('views.profile.placeholder_email')"
+              />
             </NFormItem>
             <NButton type="primary" :loading="isLoading" @click="updateProfile">
               {{ $t('common.buttons.save') }}
@@ -196,19 +230,40 @@ const customRequest = ({
         </div>
       </NTabPane>
       <NTabPane name="contact" :tab="$t('views.profile.label_change_password')">
-        <NForm ref="passwordFormRef" label-placement="top" label-align="left" :model="passwordForm" label-width="200"
-          :rules="passwordFormRules" class="m-30 w-500">
+        <NForm
+          ref="passwordFormRef"
+          label-placement="top"
+          label-align="left"
+          :model="passwordForm"
+          label-width="200"
+          :rules="passwordFormRules"
+          class="m-30 w-500"
+        >
           <NFormItem :label="$t('views.profile.label_old_password')" path="old_password">
-            <NInput v-model:value="passwordForm.old_password" type="password" show-password-on="mousedown"
-              :placeholder="$t('views.profile.placeholder_old_password')" />
+            <NInput
+              v-model:value="passwordForm.old_password"
+              type="password"
+              show-password-on="mousedown"
+              :placeholder="$t('views.profile.placeholder_old_password')"
+            />
           </NFormItem>
           <NFormItem :label="$t('views.profile.label_new_password')" path="new_password">
-            <NInput v-model:value="passwordForm.new_password" :disabled="!passwordForm.old_password" type="password"
-              show-password-on="mousedown" :placeholder="$t('views.profile.placeholder_new_password')" />
+            <NInput
+              v-model:value="passwordForm.new_password"
+              :disabled="!passwordForm.old_password"
+              type="password"
+              show-password-on="mousedown"
+              :placeholder="$t('views.profile.placeholder_new_password')"
+            />
           </NFormItem>
           <NFormItem :label="$t('views.profile.label_confirm_password')" path="confirm_password">
-            <NInput v-model:value="passwordForm.confirm_password" :disabled="!passwordForm.new_password" type="password"
-              show-password-on="mousedown" :placeholder="$t('views.profile.placeholder_confirm_password')" />
+            <NInput
+              v-model:value="passwordForm.confirm_password"
+              :disabled="!passwordForm.new_password"
+              type="password"
+              show-password-on="mousedown"
+              :placeholder="$t('views.profile.placeholder_confirm_password')"
+            />
           </NFormItem>
           <NButton type="primary" :loading="isLoading" @click="updatePassword">
             {{ $t('common.buttons.save') }}

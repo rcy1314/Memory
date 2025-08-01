@@ -26,17 +26,30 @@ class Settings(BaseSettings):
     JWT_ALGORITHM: str = "HS256"
     JWT_ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 7
     DB_CONNECTION: dict = {
-        "db_url": f"sqlite:///{DATA_DIR}/db.sqlite3",
+        "db_url": f"sqlite:///{DATA_DIR}/db.sqlite3?timeout=30&journal_mode=WAL&synchronous=NORMAL&cache_size=10000&temp_store=memory",
         "modules": {"models": ["app.models"]},
         "use_tz": False,
         "timezone": "Asia/Shanghai",
     }
     TORTOISE_ORM: dict = {
-        "connections": {"default": f"sqlite://{DATA_DIR}/db.sqlite3"},
+        "connections": {
+            "default": {
+                "engine": "tortoise.backends.sqlite",
+                "credentials": {
+                    "file_path": f"{DATA_DIR}/db.sqlite3",
+                    "journal_mode": "WAL",
+                    "synchronous": "NORMAL",
+                    "cache_size": 10000,
+                    "temp_store": "memory",
+                    "timeout": 30,
+                    "check_same_thread": False,
+                }
+            }
+        },
         "apps": {
             "models": {
                 "models": ["app.models"],
-                "default_connection": "sqlite",
+                "default_connection": "default",
             },
         },
         "use_tz": False,

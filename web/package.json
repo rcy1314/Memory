@@ -45,6 +45,7 @@
   },
   "devDependencies": {
     "@vitejs/plugin-vue": "^5.0.0",
+    "eslint-plugin-local-rules": "^3.0.2",
     "vite": "^5.0.0"
   },
   "lint-staged": {

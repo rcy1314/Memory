@@ -69,15 +69,20 @@ async def list_blog(
         prefetch_fields=["images"],
     )
 
-    data = [await obj.to_dict_with_images(m2m=True) for obj in blog_objs]
+    # 优化：批量处理，减少数据库查询
     valid_blogs = []
-
-    for item in data:
-        item["category_ids"] = [category["id"] for category in item["categories"]]
-        visible_images = [img for img in item["images"] if not img["is_hidden"]]
-        item["images"] = visible_images
+    for obj in blog_objs:
+        # 直接使用已预取的数据，避免额外查询
+        blog_dict = await obj.to_dict(m2m=True)
+        blog_dict["category_ids"] = [category["id"] for category in blog_dict["categories"]]
+        
+        # 处理图片，过滤隐藏的图片
+        visible_images = [img for img in obj.images if not img.is_hidden]
         if visible_images:
-            valid_blogs.append(item)
+            # 只有当有可见图片时才转换图片数据
+            blog_dict["images"] = [await img.to_dict() for img in visible_images]
+            blog_dict["images"].sort(key=lambda x: x["order"])
+            valid_blogs.append(blog_dict)
 
     return SuccessExtra(data=valid_blogs, total=total, page=page, page_size=page_size)
 

@@ -13,20 +13,41 @@
             </div>
           </div>
           <n-space :size="12" :wrap="false">
-            <n-statistic v-for="item in statisticData" :key="item.id" v-bind="item"
-              style="text-align: center;margin-right: 8px;"></n-statistic>
+            <n-statistic
+              v-for="item in statisticData"
+              :key="item.id"
+              v-bind="item"
+              style="text-align: center; margin-right: 8px"
+            ></n-statistic>
           </n-space>
         </div>
       </n-card>
 
-      <n-card :title="$t('views.workbench.label_latest')" size="small" :segmented="true" mt-15 rounded-10>
+      <n-card
+        :title="$t('views.workbench.label_latest')"
+        size="small"
+        :segmented="true"
+        mt-15
+        rounded-10
+      >
         <template #header-extra>
-          <router-link to="/admin/content/blog"><n-button text type="primary">{{ $t('views.workbench.label_more')
-          }}</n-button></router-link>
+          <router-link to="/admin/content/blog"
+            ><n-button text type="primary">{{
+              $t('views.workbench.label_more')
+            }}</n-button></router-link
+          >
         </template>
-        <div flex flex-wrap style="row-gap: 10px;column-gap: 10px;flex-direction: row">
-          <n-image v-for="blog in blogData" :key="blog.id" :src="blog.image" :width="300" :height="150"
-            class="gallery-image" style="border-radius: 8px;" show-toolbar-tooltip>
+        <div flex flex-wrap style="row-gap: 10px; column-gap: 10px; flex-direction: row">
+          <n-image
+            v-for="blog in blogData"
+            :key="blog.id"
+            :src="blog.image"
+            :width="300"
+            :height="150"
+            class="gallery-image"
+            style="border-radius: 8px"
+            show-toolbar-tooltip
+          >
             <p op-60>{{ blog.image }}</p>
           </n-image>
         </div>
@@ -64,29 +85,35 @@ async function getCount() {
         id: 1,
         label: t('views.workbench.label_number_of_categories'),
         value: `${res.data.category}`,
-      }
+      },
     ]
   }
 }
 async function getBlogs() {
-  const res = await api.getBlogs({ page: 1, page_size: 20, order_option: "created_at_desc" })
+  const res = await api.getBlogs({ page: 1, page_size: 20, order_option: 'created_at_desc' })
   if (res.code == 200) {
-    return res.data;
+    return res.data
   }
   return []
 }
 const userStore = useUserStore()
 const settingStore = useSettingStore()
-var workbench_title = isValueNotEmpty(settingStore.generalSetting?.workbench_title) ? settingStore.generalSetting?.workbench_title : import.meta.env.VITE_WORKBENCH_TITLE
-var workbench_desc = isValueNotEmpty(settingStore.generalSetting?.workbench_desc) ? settingStore.generalSetting?.workbench_desc : import.meta.env.VITE_WORKBENCH_DESC
-var thumbnail_suffix = isValueNotEmpty(settingStore.contentSetting?.thumbnail_suffix) ? settingStore.contentSetting?.thumbnail_suffix : ""
-workbench_title = workbench_title.replaceAll("{username}", userStore.name)
-workbench_desc = workbench_desc.replaceAll("{username}", userStore.name)
+var workbench_title = isValueNotEmpty(settingStore.generalSetting?.workbench_title)
+  ? settingStore.generalSetting?.workbench_title
+  : import.meta.env.VITE_WORKBENCH_TITLE
+var workbench_desc = isValueNotEmpty(settingStore.generalSetting?.workbench_desc)
+  ? settingStore.generalSetting?.workbench_desc
+  : import.meta.env.VITE_WORKBENCH_DESC
+var thumbnail_suffix = isValueNotEmpty(settingStore.contentSetting?.thumbnail_suffix)
+  ? settingStore.contentSetting?.thumbnail_suffix
+  : ''
+workbench_title = workbench_title.replaceAll('{username}', userStore.name)
+workbench_desc = workbench_desc.replaceAll('{username}', userStore.name)
 getCount()
 getBlogs().then((blogs) => {
   blogData.value = blogs.map((e) => {
-    e.image = e.images[0].image_url + thumbnail_suffix;
-    return e;
+    e.image = e.images[0].image_url + thumbnail_suffix
+    return e
   })
 })
 </script>

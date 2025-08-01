@@ -10,3 +10,19 @@ services:
       - ./.moment:/app/data
     ports:
       - 9573:9999
+    environment:
+      # 数据库连接配置
+      - DB_HOST=host.docker.internal
+      # 支持域名反代时的数据库连接
+      - EXTERNAL_DB_HOST=${EXTERNAL_DB_HOST:-host.docker.internal}
+    extra_hosts:
+      # 确保容器可以解析host.docker.internal
+      - "host.docker.internal:host-gateway"
+    networks:
+      - memory-network
+
+networks:
+  memory-network:
+    driver: bridge
+    # 启用IPv6支持（可选）
+    enable_ipv6: false

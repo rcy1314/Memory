@@ -1,5 +1,5 @@
 <template>
-  <div class="header-container" flex items-center justify-between w-full>
+  <div class="header-container" w-full flex items-center justify-between>
     <div flex items-center>
       <MenuCollapse />
       <BreadCrumb ml-15 hidden sm:block />
@@ -19,5 +19,4 @@ import MenuCollapse from './components/MenuCollapse.vue'
 import Preview from './components/Preview.vue'
 import UserAvatar from './components/UserAvatar.vue'
 import ThemeMode from './components/ThemeMode.vue'
-
 </script>
