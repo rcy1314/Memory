@@ -89,9 +89,5 @@ netlify_app.include_router(api_router, prefix="/api")
 async def health_check():
     return {"status": "ok", "message": "Netlify Functions is running", "version": settings.VERSION}
 
-# 创建Mangum处理器
+# 创建Mangum处理器 - Netlify Functions 入口点
 handler = Mangum(netlify_app, lifespan="off")
-
-def main(event, context):
-    """Netlify Functions处理器"""
-    return handler(event, context)
