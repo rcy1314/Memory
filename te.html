@@ -1,0 +1,1153 @@
+<!DOCTYPE HTML>
+<html lang="zh-CN">
+<script src="static/js/jquery.min.js"></script>
+<!--	<script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.7/jquery.min.js"></script> -->
+
+<head>
+    <meta http-equiv="Content-Type" charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge, chrome=1">
+    <meta name="renderer" content="webkit">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+    <meta name="description" content="这是来自NOISE的摄影图库，来自于个人拍摄及所见所闻，点击后可查看图片，欢迎访问！">
+	<meta name="keywords" content="NOISE,NOISE摄影图,诺伊斯,NOISE图库,图库,摄影,宝藏站点,">
+    <link rel="stylesheet" href="./style.css">
+    <script src="static/js/loading.js"></script>
+    <link type="image/vnd.microsoft.icon" href="" rel="shortcut icon">
+    <link rel="icon" href="static/img/logo.png" type="image/png" />
+    <title>NOISE摄影图库</title>
+    <link rel="stylesheet" href="https://cdn.staticfile.org/fancybox/3.5.2/jquery.fancybox.min.css">
+    <script src="https://cdn.staticfile.org/jquery/3.6.0/jquery.min.js"></script>
+    <script src="https://cdn.staticfile.org/fancybox/3.5.2/jquery.fancybox.min.js"></script>
+    <script src="https://cdn.staticfile.org/jquery/3.3.1/jquery.min.js"></script>
+    <script src="https://cdn.staticfile.org/layer/3.1.1/layer.js"></script>
+    <script src="static/js/jquery.min.js"></script>
+    <script src="static/js/grids.js"></script>
+    <link rel="manifest" href="manifest.json">
+    <style>
+        a:hover { cursor: pointer; }
+    </style>
+    <!-- 添加Service Worker -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', function() {
+                navigator.serviceWorker.register('/service-worker.js').then(function(registration) {
+                    console.log('ServiceWorker registration successful with scope: ', registration.scope);
+                }).catch(function(error) {
+                    console.log('ServiceWorker registration failed: ', error);
+                });
+            });
+        }
+    </script>
+</head>
+
+<body>
+
+    <header>
+        <div class="header-top">
+            <div class="logo">
+                <a href="https://noisework.cn/photo">
+                    <img src="static/img/logo.png" alt="">
+                    <div class="site-name"><a>NOISE摄影图库</a></div>
+                </a>
+            </div>
+                        <span id="hitokoto">正在获取中...</span>
+                        </div>
+                        <script src="https://v1.hitokoto.cn/?encode=js&select=%23hitokoto" defer></script>   
+                        
+
+                    <!-- <li>
+                            <a href="" target="_blank">
+                                <img class="social-icon" src="static/img/ideallogo.gif">
+                            </a>
+                        </li> -->
+                </ul>
+            </div>
+        </div>
+         <!-- 弹窗信息提醒代码开始 -->
+  <script>
+    window.addEventListener('load', function() {
+        var currentTime = new Date().getHours();
+        var greeting;
+        if (currentTime < 5) {
+            greeting = "凌晨好！";
+        } else if (currentTime < 8) {
+            greeting = "早上好！";
+        } else if (currentTime < 11) {
+            greeting = "上午好！";
+        } else if (currentTime < 13) {
+            greeting = "中午好！";
+        } else if (currentTime < 18) {
+            greeting = "下午好！";
+        } else if (currentTime < 19) {
+            greeting = "傍晚好！";
+        } else if (currentTime < 24) {
+            greeting = "晚上好！";
+        }
+     
+  layer.msg(greeting + "👏欢迎访问！");
+    });
+    </script>
+    <!-- 弹窗信息提醒代码结束 -->
+        <div class="header-bottom">
+            <div class="categories-container">
+                <div class="categories">
+
+                    <ul class="categories-list">
+                        <li><a href="">
+                                <div class="categories-single">首页</div>
+                            </a></li>
+
+                        <li class="slide"></li>
+                        <li>
+                            <a onClick="changetab('ALL')"
+                                title="全部">
+                                <div class="categories-single category-current" id="ALL">
+                                    全部
+                                </div>
+                            </a>
+                        </li>
+                        <li>
+                            <a onClick="changetab('LIFE')"
+                                title="人间生活">
+                                <div class="categories-single" id="LIFE">
+                                    人间生活
+                                </div>
+                            </a>
+                        </li>
+                        <li>
+                            <a onClick="changetab('SCENE')"
+                                title="风景">
+                                <div class="categories-single" id="SCENE">
+                                    风景
+                                </div>
+                            </a>
+                        </li>
+                        <li>
+                            <a onClick="changetab('FOOD')"
+                                title="美食">
+                                <div class="categories-single" id="FOOD">
+                                    美食
+                                </div>
+                        <li>
+                            <a onClick="changetab('night')"
+                                title="夜景">
+                                <div class="categories-single" id="night">
+                                    夜景
+                                </div>
+                       <li>
+                            <a onClick="changetab('ME')"
+                                title="自拍">
+                                <div class="categories-single" id="ME">
+                                    自拍
+                                </div>
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </header>
+    <div class="container">
+        <div class="banner" style="height:600px;background: url(https://jsd.cdn.noisework.cn/gh/rcy1314/my-photo@master/20230126/image.13lod53g3r40.jpg)">
+            <!-- https://s1.ax1x.com/2020/04/14/GzCOT1.png -->
+            <div class="banner-content">
+                <div class="banner-heading">图库展示</div>
+                <div class="banner-description">这里包含之前的所见所闻</div>
+
+                <div class="site-data">
+                    <div class="banner-column banner-column-left">100+<p>图片数量</p>
+                    </div>
+                    <div class="banner-column banner-column-center">5<p>类别</p>
+                    </div>
+                    <div class="banner-column banner-column-right">80%<p>活跃度</p>
+                    </div>
+                </div>
+            </div>
+            <div class="banner-info">
+                <div class="week" style="">知行合一，努力才会有收获</div>
+            </div>
+        </div>
+     <!-- 分割-->
+
+
+        <div class="articles" id="grid">
+            <div class="grid-item LIFE">
+                <a href="https://jsd.cdn.noisework.cn/gh/rcy1314/my-photo@master/20230126/DSC00140-6000x4000.3xrlp66fxag0.jpg"
+            data-fancybox="gallery" title="" />
+            <img src="https://jsd.cdn.noisework.cn/gh/rcy1314/my-photo@master/20230126/DSC00140-6000x4000.3xrlp66fxag0.jpg">
+            <div class="item-info" >
+                <div class="title"
+                    style="color: #fff;position: absolute;left: 0;top: 0;width: 100%;height: 100%;display: flex;align-items: center;justify-content: center">
+                    唾手可得</div>
+            </div>
+            </a>
+            </div>
+            <div class="grid-item LIFE">
+                <a href="https://jsd.cdn.noisework.cn/gh/rcy1314/my-photo@master/20230126/IMG_0034.6y2a9d1zeig0.jpg" data-fancybox="gallery" title="" />
+                <img
+                    src="https://jsd.cdn.noisework.cn/gh/rcy1314/my-photo@master/20230126/IMG_0034.6y2a9d1zeig0.jpg">
+                <div class="item-info" >
+                    <div class="title"
+                        style="color: #fff;position: absolute;left: 0;top: 0;width: 100%;height: 100%;display: flex;align-items: center;justify-content: center">
+                        遇见彩虹</div>
+                </div>
+                </img>
+                </a>
+            </div>
+            <div class="grid-item LIFE">
+                <a href="https://jsd.cdn.noisework.cn/gh/rcy1314/my-photo@master/20230126/image.1ld04nbjxwkg.jpg" data-fancybox="gallery" title="" />
+                <img
+                    src="https://jsd.cdn.noisework.cn/gh/rcy1314/my-photo@master/20230126/image.1ld04nbjxwkg.jpg">
+                <div class="item-info" >
+                    <div class="title"
+                        style="color: #fff;position: absolute;left: 0;top: 0;width: 100%;height: 100%;display: flex;align-items: center;justify-content: center">
+                       大型摆件</div>
+                    </div>
+                </img>
+                </a>
+            </div>
+            <div class="grid-item LIFE">
+                <a href="https://jsd.cdn.noisework.cn/gh/rcy1314/my-photo@master/20230126/image.1x2j09tik4tc.jpg" data-fancybox="gallery" title="" />
+                <img
+                    src="https://jsd.cdn.noisework.cn/gh/rcy1314/my-photo@master/20230126/image.1x2j09tik4tc.jpg">
+                <div class="item-info" >
+                    <div class="title"
+                        style="color: #fff;position: absolute;left: 0;top: 0;width: 100%;height: 100%;display: flex;align-items: center;justify-content: center">
+                       杭州苹果店</div>
+                    </div>
+                </img>
+                </a>
+            </div>
+            <div class="grid-item LIFE">
+                <a href="https://jsd.cdn.noisework.cn/gh/rcy1314/my-photo@master/20230126/IMG_0738.27brnbzu60g0.jpg" data-fancybox="gallery" title="" />
+                <img
+                    src="https://jsd.cdn.noisework.cn/gh/rcy1314/my-photo@master/20230126/IMG_0738.27brnbzu60g0.jpg">
+                <div class="item-info" >
+                    <div class="title"
+                        style="color: #fff;position: absolute;left: 0;top: 0;width: 100%;height: 100%;display: flex;align-items: center;justify-content: center">
+                       走走停停</div>
+                    </div>
+                </img>
+                </a>
+            </div>
+            <div class="grid-item LIFE">
+                <a href="https://jsd.cdn.noisework.cn/gh/rcy1314/my-photo@master/20230126/DSC00318.4a2vygnv58c0.jpg" data-fancybox="gallery" title="" />
+                <img
+                    src="https://jsd.cdn.noisework.cn/gh/rcy1314/my-photo@master/20230126/DSC00318.4a2vygnv58c0.jpg">
+                <div class="item-info" >
+                    <div class="title"
+                        style="color: #fff;position: absolute;left: 0;top: 0;width: 100%;height: 100%;display: flex;align-items: center;justify-content: center">
+                        后知后觉</div>
+                    </div>
+                </img>
+                </a>
+            </div>
+            <div class="grid-item LIFE">
+                <a href="https://jsd.cdn.noisework.cn/gh/rcy1314/my-photo@master/20230126/DSC00294-1.3jz8ufvogxk0.jpg" data-fancybox="gallery" title="" />
+                <img
+                    src="https://jsd.cdn.noisework.cn/gh/rcy1314/my-photo@master/20230126/DSC00294-1.3jz8ufvogxk0.jpg">
+                <div class="item-info" >
+                    <div class="title"
+                        style="color: #fff;position: absolute;left: 0;top: 0;width: 100%;height: 100%;display: flex;align-items: center;justify-content: center">
+                        脱俗</div>
+                    </div>
+                </img>
+                </a>
+            </div>
+            <div class="grid-item LIFE">
+                <a href="https://jsd.cdn.noisework.cn/gh/rcy1314/my-photo@master/20230126/DSC00130-1.5zg4hfplwc00.jpg" data-fancybox="gallery" title="" />
+                <img
+                    src="https://jsd.cdn.noisework.cn/gh/rcy1314/my-photo@master/20230126/DSC00130-1.5zg4hfplwc00.jpg">
+                <div class="item-info" >
+                    <div class="title"
+                        style="color: #fff;position: absolute;left: 0;top: 0;width: 100%;height: 100%;display: flex;align-items: center;justify-content: center">
+                        夜灯渐入朦胧</div>
+                    </div>
+                </img>
+                </a>
+            </div>
+            <div class="grid-item LIFE">
+                <a href="https://jsd.cdn.noisework.cn/gh/rcy1314/my-photo@master/20230126/IMG_0274.1klj5n0m5ji8.jpg" data-fancybox="gallery" title="" />
+                <img
+                    src="https://jsd.cdn.noisework.cn/gh/rcy1314/my-photo@master/20230126/IMG_0274.1klj5n0m5ji8.jpg">
+                <div class="item-info" >
+                    <div class="title"
+                        style="color: #fff;position: absolute;left: 0;top: 0;width: 100%;height: 100%;display: flex;align-items: center;justify-content: center">
+                        24-70 F4</div>
+                    </div>
+                </img>
+                </a>
+            </div>
+            <div class="grid-item LIFE">
+                <a href="https://jsd.cdn.noisework.cn/gh/rcy1314/my-photo@master/20230126/A7D1AF3D-FFE5-4E45-B622-A5F3C2AA4DD5.58ayu937tv40.jpg" data-fancybox="gallery" title="" />
+                <img
+                    src="https://jsd.cdn.noisework.cn/gh/rcy1314/my-photo@master/20230126/A7D1AF3D-FFE5-4E45-B622-A5F3C2AA4DD5.58ayu937tv40.jpg">
+                <div class="item-info" >
+                    <div class="title"
+                        style="color: #fff;position: absolute;left: 0;top: 0;width: 100%;height: 100%;display: flex;align-items: center;justify-content: center">
+                        傍晚时分</div>
+                    </div>
+                </img>
+                </a>
+            </div>
+            <div class="grid-item LIFE">
+                <a href="https://jsd.cdn.noisework.cn/gh/rcy1314/my-photo@master/20230126/IMG_0128.3a74zeo93de0.jpg" data-fancybox="gallery" title="" />
+                <img
+                    src="https://jsd.cdn.noisework.cn/gh/rcy1314/my-photo@master/20230126/IMG_0128.3a74zeo93de0.jpg">
+                <div class="item-info" >
+                    <div class="title"
+                        style="color: #fff;position: absolute;left: 0;top: 0;width: 100%;height: 100%;display: flex;align-items: center;justify-content: center">
+                        缺少灵感</div>
+                    </div>
+                </img>
+                </a>
+            </div>
+            <div class="grid-item LIFE">
+                <a href="https://jsd.cdn.noisework.cn/gh/rcy1314/my-photo@master/20230126/IMG_0736.ge407akhsww.jpg" data-fancybox="gallery" title="" />
+                <img
+                    src="https://jsd.cdn.noisework.cn/gh/rcy1314/my-photo@master/20230126/IMG_0736.ge407akhsww.jpg">
+                <div class="item-info" >
+                    <div class="title"
+                        style="color: #fff;position: absolute;left: 0;top: 0;width: 100%;height: 100%;display: flex;align-items: center;justify-content: center">
+                        奈斯减光镜</div>
+                    </div>
+                </img>
+                </a>
+            </div>
+            <div class="grid-item LIFE">
+                <a href="https://jsd.cdn.noisework.cn/gh/rcy1314/my-photo@master/20230126/DSC00336-1.5q5xrayeb7o0.jpg" data-fancybox="gallery" title="" />
+                <img
+                    src="https://jsd.cdn.noisework.cn/gh/rcy1314/my-photo@master/20230126/DSC00336-1.5q5xrayeb7o0.jpg">
+                <div class="item-info" >
+                    <div class="title"
+                        style="color: #fff;position: absolute;left: 0;top: 0;width: 100%;height: 100%;display: flex;align-items: center;justify-content: center">
+                        发光面具</div>
+                    </div>
+                </img>
+                </a>
+            </div>
+            <div class="grid-item LIFE">
+                <a href="https://jsd.cdn.noisework.cn/gh/rcy1314/my-photo@master/20230126/IMG_0455(20220913-051806).1p1fr80sddb4.jpg" data-fancybox="gallery" title="" />
+                <img
+                    src="https://jsd.cdn.noisework.cn/gh/rcy1314/my-photo@master/20230126/IMG_0455(20220913-051806).1p1fr80sddb4.jpg">
+                <div class="item-info" >
+                    <div class="title"
+                        style="color: #fff;position: absolute;left: 0;top: 0;width: 100%;height: 100%;display: flex;align-items: center;justify-content: center">
+                        自我</div>
+                    </div>
+                </img>
+                </a>
+            </div>
+            <div class="grid-item LIFE">
+                <a href="https://jsd.cdn.noisework.cn/gh/rcy1314/my-photo@master/20230126/IMG_0755.6roo0cyl70k0.jpg" data-fancybox="gallery" title="" />
+                <img
+                    src="https://jsd.cdn.noisework.cn/gh/rcy1314/my-photo@master/20230126/IMG_0755.6roo0cyl70k0.jpg">
+                <div class="item-info" >
+                    <div class="title"
+                        style="color: #fff;position: absolute;left: 0;top: 0;width: 100%;height: 100%;display: flex;align-items: center;justify-content: center">
+                        雾化电子烟</div>
+                    </div>
+                </img>
+                </a>
+            </div>
+            <div class="grid-item LIFE">
+                <a href="https://jsd.cdn.noisework.cn/gh/rcy1314/my-photo@master/20230126/C96A5FD3-2F56-4967-9965-366DC024658D.7doiiqxov6k0.jpg" data-fancybox="gallery" title="" />
+                <img
+                    src="https://jsd.cdn.noisework.cn/gh/rcy1314/my-photo@master/20230126/C96A5FD3-2F56-4967-9965-366DC024658D.7doiiqxov6k0.jpg">
+                <div class="item-info" >
+                    <div class="title"
+                        style="color: #fff;position: absolute;left: 0;top: 0;width: 100%;height: 100%;display: flex;align-items: center;justify-content: center">
+                        摆件</div>
+                    </div>
+                </img>
+                </a>
+            </div>
+            <div class="grid-item LIFE">
+                <a href="https://jsd.cdn.noisework.cn/gh/rcy1314/my-photo@master/20230126/IMG_03293th423oin0a0.2x1fets85aw0.jpg" data-fancybox="gallery" title="" />
+                <img
+                    src="https://jsd.cdn.noisework.cn/gh/rcy1314/my-photo@master/20230126/IMG_03293th423oin0a0.2x1fets85aw0.jpg">
+                <div class="item-info" >
+                    <div class="title"
+                        style="color: #fff;position: absolute;left: 0;top: 0;width: 100%;height: 100%;display: flex;align-items: center;justify-content: center">
+                        猫猫摆件</div>
+                    </div>
+                </img>
+                </a>
+            </div>
+            <div class="grid-item LIFE">
+                <a href="https://jsd.cdn.noisework.cn/gh/rcy1314/my-photo@master/20230126/IMG_0445.56sbj2ab9ao0.jpg" data-fancybox="gallery" title="" />
+                <img
+                    src="https://jsd.cdn.noisework.cn/gh/rcy1314/my-photo@master/20230126/IMG_0445.56sbj2ab9ao0.jpg">
+                <div class="item-info" >
+                    <div class="title"
+                        style="color: #fff;position: absolute;left: 0;top: 0;width: 100%;height: 100%;display: flex;align-items: center;justify-content: center">
+                        后视镜</div>
+                    </div>
+                </img>
+                </a>
+            </div>
+            <div class="grid-item LIFE">
+                <a href="https://jsd.cdn.noisework.cn/gh/rcy1314/my-photo@master/20230126/C234ECC2-6514-4F03-8B34-DA07D77218CA.4a70u1zzbrw0.jpg" data-fancybox="gallery" title="" />
+                <img
+                    src="https://jsd.cdn.noisework.cn/gh/rcy1314/my-photo@master/20230126/C234ECC2-6514-4F03-8B34-DA07D77218CA.4a70u1zzbrw0.jpg">
+                <div class="item-info" >
+                    <div class="title"
+                        style="color: #fff;position: absolute;left: 0;top: 0;width: 100%;height: 100%;display: flex;align-items: center;justify-content: center">
+                        公交车</div>
+                    </div>
+                </img>
+                </a>
+            </div>
+            <div class="grid-item LIFE">
+                <a href="https://jsd.cdn.noisework.cn/gh/rcy1314/my-photo@master/20230126/IMG_0179.260pa2b7suzk.jpg" data-fancybox="gallery" title="" />
+                <img
+                    src="https://jsd.cdn.noisework.cn/gh/rcy1314/my-photo@master/20230126/IMG_0179.260pa2b7suzk.jpg">
+                <div class="item-info" >
+                    <div class="title"
+                        style="color: #fff;position: absolute;left: 0;top: 0;width: 100%;height: 100%;display: flex;align-items: center;justify-content: center">
+                        地铁一角</div>
+                    </div>
+                </img>
+                </a>
+
+
+
+                
+            </div>
+            <div class="grid-item LIFE">
+                <a href="https://jsd.cdn.noisework.cn/gh/rcy1314/my-photo@master/20230126/03E3927D-B04B-4F69-BEE2-DEE1611C73C2_压缩后.5s41l5suyuo0.jpg" data-fancybox="gallery" title="" />
+                <img
+                    src="https://jsd.cdn.noisework.cn/gh/rcy1314/my-photo@master/20230126/03E3927D-B04B-4F69-BEE2-DEE1611C73C2_压缩后.5s41l5suyuo0.jpg">
+                <div class="item-info" >
+                    <div class="title"
+                        style="color: #fff;position: absolute;left: 0;top: 0;width: 100%;height: 100%;display: flex;align-items: center;justify-content: center">
+                        火车站候车</div>
+                    </div>
+                </img>
+                </a>
+            </div>
+            <div class="grid-item LIFE">
+                <a href="https://jsd.cdn.noisework.cn/gh/rcy1314/my-photo@master/20230127/IMG_1552.egat6ab1jkg.jpg" data-fancybox="gallery" title="" />
+                <img
+                    src="https://jsd.cdn.noisework.cn/gh/rcy1314/my-photo@master/20230127/IMG_1552.egat6ab1jkg.jpg">
+                <div class="item-info" >
+                    <div class="title"
+                        style="color: #fff;position: absolute;left: 0;top: 0;width: 100%;height: 100%;display: flex;align-items: center;justify-content: center">
+                        分岔路</div>
+                    </div>
+                </img>
+                </a>
+            </div>
+            <div class="grid-item LIFE">
+                <a href="https://jsd.cdn.noisework.cn/gh/rcy1314/my-photo@master/20230126/4B6723BE-700D-4EAE-B7DC-72599EEBE142_压缩后.14gleh6zsu1s.jpg" data-fancybox="gallery" title="" />
+                <img
+                    src="https://jsd.cdn.noisework.cn/gh/rcy1314/my-photo@master/20230126/4B6723BE-700D-4EAE-B7DC-72599EEBE142_压缩后.14gleh6zsu1s.jpg">
+                <div class="item-info" >
+                    <div class="title"
+                        style="color: #fff;position: absolute;left: 0;top: 0;width: 100%;height: 100%;display: flex;align-items: center;justify-content: center">
+                        留念</div>
+                    </div>
+                </img>
+                </a>
+            </div>
+            <div class="grid-item LIFE">
+                <a href="https://jsd.cdn.noisework.cn/gh/rcy1314/my-photo@master/20230126/2C2B41D0-A104-447E-8286-84AB4DA5C310_压缩后.2tq9tuqk67a.jpg" data-fancybox="gallery" title="" />
+                <img
+                    src="https://jsd.cdn.noisework.cn/gh/rcy1314/my-photo@master/20230126/2C2B41D0-A104-447E-8286-84AB4DA5C310_压缩后.2tq9tuqk67a.jpg">
+                <div class="item-info" >
+                    <div class="title"
+                        style="color: #fff;position: absolute;left: 0;top: 0;width: 100%;height: 100%;display: flex;align-items: center;justify-content: center">
+                        舟山小店留言墙</div>
+                    </div>
+                </img>
+                </a>
+            </div>
+            <div class="grid-item LIFE">
+                <a href="https://jsd.cdn.noisework.cn/gh/rcy1314/my-photo@master/20230126/EB851506-46BB-44D8-B1DF-6BAE38ECA262.191teyrx4gio.jpg" data-fancybox="gallery" title="" />
+                <img
+                    src="https://jsd.cdn.noisework.cn/gh/rcy1314/my-photo@master/20230126/EB851506-46BB-44D8-B1DF-6BAE38ECA262.191teyrx4gio.jpg">
+                <div class="item-info" >
+                    <div class="title"
+                        style="color: #fff;position: absolute;left: 0;top: 0;width: 100%;height: 100%;display: flex;align-items: center;justify-content: center">
+                        组装台式</div>
+                    </div>
+                </img>
+                </a>
+            </div>
+            <div class="grid-item LIFE">
+                <a href="https://jsd.cdn.noisework.cn/gh/rcy1314/my-photo@master/20230126/0EED2478-D5F3-41C8-B696-DBC412AB6DCE.4whp9gzzgf80.jpg" data-fancybox="gallery" title="" />
+                <img
+                    src="https://jsd.cdn.noisework.cn/gh/rcy1314/my-photo@master/20230126/0EED2478-D5F3-41C8-B696-DBC412AB6DCE.4whp9gzzgf80.jpg">
+                <div class="item-info" >
+                    <div class="title"
+                        style="color: #fff;position: absolute;left: 0;top: 0;width: 100%;height: 100%;display: flex;align-items: center;justify-content: center">
+                        宁波静吧一角</div>
+                    </div>
+                </img>
+                </a>
+            </div>
+            <div class="grid-item LIFE">
+                <a href="https://jsd.cdn.noisework.cn/gh/rcy1314/my-photo@master/20230126/8EF24EC4-1425-4D45-A60E-23722B578AFC.7gpt54jdeps0.jpg" data-fancybox="gallery" title="" />
+                <img
+                    src="https://jsd.cdn.noisework.cn/gh/rcy1314/my-photo@master/20230126/8EF24EC4-1425-4D45-A60E-23722B578AFC.7gpt54jdeps0.jpg">
+                <div class="item-info" >
+                    <div class="title"
+                        style="color: #fff;position: absolute;left: 0;top: 0;width: 100%;height: 100%;display: flex;align-items: center;justify-content: center">
+                        喜欢的摆件</div>
+                    </div>
+                </img>
+                </a>
+            </div>
+            <div class="grid-item LIFE">
+                <a href="https://jsd.cdn.noisework.cn/gh/rcy1314/my-photo@master/20230126/461E4277-C43A-442F-8E33-2C04F7BAC626.6fzxhly9spg0.jpg" data-fancybox="gallery" title="" />
+                <img
+                    src="https://jsd.cdn.noisework.cn/gh/rcy1314/my-photo@master/20230126/461E4277-C43A-442F-8E33-2C04F7BAC626.6fzxhly9spg0.jpg">
+                <div class="item-info" >
+                    <div class="title"
+                        style="color: #fff;position: absolute;left: 0;top: 0;width: 100%;height: 100%;display: flex;align-items: center;justify-content: center">
+                        DDJ</div>
+                    </div>
+                </img>
+                </a>
+            </div>
+            <div class="grid-item LIFE">
+                <a href="https://jsd.cdn.noisework.cn/gh/rcy1314/my-photo@master/20230126/IMG_1539(20230126-234745).3jmjku2aeqe0.jpg" data-fancybox="gallery" title="" />
+                <img
+                    src="https://jsd.cdn.noisework.cn/gh/rcy1314/my-photo@master/20230126/IMG_1539(20230126-234745).3jmjku2aeqe0.jpg">
+                <div class="item-info" >
+                    <div class="title"
+                        style="color: #fff;position: absolute;left: 0;top: 0;width: 100%;height: 100%;display: flex;align-items: center;justify-content: center">
+                       雪地修狗</div>
+                    </div>
+                </img>
+                </a>
+            </div>
+            <div class="grid-item LIFE">
+                <a href="https://jsd.cdn.noisework.cn/gh/rcy1314/my-photo@master/20230126/IMG_1550.4k77d20f8tg0.jpg" data-fancybox="gallery" title="" />
+                <img
+                    src="https://jsd.cdn.noisework.cn/gh/rcy1314/my-photo@master/20230126/IMG_1550.4k77d20f8tg0.jpg">
+                <div class="item-info" >
+                    <div class="title"
+                        style="color: #fff;position: absolute;left: 0;top: 0;width: 100%;height: 100%;display: flex;align-items: center;justify-content: center">
+                       高速行驶</div>
+                    </div>
+                </img>
+                </a>
+            </div>
+            <div class="grid-item LIFE">
+                <a href="https://jsd.cdn.noisework.cn/gh/rcy1314/my-photo@master/20230127/F8806C07-0CFE-4B3D-BFC3-FC8C66E64522(20191102-205.6nmckv8dw140.jpg" data-fancybox="gallery" title="" />
+                <img
+                    src="https://jsd.cdn.noisework.cn/gh/rcy1314/my-photo@master/20230127/F8806C07-0CFE-4B3D-BFC3-FC8C66E64522(20191102-205.6nmckv8dw140.jpg">
+                <div class="item-info" >
+                    <div class="title"
+                        style="color: #fff;position: absolute;left: 0;top: 0;width: 100%;height: 100%;display: flex;align-items: center;justify-content: center">
+                       马里奥摆件</div>
+                    </div>
+                </img>
+                </a>
+            </div>
+            <div class="grid-item LIFE">
+                <a href="https://jsd.cdn.noisework.cn/gh/rcy1314/my-photo@master/20230127/IMG_1554(20220904-005859).3vrq2ciac1g0.jpg" data-fancybox="gallery" title="" />
+                <img
+                    src="https://jsd.cdn.noisework.cn/gh/rcy1314/my-photo@master/20230127/IMG_1554(20220904-005859).3vrq2ciac1g0.jpg">
+                <div class="item-info" >
+                    <div class="title"
+                        style="color: #fff;position: absolute;left: 0;top: 0;width: 100%;height: 100%;display: flex;align-items: center;justify-content: center">
+                       一摊</div>
+                    </div>
+                </img>
+                </a>
+            </div>
+            <!-- 分割-->
+            <div class="grid-item SCENE">
+                <a href="https://jsd.cdn.noisework.cn/gh/rcy1314/my-photo@master/20230126/DSC00322.3x70utfo5qg0.jpg" data-fancybox="gallery" title="" />
+                <img
+                    src="https://jsd.cdn.noisework.cn/gh/rcy1314/my-photo@master/20230126/DSC00322.3x70utfo5qg0.jpg">
+                <div class="item-info" >
+                    <div class="title"
+                        style="color: #fff;position: absolute;left: 0;top: 0;width: 100%;height: 100%;display: flex;align-items: center;justify-content: center">
+                        青岛一见</div>
+                    </div>
+                </img>
+                </a>
+            </div>
+            <div class="grid-item SCENE">
+                <a href="https://jsd.cdn.noisework.cn/gh/rcy1314/my-photo@master/20230126/DSC00135-1.3aebqw1hfes0.jpg" data-fancybox="gallery" title="" />
+                <img
+                    src="https://jsd.cdn.noisework.cn/gh/rcy1314/my-photo@master/20230126/DSC00135-1.3aebqw1hfes0.jpg">
+                <div class="item-info" >
+                    <div class="title"
+                        style="color: #fff;position: absolute;left: 0;top: 0;width: 100%;height: 100%;display: flex;align-items: center;justify-content: center">
+                        雾天成都</div>
+                    </div>
+                </img>
+                </a>
+            </div>
+            <div class="grid-item SCENE">
+                <a href="https://jsd.cdn.noisework.cn/gh/rcy1314/my-photo@master/20230126/3163EABE-CB76-47CE-980E-267593D6C19A(20200625-175.1zm3kyu1meps.jpg" data-fancybox="gallery" title="" />
+                <img
+                    src="https://jsd.cdn.noisework.cn/gh/rcy1314/my-photo@master/20230126/3163EABE-CB76-47CE-980E-267593D6C19A(20200625-175.1zm3kyu1meps.jpg">
+                <div class="item-info" >
+                    <div class="title"
+                        style="color: #fff;position: absolute;left: 0;top: 0;width: 100%;height: 100%;display: flex;align-items: center;justify-content: center">
+                        海边夕阳</div>
+                    </div>
+                </img>
+                </a>
+            </div>
+            <div class="grid-item SCENE">
+                <a href="https://jsd.cdn.noisework.cn/gh/rcy1314/my-photo@master/20230126/590CBBC1-3961-439A-ABDB-2AF9BA2.79x83i2pzj80.jpg" data-fancybox="gallery" title="" />
+                <img
+                    src="https://jsd.cdn.noisework.cn/gh/rcy1314/my-photo@master/20230126/590CBBC1-3961-439A-ABDB-2AF9BA2.79x83i2pzj80.jpg">
+                <div class="item-info" >
+                    <div class="title"
+                        style="color: #fff;position: absolute;left: 0;top: 0;width: 100%;height: 100%;display: flex;align-items: center;justify-content: center">
+                        青岛的海水</div>
+                    </div>
+                </img>
+                </a>
+            </div>
+            <div class="grid-item SCENE">
+                <a href="https://jsd.cdn.noisework.cn/gh/rcy1314/my-photo@master/20230126/DSC00246.5m7yameom8g0.jpg" data-fancybox="gallery" title="" />
+                <img
+                    src="https://jsd.cdn.noisework.cn/gh/rcy1314/my-photo@master/20230126/DSC00246.5m7yameom8g0.jpg">
+                <div class="item-info" >
+                    <div class="title"
+                        style="color: #fff;position: absolute;left: 0;top: 0;width: 100%;height: 100%;display: flex;align-items: center;justify-content: center">
+                        清晨</div>
+                    </div>
+                </img>
+                </a>
+            </div>
+            <div class="grid-item SCENE">
+                <a href="https://jsd.cdn.noisework.cn/gh/rcy1314/my-photo@master/20230126/IMG_0776.3zoq2xnr40a0.jpg" data-fancybox="gallery" title="" />
+                <img
+                    src="https://jsd.cdn.noisework.cn/gh/rcy1314/my-photo@master/20230126/IMG_0776.3zoq2xnr40a0.jpg">
+                <div class="item-info" >
+                    <div class="title"
+                        style="color: #fff;position: absolute;left: 0;top: 0;width: 100%;height: 100%;display: flex;align-items: center;justify-content: center">
+                        宝殿</div>
+                </div>
+                </img>
+                </a>
+            </div>
+            <div class="grid-item SCENE">
+                <a href="https://jsd.cdn.noisework.cn/gh/rcy1314/my-photo@master/20230126/1369649F-7F37-4C37-BAB8-B4E2EC5FAFB7(20200625-175.g4usx8wi40o.jpg" data-fancybox="gallery" title="" />
+                <img
+                    src="https://jsd.cdn.noisework.cn/gh/rcy1314/my-photo@master/20230126/1369649F-7F37-4C37-BAB8-B4E2EC5FAFB7(20200625-175.g4usx8wi40o.jpg">
+                <div class="item-info" >
+                    <div class="title"
+                        style="color: #fff;position: absolute;left: 0;top: 0;width: 100%;height: 100%;display: flex;align-items: center;justify-content: center">
+                        角边</div>
+                </div>
+                </img>
+                </a>
+            </div>
+            <div class="grid-item SCENE">
+                <a href="https://jsd.cdn.noisework.cn/gh/rcy1314/my-photo@master/20230126/IMG_1566(20220901-000347).6mh3cjrzvao0.jpg" data-fancybox="gallery" title="" />
+                <img
+                    src="https://jsd.cdn.noisework.cn/gh/rcy1314/my-photo@master/20230126/IMG_1566(20220901-000347).6mh3cjrzvao0.jpg">
+                <div class="item-info" >
+                    <div class="title"
+                        style="color: #fff;position: absolute;left: 0;top: 0;width: 100%;height: 100%;display: flex;align-items: center;justify-content: center">
+                        成都宽窄巷子</div>
+                </div>
+                </img>
+                </a>
+            </div>
+            <div class="grid-item SCENE">
+                <a href="https://jsd.cdn.noisework.cn/gh/rcy1314/my-photo@master/20230126/4ED630AB-E709-4461-9FEE-B89F6D8D59CE(20200107-173.36pznx9vr820.jpg" data-fancybox="gallery" title="" />
+                <img
+                    src="https://jsd.cdn.noisework.cn/gh/rcy1314/my-photo@master/20230126/4ED630AB-E709-4461-9FEE-B89F6D8D59CE(20200107-173.36pznx9vr820.jpg">
+                <div class="item-info" >
+                    <div class="title"
+                        style="color: #fff;position: absolute;left: 0;top: 0;width: 100%;height: 100%;display: flex;align-items: center;justify-content: center">
+                        小吃街</div>
+                    </div>
+                </img>
+                </a>
+            </div>
+            <div class="grid-item SCENE">
+                <a href="https://jsd.cdn.noisework.cn/gh/rcy1314/my-photo@master/20230126/IMG_0687.6itxsw92ucc0.jpg" data-fancybox="gallery" title="" />
+                <img
+                    src="https://jsd.cdn.noisework.cn/gh/rcy1314/my-photo@master/20230126/IMG_0687.6itxsw92ucc0.jpg">
+                <div class="item-info" >
+                    <div class="title"
+                        style="color: #fff;position: absolute;left: 0;top: 0;width: 100%;height: 100%;display: flex;align-items: center;justify-content: center">
+                        桥边一角</div>
+                    </div>
+                </img>
+                </a>
+            </div>
+            <div class="grid-item SCENE">
+                <a href="https://jsd.cdn.noisework.cn/gh/rcy1314/my-photo@master/20230126/IMG_1559(20220903-235617).2n720s19u120.jpg" data-fancybox="gallery" title="" />
+                <img
+                    src="https://jsd.cdn.noisework.cn/gh/rcy1314/my-photo@master/20230126/IMG_1559(20220903-235617).2n720s19u120.jpg">
+                <div class="item-info" >
+                    <div class="title"
+                        style="color: #fff;position: absolute;left: 0;top: 0;width: 100%;height: 100%;display: flex;align-items: center;justify-content: center">
+                        面朝青岛</div>
+                    </div>
+                </img>
+                </a>
+            </div>
+            <div class="grid-item SCENE">
+                <a href="https://jsd.cdn.noisework.cn/gh/rcy1314/my-photo@master/20230126/IMG_1563(20220901-015934).4p7oszrgr120.jpg" data-fancybox="gallery" title="" />
+                <img
+                    src="https://jsd.cdn.noisework.cn/gh/rcy1314/my-photo@master/20230126/IMG_1563(20220901-015934).4p7oszrgr120.jpg">
+                <div class="item-info" >
+                    <div class="title"
+                        style="color: #fff;position: absolute;left: 0;top: 0;width: 100%;height: 100%;display: flex;align-items: center;justify-content: center">
+                        海风吹拂</div>
+                    </div>
+                </img>
+                </a>
+            </div>
+            <div class="grid-item SCENE">
+                <a href="https://jsd.cdn.noisework.cn/gh/rcy1314/my-photo@master/20230126/IMG_1555.1syxhuw1lhvk.jpg" data-fancybox="gallery" title="" />
+                <img
+                    src="https://jsd.cdn.noisework.cn/gh/rcy1314/my-photo@master/20230126/IMG_1555.1syxhuw1lhvk.jpg">
+                <div class="item-info" >
+                    <div class="title"
+                        style="color: #fff;position: absolute;left: 0;top: 0;width: 100%;height: 100%;display: flex;align-items: center;justify-content: center">
+                        杭州面罩摆件</div>
+                    </div>
+                </img>
+                </a>
+            </div>
+            <div class="grid-item SCENE">
+                <a href="https://jsd.cdn.noisework.cn/gh/rcy1314/my-photo@master/20230126/IMG_1551.iwsoevt12i8.jpg" data-fancybox="gallery" title="" />
+                <img
+                    src="https://jsd.cdn.noisework.cn/gh/rcy1314/my-photo@master/20230126/IMG_1551.iwsoevt12i8.jpg">
+                <div class="item-info" >
+                    <div class="title"
+                        style="color: #fff;position: absolute;left: 0;top: 0;width: 100%;height: 100%;display: flex;align-items: center;justify-content: center">
+                        荷花未开</div>
+                    </div>
+                </img>
+                </a>
+            </div>
+            <div class="grid-item SCENE">
+                <a href="https://jsd.cdn.noisework.cn/gh/rcy1314/my-photo@master/20230126/IMG_1553.5nr6vgtxrhs0.jpg" data-fancybox="gallery" title="" />
+                <img
+                    src="https://jsd.cdn.noisework.cn/gh/rcy1314/my-photo@master/20230126/IMG_1553.5nr6vgtxrhs0.jpg">
+                <div class="item-info" >
+                    <div class="title"
+                        style="color: #fff;position: absolute;left: 0;top: 0;width: 100%;height: 100%;display: flex;align-items: center;justify-content: center">
+                        西溪湿地</div>
+                    </div>
+                </img>
+                </a>
+            </div>
+           <!-- 分割-->
+            
+            <div class="grid-item FOOD">
+                <a href="https://s3.bmp.ovh/imgs/2022/06/02/e3b792f0a088e22d.jpeg" data-fancybox="gallery" title="" />
+                <img
+                    src="https://s3.bmp.ovh/imgs/2022/06/02/e3b792f0a088e22d.jpeg">
+                <div class="item-info" >
+                    <div class="title"
+                        style="color: #fff;position: absolute;left: 0;top: 0;width: 100%;height: 100%;display: flex;align-items: center;justify-content: center">
+                        麦 旋 风🍦</div>
+                    </div>
+                </img>
+                </a>
+            </div>
+            <div class="grid-item FOOD">
+                <a href="https://s3.bmp.ovh/imgs/2022/06/02/12b2b9fa14b6bafb.jpeg" data-fancybox="gallery" title="" />
+                <img
+                    src="https://s3.bmp.ovh/imgs/2022/06/02/12b2b9fa14b6bafb.jpeg">
+                <div class="item-info" >
+                    <div class="title"
+                        style="color: #fff;position: absolute;left: 0;top: 0;width: 100%;height: 100%;display: flex;align-items: center;justify-content: center">
+                        西 冷 牛 排</div>
+                    </div>
+                </img>
+                </a>
+            </div>
+            <div class="grid-item FOOD">
+                <a href="https://s4.ax1x.com/2022/01/03/THIeoQ.jpg" data-fancybox="gallery" title="" />
+                <img
+                    src="https://s4.ax1x.com/2022/01/03/THIeoQ.jpg">
+                <div class="item-info" >
+                    <div class="title"
+                        style="color: #fff;position: absolute;left: 0;top: 0;width: 100%;height: 100%;display: flex;align-items: center;justify-content: center">
+                        I love pizza🍕</div>
+                </div>
+                </img>
+                </a>
+            </div>
+            <div class="grid-item FOOD">
+                <a href="https://s3.bmp.ovh/imgs/2022/06/02/08a77972ab9f960d.jpeg" data-fancybox="gallery" title="" />
+                <img
+                    src="https://s3.bmp.ovh/imgs/2022/06/02/08a77972ab9f960d.jpeg">
+                <div class="item-info" >
+                    <div class="title"
+                        style="color: #fff;position: absolute;left: 0;top: 0;width: 100%;height: 100%;display: flex;align-items: center;justify-content: center">
+                        吮 指 鸡🍗</div>
+                </div>
+                </img>
+                </a>
+            </div>
+             <!-- 分割-->
+            <div class="grid-item night">
+                <a href="https://jsd.cdn.noisework.cn/gh/rcy1314/my-photo@master/20230126/xxx.8oqkny1vrw8.jpg" data-fancybox="gallery" title="" />
+                <img
+                    src="https://jsd.cdn.noisework.cn/gh/rcy1314/my-photo@master/20230126/xxx.8oqkny1vrw8.jpg">
+                <div class="item-info" >
+                    <div class="title"
+                        style="color: #fff;position: absolute;left: 0;top: 0;width: 100%;height: 100%;display: flex;align-items: center;justify-content: center">
+                        杭州凤起路</div>
+                     </div>
+                     </img>
+                     </a>
+                    </div>
+            <div class="grid-item night">
+                <a href="https://jsd.cdn.noisework.cn/gh/rcy1314/my-photo@master/20230126/DSC00091.a9jv9co5gsc.jpg" data-fancybox="gallery" title="" />
+                <img
+                    src="https://jsd.cdn.noisework.cn/gh/rcy1314/my-photo@master/20230126/DSC00091.a9jv9co5gsc.jpg">
+                <div class="item-info" >
+                    <div class="title"
+                         style="color: #fff;position: absolute;left: 0;top: 0;width: 100%;height: 100%;display: flex;align-items: center;justify-content: center">
+                        杭州凤起路</div>
+                    </div>
+                   </img>
+                    </a>
+                    </div>
+                    <div class="grid-item night">
+                        <a href="https://jsd.cdn.noisework.cn/gh/rcy1314/my-photo@master/20230126/DSC00243-1.5wd5lp6lemw0.jpg" data-fancybox="gallery" title="" />
+                        <img
+                            src="https://jsd.cdn.noisework.cn/gh/rcy1314/my-photo@master/20230126/DSC00243-1.5wd5lp6lemw0.jpg">
+                        <div class="item-info" >
+                            <div class="title"
+                                 style="color: #fff;position: absolute;left: 0;top: 0;width: 100%;height: 100%;display: flex;align-items: center;justify-content: center">
+                                入夜青岛</div>
+                            </div>
+                            </img>
+                            </a>
+                            </div>
+                            <div class="grid-item night">
+                                <a href="https://jsd.cdn.noisework.cn/gh/rcy1314/my-photo@master/20230126/DSC00079.4wtbjdimkj60.jpg" data-fancybox="gallery" title="" />
+                                <img
+                                    src="https://jsd.cdn.noisework.cn/gh/rcy1314/my-photo@master/20230126/DSC00079.4wtbjdimkj60.jpg">
+                                <div class="item-info" >
+                                    <div class="title"
+                                        style="color: #fff;position: absolute;left: 0;top: 0;width: 100%;height: 100%;display: flex;align-items: center;justify-content: center">
+                                        西湖夜景</div>
+                                     </div>
+                                     </img>
+                                     </a>
+                                    </div>
+                     <div class="grid-item night">
+                                <a href="https://jsd.cdn.noisework.cn/gh/rcy1314/my-photo@master/20230126/DSC00096.6kiovv4dd180.jpg" data-fancybox="gallery" title="" />
+                                <img
+                                    src="https://jsd.cdn.noisework.cn/gh/rcy1314/my-photo@master/20230126/DSC00096.6kiovv4dd180.jpg">
+                                <div class="item-info" >
+                                    <div class="title"
+                                        style="color: #fff;position: absolute;left: 0;top: 0;width: 100%;height: 100%;display: flex;align-items: center;justify-content: center">
+                                        杭州庆春路</div>
+                                     </div>
+                                     </img>
+                                     </a>
+                                    </div> 
+                     <div class="grid-item night">
+                                <a href="https://jsd.cdn.noisework.cn/gh/rcy1314/my-photo@master/20230126/DSC00120-2.fo0nq3j1quw.jpg" data-fancybox="gallery" title="" />
+                                <img
+                                    src="https://jsd.cdn.noisework.cn/gh/rcy1314/my-photo@master/20230126/DSC00120-2.fo0nq3j1quw.jpg">
+                                <div class="item-info" >
+                                    <div class="title"
+                                        style="color: #fff;position: absolute;left: 0;top: 0;width: 100%;height: 100%;display: flex;align-items: center;justify-content: center">
+                                        入夜成都</div>
+                                     </div>
+                                     </img>
+                                     </a>
+                                    </div>  
+                    <div class="grid-item night">
+                                <a href="https://jsd.cdn.noisework.cn/gh/rcy1314/my-photo@master/20230126/DSC00330.3fkboy8p4h80.jpg" data-fancybox="gallery" title="" />
+                                <img
+                                    src="https://jsd.cdn.noisework.cn/gh/rcy1314/my-photo@master/20230126/DSC00330.3fkboy8p4h80.jpg">
+                                <div class="item-info" >
+                                    <div class="title"
+                                        style="color: #fff;position: absolute;left: 0;top: 0;width: 100%;height: 100%;display: flex;align-items: center;justify-content: center">
+                                        青岛火车站夜景</div>
+                                     </div>
+                                     </img>
+                                     </a>
+                                    </div>  
+                     <div class="grid-item night">
+                                <a href="https://jsd.cdn.noisework.cn/gh/rcy1314/my-photo@master/20230126/IMG_0559.7h8imwhonqw0.jpg" data-fancybox="gallery" title="" />
+                                <img
+                                    src="https://jsd.cdn.noisework.cn/gh/rcy1314/my-photo@master/20230126/IMG_0559.7h8imwhonqw0.jpg">
+                                <div class="item-info" >
+                                    <div class="title"
+                                        style="color: #fff;position: absolute;left: 0;top: 0;width: 100%;height: 100%;display: flex;align-items: center;justify-content: center">
+                                        深夜指示牌</div>
+                                     </div>
+                                     </img>
+                                     </a>
+                                    </div> 
+                    <div class="grid-item night">
+                                <a href="https://jsd.cdn.noisework.cn/gh/rcy1314/my-photo@master/20230126/7F594E51-A7DF-445B-B6D5-F1B5883E80E3.xgtldczchfk.jpg" data-fancybox="gallery" title="" />
+                                <img
+                                    src="https://jsd.cdn.noisework.cn/gh/rcy1314/my-photo@master/20230126/7F594E51-A7DF-445B-B6D5-F1B5883E80E3.xgtldczchfk.jpg">
+                                <div class="item-info" >
+                                    <div class="title"
+                                        style="color: #fff;position: absolute;left: 0;top: 0;width: 100%;height: 100%;display: flex;align-items: center;justify-content: center">
+                                        苏州古城一角</div>
+                                     </div>
+                                     </img>
+                                     </a>
+                                    </div> 
+                    <div class="grid-item night">
+                                <a href="https://jsd.cdn.noisework.cn/gh/rcy1314/my-photo@master/20230126/IMG_1558.193al3trizq8.jpg" data-fancybox="gallery" title="" />
+                                <img
+                                    src="https://jsd.cdn.noisework.cn/gh/rcy1314/my-photo@master/20230126/IMG_1558.193al3trizq8.jpg">
+                                <div class="item-info" >
+                                    <div class="title"
+                                        style="color: #fff;position: absolute;left: 0;top: 0;width: 100%;height: 100%;display: flex;align-items: center;justify-content: center">
+                                        苏州桥边酒吧</div>
+                                     </div>
+                                     </img>
+                                     </a>
+                                    </div> 
+                    <div class="grid-item night">
+                                <a href="https://jsd.cdn.noisework.cn/gh/rcy1314/my-photo@master/20230126/IMG_1548(20220729-223102).3h1ldlxl30g0.jpg" data-fancybox="gallery" title="" />
+                                <img
+                                    src="https://jsd.cdn.noisework.cn/gh/rcy1314/my-photo@master/20230126/IMG_1548(20220729-223102).3h1ldlxl30g0.jpg">
+                                <div class="item-info" >
+                                    <div class="title"
+                                        style="color: #fff;position: absolute;left: 0;top: 0;width: 100%;height: 100%;display: flex;align-items: center;justify-content: center">
+                                        入夜青岛</div>
+                                     </div>
+                                     </img>
+                                     </a>
+                                    </div>
+                 <!-- 分割-->
+                 <div class="grid-item ME">
+                    <a href="https://jsd.cdn.noisework.cn/gh/rcy1314/my-photo@master/20230126/1FD38CAE-2B1E-4E4D-962C-A1EA2329A16F(20210506-061.6kiziox6a280.jpg" data-fancybox="gallery" title="" />
+                    <img
+                        src="https://jsd.cdn.noisework.cn/gh/rcy1314/my-photo@master/20230126/1FD38CAE-2B1E-4E4D-962C-A1EA2329A16F(20210506-061.6kiziox6a280.jpg">
+                    <div class="item-info" >
+                        <div class="title"
+                            style="color: #fff;position: absolute;left: 0;top: 0;width: 100%;height: 100%;display: flex;align-items: center;justify-content: center">
+                            2018</div>
+                         </div>
+                         </img>
+                         </a>
+                        </div>
+                 <div class="grid-item ME">
+                    <a href="https://jsd.cdn.noisework.cn/gh/rcy1314/my-photo@master/20230126/IMG_0424(20220913-051806).5zw2q5fawf00.jpg" data-fancybox="gallery" title="" />
+                    <img
+                        src="https://jsd.cdn.noisework.cn/gh/rcy1314/my-photo@master/20230126/IMG_0424(20220913-051806).5zw2q5fawf00.jpg">
+                    <div class="item-info" >
+                        <div class="title"
+                            style="color: #fff;position: absolute;left: 0;top: 0;width: 100%;height: 100%;display: flex;align-items: center;justify-content: center">
+                            2019</div>
+                         </div>
+                         </img>
+                         </a>
+                        </div>
+                <div class="grid-item ME">
+                    <a href="https://jsd.cdn.noisework.cn/gh/rcy1314/my-photo@master/20230126/IMG_0560(20220913-051806).7ipory8fqn00.jpg" data-fancybox="gallery" title="" />
+                    <img
+                        src="https://jsd.cdn.noisework.cn/gh/rcy1314/my-photo@master/20230126/IMG_0560(20220913-051806).7ipory8fqn00.jpg">
+                    <div class="item-info" >
+                        <div class="title"
+                            style="color: #fff;position: absolute;left: 0;top: 0;width: 100%;height: 100%;display: flex;align-items: center;justify-content: center">
+                            加班途中</div>
+                         </div>
+                         </img>
+                         </a>
+                        </div>
+                <div class="grid-item ME">
+                    <a href="https://jsd.cdn.noisework.cn/gh/rcy1314/my-photo@master/20230126/F7B5294B-8FF6-4367-9597-20280C3DD9D9.1xcrnn84s734.jpg" data-fancybox="gallery" title="" />
+                    <img
+                        src="https://jsd.cdn.noisework.cn/gh/rcy1314/my-photo@master/20230126/F7B5294B-8FF6-4367-9597-20280C3DD9D9.1xcrnn84s734.jpg">
+                    <div class="item-info" >
+                        <div class="title"
+                            style="color: #fff;position: absolute;left: 0;top: 0;width: 100%;height: 100%;display: flex;align-items: center;justify-content: center">
+                            海边一见</div>
+                         </div>
+                         </img>
+                         </a>
+                        </div>
+                <div class="grid-item ME">
+                    <a href="https://jsd.cdn.noisework.cn/gh/rcy1314/my-photo@master/20230126/IMG_0701(20220922-025520).3hxshv6pn3i0.jpg" data-fancybox="gallery" title="" />
+                    <img
+                        src="https://jsd.cdn.noisework.cn/gh/rcy1314/my-photo@master/20230126/IMG_0701(20220922-025520).3hxshv6pn3i0.jpg">
+                    <div class="item-info" >
+                        <div class="title"
+                            style="color: #fff;position: absolute;left: 0;top: 0;width: 100%;height: 100%;display: flex;align-items: center;justify-content: center">
+                            又见</div>
+                         </div>
+                         </img>
+                         </a>
+                        </div>
+                <div class="grid-item ME">
+                    <a href="https://jsd.cdn.noisework.cn/gh/rcy1314/my-photo@master/20230126/007E9CC3-5EA2-48C6-8967-34B63DF93694(20190412-034.7i85thj74eo0.jpg" data-fancybox="gallery" title="" />
+                    <img
+                        src="https://jsd.cdn.noisework.cn/gh/rcy1314/my-photo@master/20230126/007E9CC3-5EA2-48C6-8967-34B63DF93694(20190412-034.7i85thj74eo0.jpg">
+                    <div class="item-info" >
+                        <div class="title"
+                            style="color: #fff;position: absolute;left: 0;top: 0;width: 100%;height: 100%;display: flex;align-items: center;justify-content: center">
+                            刻刻</div>
+                         </div>
+                         </img>
+                         </a>
+                        </div>
+                <div class="grid-item ME">
+                    <a href="https://jsd.cdn.noisework.cn/gh/rcy1314/my-photo@master/20230126/8441B5CB-AFEC-4C93-9979-E3F681EA9FE7(20220901-015_压缩后.4944od1qtf60.jpg" data-fancybox="gallery" title="" />
+                    <img
+                        src="https://jsd.cdn.noisework.cn/gh/rcy1314/my-photo@master/20230126/8441B5CB-AFEC-4C93-9979-E3F681EA9FE7(20220901-015_压缩后.4944od1qtf60.jpg">
+                    <div class="item-info" >
+                        <div class="title"
+                            style="color: #fff;position: absolute;left: 0;top: 0;width: 100%;height: 100%;display: flex;align-items: center;justify-content: center">
+                            微笑</div>
+                         </div>
+                         </img>
+                         </a>
+                        </div>
+                <div class="grid-item ME">
+                    <a href="https://jsd.cdn.noisework.cn/gh/rcy1314/my-photo@master/20230126/D2770965-E31A-4FED-AF89-ADDEE29025AC.5k0e69nh4lo0.jpg" data-fancybox="gallery" title="" />
+                    <img
+                        src="https://jsd.cdn.noisework.cn/gh/rcy1314/my-photo@master/20230126/D2770965-E31A-4FED-AF89-ADDEE29025AC.5k0e69nh4lo0.jpg">
+                    <div class="item-info" >
+                        <div class="title"
+                            style="color: #fff;position: absolute;left: 0;top: 0;width: 100%;height: 100%;display: flex;align-items: center;justify-content: center">
+                            好傻啊</div>
+                         </div>
+                         </img>
+                         </a>
+                        </div>
+                <div class="grid-item ME">
+                    <a href="https://jsd.cdn.noisework.cn/gh/rcy1314/my-photo@master/20230126/D6458DA1-01C9-4859-87EC-70337F66B0C8(20220916-023.3vp9g426b9o0.jpg" data-fancybox="gallery" title="" />
+                    <img
+                        src="https://jsd.cdn.noisework.cn/gh/rcy1314/my-photo@master/20230126/D6458DA1-01C9-4859-87EC-70337F66B0C8(20220916-023.3vp9g426b9o0.jpg">
+                    <div class="item-info" >
+                        <div class="title"
+                            style="color: #fff;position: absolute;left: 0;top: 0;width: 100%;height: 100%;display: flex;align-items: center;justify-content: center">
+                            憨憨</div>
+                         </div>
+                         </img>
+                         </a>
+                        </div>
+                <div class="grid-item ME">
+                    <a href="https://jsd.cdn.noisework.cn/gh/rcy1314/my-photo@master/20230126/C1A4B13F-ADC5-4315-BFE0-7D59179FC6B0.6uqng04djq00.jpg" data-fancybox="gallery" title="" />
+                    <img
+                        src="https://jsd.cdn.noisework.cn/gh/rcy1314/my-photo@master/20230126/C1A4B13F-ADC5-4315-BFE0-7D59179FC6B0.6uqng04djq00.jpg">
+                    <div class="item-info" >
+                        <div class="title"
+                            style="color: #fff;position: absolute;left: 0;top: 0;width: 100%;height: 100%;display: flex;align-items: center;justify-content: center">
+                            傻狍子</div>
+                         </div>
+                         </img>
+                         </a>
+                        </div>
+                <div class="grid-item ME">
+                    <a href="https://jsd.cdn.noisework.cn/gh/rcy1314/my-photo@master/20230126/IMG_1568.7f3prlykmoo0.jpg" data-fancybox="gallery" title="" />
+                    <img
+                        src="https://jsd.cdn.noisework.cn/gh/rcy1314/my-photo@master/20230126/IMG_1568.7f3prlykmoo0.jpg">
+                    <div class="item-info" >
+                        <div class="title"
+                            style="color: #fff;position: absolute;left: 0;top: 0;width: 100%;height: 100%;display: flex;align-items: center;justify-content: center">
+                            深深</div>
+                         </div>
+                         </img>
+                         </a>
+                        </div>
+                <div class="grid-item ME">
+                    <a href="https://jsd.cdn.noisework.cn/gh/rcy1314/my-photo@master/20230127/48CBBCA5-ADF0-4567-9ED7-A0495607DFF2.4b986her0xu0.jpg" data-fancybox="gallery" title="" />
+                    <img
+                        src="https://jsd.cdn.noisework.cn/gh/rcy1314/my-photo@master/20230127/48CBBCA5-ADF0-4567-9ED7-A0495607DFF2.4b986her0xu0.jpg">
+                    <div class="item-info" >
+                        <div class="title"
+                            style="color: #fff;position: absolute;left: 0;top: 0;width: 100%;height: 100%;display: flex;align-items: center;justify-content: center">
+                            一角</div>
+                         </div>
+                         </img>
+                         </a>
+                        </div>
+                <div class="grid-item ME">
+                    <a href="https://jsd.cdn.noisework.cn/gh/rcy1314/my-photo@master/20230126/IMG_1540(20220731-070430).1bk3wqmehh40.jpg" data-fancybox="gallery" title="" />
+                    <img
+                        src="https://jsd.cdn.noisework.cn/gh/rcy1314/my-photo@master/20230126/IMG_1540(20220731-070430).1bk3wqmehh40.jpg">
+                    <div class="item-info" >
+                        <div class="title"
+                            style="color: #fff;position: absolute;left: 0;top: 0;width: 100%;height: 100%;display: flex;align-items: center;justify-content: center">
+                            多情</div>
+                         </div>
+                         </img>
+                         </a>
+                        </div>
+                <div class="grid-item ME">
+                    <a href="https://jsd.cdn.noisework.cn/gh/rcy1314/my-photo@master/20230127/IMG_0446.5qgv7xxlfss0.jpg" data-fancybox="gallery" title="" />
+                    <img
+                        src="https://jsd.cdn.noisework.cn/gh/rcy1314/my-photo@master/20230127/IMG_0446.5qgv7xxlfss0.jpg">
+                    <div class="item-info" >
+                        <div class="title"
+                            style="color: #fff;position: absolute;left: 0;top: 0;width: 100%;height: 100%;display: flex;align-items: center;justify-content: center">
+                            西溪湿地一角</div>
+                         </div>
+                         </img>
+                         </a>
+                        </div>
+
+        </div>
+     
+
+        <script>
+            var macy = Macy({
+                container: '#grid',
+                trueOrder: false,
+                waitForImages: false,
+                margin: 20,
+                columns: 3,
+                breakAt: {
+                    920: 2,
+                    620: 1
+                }
+            });
+
+            $(document).ready(function () {
+            $(".grid-item a").fancybox();
+            });
+            var changetab = function(type) {
+                var tabs = document.getElementsByClassName('category-current'); 
+                tabs[0].className='categories-single';
+                var nowtab = document.getElementById(type);
+                nowtab.className="categories-single category-current" ;
+                if(type=='ALL'){
+                    var divs = document.getElementsByClassName('grid-item');for(var j=0; j<divs.length; j++){divs[j].style.display='block'}
+                }else{
+                var divs = document.getElementsByClassName('grid-item');for(var j=0; j<divs.length; j++){divs[j].style.display='none'}
+                var nowdivs = document.getElementsByClassName(type);
+                for(var i=0; i<nowdivs.length; i++){
+                    nowdivs[i].style.display="block";
+                }}
+                var myEvent = new Event('resize');
+                window.dispatchEvent(myEvent)
+            }
+        </script>
+    </div>
+    <footer>
+        <div class="copyright" style="text-align:center">
+            Copyright ©2023 <a href="https://noisework.cn/photo" target="_blank">摄影图库</a> All Rights Reserved |
+            Inspired by <a href="https://noisework.cn" target="_blank">NOISE</a></div>
+    </footer>
+    <script type="text/javascript">
+        $(document).ready(function () {
+            $(".fancybox").fancybox();
+            
+        });
+    </script>
+    <script>
+        $(document).ready(function () {
+            $(".grid-item a").fancybox();
+        });
+    </script>
+    <style>
+         a:hover{ cursor:pointer }
+    </style>
+</body>
+
+</html>

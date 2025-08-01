@@ -14,6 +14,12 @@
 
 ![1754074193119](https://s2.loli.net/2025/08/02/NnOJshlFMT3iEoC.png)
 
+## 前后端运行
+
+前端：web目录下`npm run dev`
+
+后端：`python run.py` 
+
 ## docker运行
 
 ```
@@ -33,6 +39,12 @@ docker run -d \
   -p 1314:9999 \
   -v /Library/Github/Memory/data:/app/data \
   noise233/memory:latest
+```
+
+## docker-compose
+
+```
+docker-compose up -d
 ```
 
 发布
@@ -62,3 +74,5 @@ docker buildx build --platform linux/amd64,linux/arm64 -t noise233/memory:latest
 ## 其它
 
 [Docker 环境下外部数据库连接配置指南](https://github.com/rcy1314/Memory/blob/main/DOCKER_DATABASE_SETUP.md)
+
+二次开发时请注意该项目使用v-model:value语法编写
