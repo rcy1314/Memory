@@ -59,4 +59,6 @@ docker buildx build --platform linux/amd64,linux/arm64 -t noise233/memory:latest
 
 ------
 
-Docker 环境下外部数据库连接配置指南
+## 其它
+
+[Docker 环境下外部数据库连接配置指南](https://github.com/rcy1314/Memory/blob/main/DOCKER_DATABASE_SETUP.md)
