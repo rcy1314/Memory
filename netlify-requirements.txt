@@ -4,7 +4,7 @@ email_validator==2.1.1
 fastapi==0.115.11
 loguru==0.7.2
 # 使用预编译版本的 pydantic 避免 Rust 依赖
-pydantic==2.5.3
+pydantic==2.6.3
 pydantic-settings==2.2.1
 pyjwt==2.8.0
 tortoise==0.1.1
