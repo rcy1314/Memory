@@ -135,7 +135,7 @@ function handleChange(value) {
         </NFormItem>
         <NFormItem :label="$t('views.setting.label_path')" path="path">
           <NInput v-model:value="infoForm.path" type="text"
-            :placeholder="$t('views.setting.placeholder_path', { path: '/{year}/{month}/{timestamp}_{filename}' })"
+            :placeholder="$t('views.setting.placeholder_path', { path: '{year}/{month}/{timestamp}_{filename}' })"
             :disabled="!infoForm.enable_storage" clearable />
         </NFormItem>
         <NFormItem :label="$t('views.setting.label_prefix')" path="prefix">
