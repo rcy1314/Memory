@@ -471,11 +471,13 @@ body {
   left: 0;
   width: 100%;
   height: 100%;
-  background: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 100%);
+  background: rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(4px);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 9999;
+  transition: opacity 0.3s ease;
 }
 
 .loading-spinner {

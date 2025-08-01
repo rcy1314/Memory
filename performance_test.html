@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>图片加载性能测试页面</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f5f5f5;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .test-grid {
+            column-count: 4;
+            column-gap: 16px;
+            padding: 8px;
+        }
+        .test-item {
+            break-inside: avoid;
+            margin-bottom: 12px;
+            border-radius: 8px;
+            overflow: hidden;
+            background: white;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            transition: transform 0.3s ease;
+        }
+        .test-item:hover {
+            transform: translateY(-2px);
+        }
+        .image-container {
+            position: relative;
+            width: 100%;
+            min-height: 200px;
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            overflow: hidden;
+        }
+        .image-placeholder {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .loading-spinner {
+            width: 24px;
+            height: 24px;
+            border: 3px solid rgba(255, 255, 255, 0.2);
+            border-top: 3px solid rgba(255, 255, 255, 0.8);
+            border-radius: 50%;
+            animation: spin 1.2s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .test-image {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: opacity 0.4s ease;
+            opacity: 0;
+        }
+        .test-image.loaded {
+            opacity: 1;
+        }
+        .item-info {
+            padding: 15px;
+        }
+        .item-title {
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #333;
+        }
+        .item-desc {
+            color: #666;
+            font-size: 14px;
+            line-height: 1.4;
+        }
+        .performance-stats {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: rgba(0,0,0,0.8);
+            color: white;
+            padding: 15px;
+            border-radius: 8px;
+            font-family: monospace;
+            font-size: 12px;
+            z-index: 1000;
+        }
+        @media (max-width: 1280px) {
+            .test-grid { column-count: 3; }
+        }
+        @media (max-width: 768px) {
+            .test-grid { column-count: 2; }
+        }
+        @media (max-width: 480px) {
+            .test-grid { column-count: 1; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>图片加载性能测试</h1>
+            <p>测试懒加载、占位符和滚动性能优化效果</p>
+        </div>
+        
+        <div class="performance-stats" id="stats">
+            <div>加载图片数: <span id="loadedCount">0</span></div>
+            <div>总图片数: <span id="totalCount">0</span></div>
+            <div>加载时间: <span id="loadTime">0ms</span></div>
+            <div>FPS: <span id="fps">0</span></div>
+        </div>
+        
+        <div class="test-grid" id="testGrid">
+            <!-- 动态生成测试图片 -->
+        </div>
+    </div>
+
+    <script>
+        // 性能监控
+        let loadedCount = 0;
+        let totalCount = 0;
+        let startTime = Date.now();
+        let frameCount = 0;
+        let lastTime = Date.now();
+        
+        // 测试图片URL列表
+        const testImages = [
+            'https://picsum.photos/300/400?random=1',
+            'https://picsum.photos/300/500?random=2',
+            'https://picsum.photos/300/350?random=3',
+            'https://picsum.photos/300/450?random=4',
+            'https://picsum.photos/300/380?random=5',
+            'https://picsum.photos/300/420?random=6',
+            'https://picsum.photos/300/360?random=7',
+            'https://picsum.photos/300/480?random=8',
+            'https://picsum.photos/300/400?random=9',
+            'https://picsum.photos/300/520?random=10',
+            'https://picsum.photos/300/340?random=11',
+            'https://picsum.photos/300/460?random=12',
+            'https://picsum.photos/300/390?random=13',
+            'https://picsum.photos/300/440?random=14',
+            'https://picsum.photos/300/370?random=15',
+            'https://picsum.photos/300/500?random=16',
+            'https://picsum.photos/300/410?random=17',
+            'https://picsum.photos/300/350?random=18',
+            'https://picsum.photos/300/470?random=19',
+            'https://picsum.photos/300/400?random=20'
+        ];
+        
+        // 创建测试项目
+        function createTestItem(imageUrl, index) {
+            const item = document.createElement('div');
+            item.className = 'test-item';
+            item.innerHTML = `
+                <div class="image-container">
+                    <div class="image-placeholder">
+                        <div class="loading-spinner"></div>
+                    </div>
+                    <img class="test-image" data-src="${imageUrl}" alt="测试图片 ${index + 1}">
+                </div>
+                <div class="item-info">
+                    <div class="item-title">测试图片 ${index + 1}</div>
+                    <div class="item-desc">懒加载性能测试图片，分辨率 300x${Math.floor(Math.random() * 200) + 300}px</div>
+                </div>
+            `;
+            return item;
+        }
+        
+        // 懒加载观察器
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    const img = entry.target;
+                    const placeholder = img.previousElementSibling;
+                    
+                    setTimeout(() => {
+                        img.src = img.dataset.src;
+                        img.onload = () => {
+                            img.classList.add('loaded');
+                            placeholder.style.display = 'none';
+                            loadedCount++;
+                            updateStats();
+                        };
+                        img.onerror = () => {
+                            placeholder.innerHTML = '<div style="color: white; text-align: center;">加载失败</div>';
+                        };
+                    }, 50);
+                    
+                    observer.unobserve(img);
+                }
+            });
+        }, {
+            rootMargin: '20px',
+            threshold: 0.05
+        });
+        
+        // 更新统计信息
+        function updateStats() {
+            document.getElementById('loadedCount').textContent = loadedCount;
+            document.getElementById('totalCount').textContent = totalCount;
+            document.getElementById('loadTime').textContent = Date.now() - startTime;
+        }
+        
+        // FPS 监控
+        function updateFPS() {
+            frameCount++;
+            const now = Date.now();
+            if (now - lastTime >= 1000) {
+                document.getElementById('fps').textContent = Math.round(frameCount * 1000 / (now - lastTime));
+                frameCount = 0;
+                lastTime = now;
+            }
+            requestAnimationFrame(updateFPS);
+        }
+        
+        // 初始化
+        function init() {
+            const grid = document.getElementById('testGrid');
+            
+            testImages.forEach((imageUrl, index) => {
+                const item = createTestItem(imageUrl, index);
+                grid.appendChild(item);
+                
+                const img = item.querySelector('.test-image');
+                observer.observe(img);
+                totalCount++;
+            });
+            
+            updateStats();
+            updateFPS();
+        }
+        
+        // 页面加载完成后初始化
+        document.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>

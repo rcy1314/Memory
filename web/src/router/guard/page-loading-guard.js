@@ -8,7 +8,7 @@ export function createPageLoadingGuard(router) {
     setTimeout(() => {
       window.$loadingBar?.finish()
       document.querySelector('body').classList.remove('is-preload')
-    }, 200)
+    }, 100) // 优化延迟时间，减少卡顿
   })
 
   router.onError(() => {

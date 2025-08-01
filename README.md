@@ -2,6 +2,8 @@
 
 ![1754074172331](https://s2.loli.net/2025/08/02/EjIZ1X6MSHqUlTD.png)
 
+![1754089150106](https://s2.loli.net/2025/08/02/o51PLHecODG9fZQ.png)
+
 ## 简介
 
 一个全屏瀑布流摄影图库程序，它是基于[Moment](https://github.com/Robert-Stackflow/Moment)二次开发的，基于[vue-fastapi-admin](https://github.com/mizhexiaoxiao/vue-fastapi-admin)使用 Vue+FastAPI 开发
@@ -68,6 +70,8 @@ docker buildx build --platform linux/amd64,linux/arm64 -t noise233/memory:latest
 - 增加用户token设置，目前认证方式：JWT token+API token
 
 ![1754073880268](https://s2.loli.net/2025/08/02/5V7cSFgkRMzyBfv.png)
+
+增加批量上传案例脚本
 
 ------
 

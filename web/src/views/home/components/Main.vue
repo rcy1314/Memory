@@ -1,8 +1,34 @@
 <template>
   <div id="blog-main" ref="listRef" :class="{ loading: isLoading }">
+    <!-- 整体相册加载动画 -->
+    <div v-if="isLoading && page === 1" class="gallery-loading-overlay">
+      <div class="gallery-loading-spinner">
+        <div class="spinner-ring"></div>
+        <p>正在加载图片...</p>
+      </div>
+    </div>
+    
     <transition-group name="fade-slide" tag="div" class="images-container">
       <Image v-for="blog in blogs" :key="blog.id" :data="blog" @click="showImage(blog)" />
     </transition-group>
+    
+    <!-- 下拉加载更多提示 -->
+    <div v-if="isLoadingMore" class="load-more-indicator">
+      <div class="load-more-spinner"></div>
+      <span>加载剩余图片中...</span>
+    </div>
+    
+    <!-- 加载更多按钮 -->
+    <div v-if="page * page_size < total && !isLoadingMore" class="load-more-button-container">
+      <button @click="loadMore" class="load-more-button">
+        加载更多
+      </button>
+    </div>
+    
+    <!-- 已加载完成提示 -->
+    <div v-if="page * page_size >= total && total > 0 && !isLoading" class="load-complete-indicator">
+      <span>已加载所有图片</span>
+    </div>
     <VueFinalModal
       v-model="show"
       content-class="lightbox"
@@ -113,6 +139,7 @@ var current_location = router.currentRoute.value.params.location
 const blogs = ref([])
 const listRef = ref(null)
 const isLoading = ref(false)
+const isLoadingMore = ref(false)
 const currentBlog = ref(null)
 const currentSize = ref({
   width: Math.min(400, window.innerWidth - 40),
@@ -198,12 +225,12 @@ onMounted(() => {
   nextTick(() => {
     setTimeout(() => {
       if (blogs.value.length > 0) {
-        // 预加载前5张图片
-        for (let i = 0; i < Math.min(5, blogs.value.length); i++) {
+        // 只预加载前3张图片，减少初始加载压力
+        for (let i = 0; i < Math.min(3, blogs.value.length); i++) {
           preloadImage(blogs.value[i].current_detail)
         }
       }
-    }, 1000) // 延迟1秒开始预加载，避免影响页面初始加载
+    }, 500) // 减少延迟时间，但仍避免影响页面初始加载
   })
 })
 
@@ -365,6 +392,7 @@ async function getBlogs() {
       } else {
         // 加载更多时，追加数据
         res.data.forEach((e) => blogs.value.push(e))
+        isLoadingMore.value = false
       }
       formatBlogs()
       page = res.page
@@ -373,6 +401,7 @@ async function getBlogs() {
   } catch (e) {
     console.log(e)
     isLoading.value = false
+    isLoadingMore.value = false
   }
 }
 function formatBlogs() {
@@ -382,7 +411,8 @@ function formatBlogs() {
     blog.detail_image_urls = []
     for (var index in blog.images) {
       var image = blog.images[index]
-      image.thumbnail = image.image_url + thumbnail_suffix
+      // 优化缩略图URL生成，如果没有缩略图后缀则使用原图
+      image.thumbnail = thumbnail_suffix ? image.image_url + thumbnail_suffix : image.image_url
       image.detail = image.image_url + detail_suffix
       if (image.time) {
         image.detail_time = formatDateTime(parseDateTime(image.time), detail_time_format)
@@ -399,14 +429,14 @@ function formatBlogs() {
   nextTick(() => {
     setTimeout(() => {
       if (blogs.value.length > 0) {
-        // 预加载前5张图片
-        for (let i = 0; i < Math.min(5, blogs.value.length); i++) {
+        // 只预加载前3张图片，减少初始加载压力
+        for (let i = 0; i < Math.min(3, blogs.value.length); i++) {
           if (blogs.value[i] && blogs.value[i].current_detail) {
             preloadImage(blogs.value[i].current_detail)
           }
         }
       }
-    }, 500) // 延迟500ms开始预加载
+    }, 300) // 进一步减少延迟时间
   })
 }
 async function getCategory() {
@@ -422,7 +452,8 @@ async function getCategory() {
   return []
 }
 function loadMore() {
-  if (page * page_size < total) {
+  if (page * page_size < total && !isLoadingMore.value) {
+    isLoadingMore.value = true
     page++
     getBlogs()
   }
@@ -625,17 +656,20 @@ scrollToload(null, loadMore)
 #blog-main {
   transition: filter 0.2s ease, opacity 0.2s ease;
   column-count: 4;
-  column-gap: 4px;
+  column-gap: 16px;
   overflow: auto;
   width: 100%;
-  padding: 0;
+  padding: 8px;
   margin: 0;
   box-sizing: border-box;
   position: relative;
+  /* 优化滚动性能 */
+  contain: layout style;
+  scroll-behavior: smooth;
 }
 
 #blog-main.loading {
-  opacity: 0.3;
+  opacity: 1;
   pointer-events: none;
 }
 
@@ -1019,5 +1053,157 @@ body.modal-active #wrapper:after {
 .nav-dot.active {
   background-color: #fff;
   transform: scale(1.2);
+}
+
+/* 整体相册加载动画 */
+.gallery-loading-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: transparent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+}
+
+.gallery-loading-spinner {
+  text-align: center;
+  color: #666;
+}
+
+.spinner-ring {
+  width: 40px;
+  height: 40px;
+  border: 3px solid #f3f3f3;
+  border-top: 3px solid #3498db;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin: 0 auto 10px;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* 下拉加载更多提示 */
+.load-more-indicator {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  color: #666;
+  font-size: 14px;
+}
+
+.load-more-spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid #f3f3f3;
+  border-top: 2px solid #3498db;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-right: 8px;
+}
+
+/* 加载更多按钮样式 */
+.load-more-button-container {
+  display: flex;
+  justify-content: center;
+  padding: 30px 0;
+  opacity: 1;
+  transition: opacity 0.3s ease;
+  column-span: all;
+  width: 100%;
+}
+
+.load-more-button {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.05) 100%);
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  color: white;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 16px 32px;
+  border-radius: 12px;
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  outline: none;
+  backdrop-filter: blur(15px);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  position: relative;
+  overflow: hidden;
+}
+
+.load-more-button::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+  transition: left 0.6s ease;
+}
+
+.load-more-button:hover::before {
+  left: 100%;
+}
+
+.load-more-button:hover {
+  color: #ff6b35;
+  background: linear-gradient(135deg, rgba(255, 107, 53, 0.2) 0%, rgba(255, 165, 0, 0.1) 100%);
+  border-color: #ff6b35;
+  transform: translateY(-4px) scale(1.05);
+  box-shadow: 0 12px 40px rgba(255, 107, 53, 0.3);
+}
+
+/* 加载完成提示样式 */
+.load-complete-indicator {
+  display: flex;
+  justify-content: center;
+  padding: 20px;
+  opacity: 1;
+  transition: opacity 0.3s ease;
+  column-span: all;
+  width: 100%;
+}
+
+.load-complete-indicator span {
+  color: #999;
+  font-size: 14px;
+  padding: 8px 16px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 4px;
+  backdrop-filter: blur(5px);
+}
+
+/* 优化页面loading效果 */
+body.is-preload #blog-main {
+  background: rgba(255, 255, 255, 0.5);
+  backdrop-filter: blur(2px);
+}
+
+/* 图片容器布局优化 */
+.images-container {
+  width: 100%;
+}
+
+/* 淡入滑动动画 */
+.fade-slide-enter-active {
+  transition: all 0.4s ease;
+  will-change: opacity, transform;
+}
+
+.fade-slide-enter-from {
+  opacity: 0;
+  transform: translateY(20px) translateZ(0);
+}
+
+.fade-slide-enter-to {
+  opacity: 1;
+  transform: translateY(0) translateZ(0);
 }
 </style>

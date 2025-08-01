@@ -1,12 +1,22 @@
 <template>
-  <article class="thumb img-area">
+  <article class="thumb img-area" ref="thumbRef">
     <a class="thumb-a my-photo">
-      <img
-        class="thumb-image my-photo"
-        onerror="this.src=`/assets/loading.gif`;this.onerror=null"
-        :src="data.current_thumbnail"
-        lazy
-      />
+      <div class="image-container">
+        <div v-if="!imageSrc" class="image-placeholder">
+          <div class="placeholder-content">
+            <div v-if="isIntersecting" class="loading-spinner"></div>
+          </div>
+        </div>
+        <img
+          v-if="imageSrc"
+          class="thumb-image my-photo"
+          ref="imageRef"
+          :src="imageSrc"
+          @load="onImageLoad"
+          @error="onImageError"
+          :style="{ opacity: imageLoaded ? 1 : 0.3 }"
+        />
+      </div>
     </a>
     <div class="thumb-overlay">
       <h2 class="thumb-title">{{ data.title }}</h2>
@@ -35,25 +45,166 @@
 </template>
 
 <script setup>
+import { ref, onMounted, onUnmounted } from 'vue'
 import { useSettingStore } from '@/store'
 import { isValueNotEmpty } from '@/utils'
+
 const settingStore = useSettingStore()
+const thumbRef = ref(null)
+const imageRef = ref(null)
+const imageLoaded = ref(false)
+const imageSrc = ref('')
+const isIntersecting = ref(false)
+
 var thumbnail_show_location = isValueNotEmpty(settingStore.contentSetting.thumbnail_show_location)
   ? settingStore.contentSetting.thumbnail_show_location
   : true
 var thumbnail_show_time = isValueNotEmpty(settingStore.contentSetting.thumbnail_show_time)
   ? settingStore.contentSetting.thumbnail_show_time
   : false
+
 const props = defineProps({
   data: {
     type: Object,
     required: true,
   },
 })
+
+// 懒加载逻辑
+let observer = null
+
+const onImageLoad = () => {
+  imageLoaded.value = true
+}
+
+const onImageError = () => {
+  // 图片加载失败时不显示错误图片，保持占位符状态
+  imageLoaded.value = false
+  imageSrc.value = ''
+}
+
+const loadImage = () => {
+  // 从images数组中获取第一张图片的image_url
+  let imageUrl = null
+  
+  if (props.data.images && props.data.images.length > 0) {
+    imageUrl = props.data.images[0].image_url
+  } else if (props.data.image_url) {
+    imageUrl = props.data.image_url
+  }
+  
+  if (imageUrl && !imageSrc.value) {
+    // 预加载图片以确保加载成功
+    const img = new Image()
+    img.onload = () => {
+      imageSrc.value = imageUrl
+    }
+    img.onerror = () => {
+      console.warn('图片加载失败:', imageUrl)
+    }
+    img.src = imageUrl
+  }
+}
+
+onMounted(() => {
+  // 使用 Intersection Observer 实现懒加载
+  if ('IntersectionObserver' in window && thumbRef.value) {
+    observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            isIntersecting.value = true
+            // 添加轻微延迟，优化加载体验
+            const delay = Math.random() * 100 + 50 // 50-150ms随机延迟
+            setTimeout(() => {
+              loadImage()
+            }, delay)
+            // 图片开始加载后取消观察
+            observer.unobserve(entry.target)
+          }
+        })
+      },
+      {
+        rootMargin: '50px', // 减少提前加载距离，避免一次性加载太多
+        threshold: 0.3 // 增加阈值，确保图片更多进入视口才开始加载
+      }
+    )
+    observer.observe(thumbRef.value)
+  } else {
+    // 降级处理：直接加载图片
+    isIntersecting.value = true
+    loadImage()
+  }
+})
+
+onUnmounted(() => {
+  if (observer && thumbRef.value) {
+    observer.unobserve(thumbRef.value)
+  }
+})
 </script>
 <style>
 .thumb .detail-tag {
   display: none;
+}
+
+/* 图片容器和占位符样式 */
+.image-container {
+  position: relative;
+  width: 100%;
+  background: #333333;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.image-placeholder {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 200px;
+  background: #f0f2f5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.placeholder-content {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+}
+
+.loading-spinner {
+  width: 24px;
+  height: 24px;
+  border: 3px solid rgba(255, 255, 255, 0.2);
+  border-top: 3px solid rgba(255, 255, 255, 0.8);
+  border-radius: 50%;
+  animation: spin 1.2s linear infinite;
+  will-change: transform;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.thumb-image {
+  width: 100%;
+  height: auto;
+  display: block;
+  transition: opacity 0.3s ease, transform 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+  object-fit: cover;
+  border-radius: 8px;
+  will-change: opacity, transform;
+  transform: translateZ(0);
+}
+
+.thumb:hover .thumb-image {
+  transform: translateZ(0) scale(0.98);
 }
 
 .thumb-overlay {
@@ -185,24 +336,28 @@ const props = defineProps({
 }
 
 #blog-main .thumb {
-  transition: opacity 0.3s ease-in-out;
+  transition: opacity 0.3s ease-in-out, transform 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
   opacity: 1;
   pointer-events: auto;
   overflow: hidden;
   position: relative;
-  margin: 0 0 4px 0;
+  margin: 0 0 10px 0;
   box-sizing: border-box;
   display: block;
   width: 100%;
   border-radius: 8px;
   box-shadow: none;
-  transition: transform 0.3s ease;
   break-inside: avoid;
   page-break-inside: avoid;
+  /* 优化渲染性能 */
+  contain: layout style paint;
+  will-change: transform;
 }
 
 #blog-main .thumb:hover {
-  /* transform: scale(1.02); */
+  transform: scale(0.98);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+  background-color: #333333;
 }
 
 body.is-preload #blog-main .thumb {

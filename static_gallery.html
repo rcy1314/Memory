@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>优化后的图片画廊 - 静态版本</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+        }
+
+        .stats {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 20px;
+            color: white;
+            display: flex;
+            justify-content: space-around;
+            flex-wrap: wrap;
+        }
+
+        .stat-item {
+            text-align: center;
+            margin: 5px;
+        }
+
+        .stat-value {
+            font-size: 24px;
+            font-weight: bold;
+            display: block;
+        }
+
+        .gallery {
+            column-count: 4;
+            column-gap: 16px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .image-item {
+            break-inside: avoid;
+            margin-bottom: 16px;
+            background: white;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .image-item:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.2);
+        }
+
+        .image-container {
+            position: relative;
+            width: 100%;
+            min-height: 200px;
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            overflow: hidden;
+        }
+
+        .image-placeholder {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 14px;
+        }
+
+        .loading-spinner {
+            width: 30px;
+            height: 30px;
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-top: 3px solid white;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .gallery-image {
+            width: 100%;
+            height: auto;
+            display: block;
+            transition: opacity 0.3s ease;
+            opacity: 0;
+        }
+
+        .gallery-image.loaded {
+            opacity: 1;
+        }
+
+        .image-info {
+            padding: 15px;
+        }
+
+        .image-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 8px;
+        }
+
+        .image-desc {
+            font-size: 14px;
+            color: #666;
+            line-height: 1.4;
+        }
+
+        .controls {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .btn {
+            background: rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 25px;
+            cursor: pointer;
+            margin: 0 10px;
+            transition: all 0.3s ease;
+        }
+
+        .btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: translateY(-2px);
+        }
+
+        @media screen and (max-width: 1280px) {
+            .gallery { column-count: 3; }
+        }
+
+        @media screen and (max-width: 768px) {
+            .gallery { column-count: 2; }
+            .stats { flex-direction: column; }
+        }
+
+        @media screen and (max-width: 480px) {
+            .gallery { column-count: 1; }
+            body { padding: 10px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>📸 优化后的图片画廊</h1>
+        <p>懒加载 + 瀑布流布局 + 性能优化</p>
+    </div>
+
+    <div class="stats">
+        <div class="stat-item">
+            <span class="stat-value" id="loadedCount">0</span>
+            <span>已加载</span>
+        </div>
+        <div class="stat-item">
+            <span class="stat-value" id="totalCount">0</span>
+            <span>总数</span>
+        </div>
+        <div class="stat-item">
+            <span class="stat-value" id="loadTime">0ms</span>
+            <span>加载时间</span>
+        </div>
+        <div class="stat-item">
+            <span class="stat-value" id="fps">60</span>
+            <span>FPS</span>
+        </div>
+    </div>
+
+    <div class="controls">
+        <button class="btn" onclick="loadMoreImages()">加载更多图片</button>
+        <button class="btn" onclick="scrollToTop()">回到顶部</button>
+        <button class="btn" onclick="toggleLazyLoading()">切换懒加载</button>
+    </div>
+
+    <div class="gallery" id="gallery"></div>
+
+    <script>
+        class OptimizedGallery {
+            constructor() {
+                this.images = [];
+                this.loadedCount = 0;
+                this.observer = null;
+                this.lazyLoadingEnabled = true;
+                this.startTime = Date.now();
+                this.fps = 60;
+                this.lastFrameTime = Date.now();
+                
+                this.init();
+            }
+
+            init() {
+                this.setupIntersectionObserver();
+                this.loadInitialImages();
+                this.startFPSMonitoring();
+                this.updateStats();
+            }
+
+            setupIntersectionObserver() {
+                if ('IntersectionObserver' in window) {
+                    this.observer = new IntersectionObserver(
+                        (entries) => {
+                            entries.forEach(entry => {
+                                if (entry.isIntersecting) {
+                                    this.loadImage(entry.target);
+                                    this.observer.unobserve(entry.target);
+                                }
+                            });
+                        },
+                        {
+                            rootMargin: '100px',
+                            threshold: 0.1
+                        }
+                    );
+                }
+            }
+
+            async loadInitialImages() {
+                try {
+                    // 模拟从API获取图片数据
+                    const response = await fetch('/api/v1/visitor/blog/list?page=1&page_size=50');
+                    const data = await response.json();
+                    
+                    if (data.code === 200 && data.data) {
+                        this.images = data.data.flatMap(blog => 
+                            blog.images.map(img => ({
+                                url: img.image_url,
+                                title: blog.title,
+                                desc: blog.desc
+                            }))
+                        );
+                    } else {
+                        // 如果API失败，使用示例图片
+                        this.generateSampleImages();
+                    }
+                } catch (error) {
+                    console.warn('API加载失败，使用示例图片:', error);
+                    this.generateSampleImages();
+                }
+                
+                this.renderImages();
+            }
+
+            generateSampleImages() {
+                // 生成示例图片用于测试
+                const sampleImages = [
+                    'https://picsum.photos/400/600?random=1',
+                    'https://picsum.photos/400/800?random=2',
+                    'https://picsum.photos/400/500?random=3',
+                    'https://picsum.photos/400/700?random=4',
+                    'https://picsum.photos/400/600?random=5',
+                    'https://picsum.photos/400/900?random=6',
+                    'https://picsum.photos/400/550?random=7',
+                    'https://picsum.photos/400/650?random=8',
+                    'https://picsum.photos/400/750?random=9',
+                    'https://picsum.photos/400/600?random=10'
+                ];
+                
+                this.images = [];
+                for (let i = 0; i < 50; i++) {
+                    const randomImage = sampleImages[i % sampleImages.length];
+                    this.images.push({
+                        url: randomImage.replace('random=' + (i % 10 + 1), 'random=' + (i + 1)),
+                        title: `示例图片 ${i + 1}`,
+                        desc: `这是第 ${i + 1} 张示例图片，用于测试懒加载和性能优化效果。`
+                    });
+                }
+            }
+
+            renderImages() {
+                const gallery = document.getElementById('gallery');
+                gallery.innerHTML = '';
+                
+                this.images.forEach((image, index) => {
+                    const imageItem = this.createImageElement(image, index);
+                    gallery.appendChild(imageItem);
+                });
+                
+                document.getElementById('totalCount').textContent = this.images.length;
+            }
+
+            createImageElement(image, index) {
+                const item = document.createElement('div');
+                item.className = 'image-item';
+                item.innerHTML = `
+                    <div class="image-container">
+                        <div class="image-placeholder">
+                            <div class="loading-spinner"></div>
+                        </div>
+                        <img class="gallery-image" data-src="${image.url}" alt="${image.title}">
+                    </div>
+                    <div class="image-info">
+                        <div class="image-title">${image.title}</div>
+                        <div class="image-desc">${image.desc}</div>
+                    </div>
+                `;
+                
+                if (this.lazyLoadingEnabled && this.observer) {
+                    this.observer.observe(item);
+                } else {
+                    // 直接加载
+                    setTimeout(() => this.loadImage(item), index * 100);
+                }
+                
+                return item;
+            }
+
+            loadImage(container) {
+                const img = container.querySelector('.gallery-image');
+                const placeholder = container.querySelector('.image-placeholder');
+                const src = img.dataset.src;
+                
+                if (!src || img.src) return;
+                
+                const tempImg = new Image();
+                tempImg.onload = () => {
+                    img.src = src;
+                    img.classList.add('loaded');
+                    placeholder.style.display = 'none';
+                    this.loadedCount++;
+                    this.updateStats();
+                };
+                
+                tempImg.onerror = () => {
+                    placeholder.innerHTML = '<div style="color: rgba(255,255,255,0.7); font-size: 12px;">加载失败</div>';
+                };
+                
+                tempImg.src = src;
+            }
+
+            startFPSMonitoring() {
+                const measureFPS = () => {
+                    const now = Date.now();
+                    const delta = now - this.lastFrameTime;
+                    this.fps = Math.round(1000 / delta);
+                    this.lastFrameTime = now;
+                    
+                    document.getElementById('fps').textContent = Math.min(this.fps, 60);
+                    requestAnimationFrame(measureFPS);
+                };
+                
+                requestAnimationFrame(measureFPS);
+            }
+
+            updateStats() {
+                document.getElementById('loadedCount').textContent = this.loadedCount;
+                document.getElementById('loadTime').textContent = `${Date.now() - this.startTime}ms`;
+            }
+
+            loadMoreImages() {
+                const currentCount = this.images.length;
+                for (let i = 0; i < 20; i++) {
+                    this.images.push({
+                        url: `https://picsum.photos/400/${500 + Math.random() * 400}?random=${currentCount + i + 100}`,
+                        title: `新图片 ${currentCount + i + 1}`,
+                        desc: `这是新加载的第 ${i + 1} 张图片。`
+                    });
+                }
+                this.renderImages();
+            }
+
+            toggleLazyLoading() {
+                this.lazyLoadingEnabled = !this.lazyLoadingEnabled;
+                alert(`懒加载已${this.lazyLoadingEnabled ? '启用' : '禁用'}`);
+                this.renderImages();
+            }
+        }
+
+        // 全局函数
+        function scrollToTop() {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function loadMoreImages() {
+            gallery.loadMoreImages();
+        }
+
+        function toggleLazyLoading() {
+            gallery.toggleLazyLoading();
+        }
+
+        // 初始化画廊
+        let gallery;
+        document.addEventListener('DOMContentLoaded', () => {
+            gallery = new OptimizedGallery();
+        });
+
+        // 性能监控
+        window.addEventListener('load', () => {
+            console.log('页面加载完成');
+            
+            // 监控滚动性能
+            let scrollTimeout;
+            window.addEventListener('scroll', () => {
+                clearTimeout(scrollTimeout);
+                scrollTimeout = setTimeout(() => {
+                    console.log('滚动结束');
+                }, 150);
+            });
+        });
+    </script>
+</body>
+</html>

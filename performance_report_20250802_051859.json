@@ -1,0 +1,35 @@
+{
+  "api_performance": {
+    "博客列表API": {
+      "response_time": 40.57502746582031,
+      "status_code": 200,
+      "passed": true
+    },
+    "分类列表API": {
+      "response_time": 6.36601448059082,
+      "status_code": 200,
+      "passed": true
+    }
+  },
+  "page_load_performance": {
+    "total_load_time": 708.4269523620605,
+    "dom_content_loaded": 115,
+    "first_paint": 164,
+    "first_contentful_paint": 240,
+    "passed": true
+  },
+  "scroll_performance": {
+    "average_scroll_time": 1028.1449794769287,
+    "min_scroll_time": 1014.5699977874756,
+    "max_scroll_time": 1040.5750274658203,
+    "passed": false
+  },
+  "image_load_performance": {
+    "total_images": 446,
+    "initial_loaded": 23,
+    "final_loaded": 31,
+    "load_rate": 6.950672645739911,
+    "passed": false
+  },
+  "overall_score": 51.737668161434975
+}
