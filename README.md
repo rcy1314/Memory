@@ -81,6 +81,17 @@ docker-compose up -d
 docker buildx build --platform linux/amd64,linux/arm64 -t noise233/memory:latest --push --no-cache .
 ```
 
+Podman（替代Docker）
+
+```
+podman manifest create noise233/memory:latest
+podman build --platform linux/amd64 --manifest noise233/memory:latest .
+podman build --platform linux/arm64 --manifest noise233/memory:latest .
+podman manifest push noise233/memory:latest
+```
+
+
+
 ## 使用
 
 - 使用`<服务器IP地址>:9999`或`域名`访问相册
@@ -407,6 +418,8 @@ jobs:
 [Docker 环境下外部数据库连接配置指南](https://github.com/rcy1314/Memory/blob/main/DOCKER_DATABASE_SETUP.md)
 
 二次开发时请注意该项目使用v-model:value语法编写
+
+运行docker时web目录下的env.production端口必须和docker-compose.yml下的端口一致
 
 ## To do
 
