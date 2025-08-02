@@ -1,5 +1,5 @@
 {
-  "productName": "Memory-不负时光相册程序",
+  "productName": "Memory-Photo-Album",
   "version": "1.0.0",
   "identifier": "com.memory.app",
   "build": {
@@ -11,7 +11,7 @@
   "app": {
     "windows": [
       {
-        "title": "Memory-不负时光相册程序",
+        "title": "Memory Photo Album",
         "width": 1200,
         "height": 800,
         "minWidth": 800,
