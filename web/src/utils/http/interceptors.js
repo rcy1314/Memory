@@ -37,7 +37,18 @@ export async function resReject(error) {
     const code = error?.code
     /** 根据code处理对应的操作，并返回处理后的message */
     const message = resolveResError(code, error.message)
-    window.$message?.error(message)
+
+    // 检查是否为静默请求（图片加载和数据库迁移相关）
+    const isSilentRequest =
+      error.config?.silentError ||
+      error.config?.url?.includes('/visitor/blog/list') ||
+      error.config?.url?.includes('/admin/database/migrate') ||
+      error.code === 'ECONNABORTED'
+
+    if (!isSilentRequest) {
+      window.$message?.error(message)
+    }
+
     return Promise.reject({ code, message, error })
   }
   const { data, status } = error.response
@@ -53,7 +64,14 @@ export async function resReject(error) {
   // 后端返回的response数据
   const code = data?.code ?? status
   const message = resolveResError(code, data?.msg ?? error.message)
-  window.$message?.error(message, { keepAliveOnHover: true })
+  
+  // 检查是否为静默请求（图片加载相关）
+  const isSilentRequest = error.config?.silentError || 
+                         error.config?.url?.includes('/visitor/blog/list')
+  
+  if (!isSilentRequest) {
+    window.$message?.error(message, { keepAliveOnHover: true })
+  }
 
   // 只返回有用的错误信息，避免包含HTML内容
   const errorInfo = typeof data === 'object' && data !== null ? data : { message: error.message }

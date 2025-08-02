@@ -536,15 +536,29 @@ const migrateData = async () => {
     
     // 重新加载数据库设置以显示最新配置
     await getDatabaseSettings()
+    migrating.value = false
   } catch (error) {
     console.error('数据迁移失败:', error)
-    if (error.message) {
-      message.error(error.message)
+    
+    // 检查是否为超时错误
+    const isTimeoutError = error.code === 'ECONNABORTED' || 
+                          error.message?.includes('timeout') || 
+                          error.message?.includes('time out')
+    
+    if (isTimeoutError) {
+      // 超时错误显示友好提示，但不重置迁移状态
+      message.warning('数据过多，请继续等待迁移完成', {
+        duration: 5000
+      })
     } else {
-      message.error('数据迁移失败')
+      // 其他错误正常处理并重置迁移状态
+      migrating.value = false
+      if (error.message) {
+        message.error(error.message)
+      } else {
+        message.error('数据迁移失败')
+      }
     }
-  } finally {
-    migrating.value = false
   }
 }
 

@@ -370,7 +370,7 @@ function onTransitionEnd(e) {
 function onImageLoad() {
   imageVisible.value = true
 }
-async function getBlogs() {
+async function getBlogs(silentError = false) {
   try {
     if (page === 1) {
       isLoading.value = true
@@ -399,9 +399,21 @@ async function getBlogs() {
       total = res.total
     }
   } catch (e) {
-    console.log(e)
+    // 静默处理加载错误，不显示错误提示
+    console.log('图片加载失败，静默处理:', e)
     isLoading.value = false
     isLoadingMore.value = false
+    
+    // 如果是首次加载失败，可以尝试重新加载
+    if (page === 1 && blogs.value.length === 0 && !silentError) {
+      // 延迟3秒后自动重试一次
+      setTimeout(() => {
+        if (blogs.value.length === 0) {
+          console.log('自动重试加载图片...')
+          getBlogs(true) // 重试时使用静默模式
+        }
+      }, 3000)
+    }
   }
 }
 function formatBlogs() {
@@ -455,7 +467,8 @@ function loadMore() {
   if (page * page_size < total && !isLoadingMore.value) {
     isLoadingMore.value = true
     page++
-    getBlogs()
+    // 滚动加载更多时也使用静默错误处理
+    getBlogs(true) // 传入silentError参数
   }
 }
 // 监听当前分类变化

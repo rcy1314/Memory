@@ -8,6 +8,10 @@
 
 一个全屏瀑布流摄影图库程序，它是基于[Moment](https://github.com/Robert-Stackflow/Moment)二次开发的，基于[vue-fastapi-admin](https://github.com/mizhexiaoxiao/vue-fastapi-admin)使用 Vue+FastAPI 开发
 
+演示：https://memory.noisework.cn
+
+## 特征
+
 - 支持 linux/amd64 和 linux/arm64 两个平台
 - 支持S3/R2两种oss存储上传方式
 - 支持多种数据库的选择连接，支持一键迁移
@@ -101,6 +105,12 @@ docker buildx build --platform linux/amd64,linux/arm64 -t noise233/memory:latest
 - 添加载入动画及提示弹窗
 
 ------
+
+## 后台预览
+
+![1754126989821](https://s2.loli.net/2025/08/02/9Zz4ekyiqlYJFRD.png)
+
+![1754127006714](https://s2.loli.net/2025/08/02/sWHKwyJu7kVqI5A.png)
 
 ## 其它
 
