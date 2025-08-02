@@ -100,7 +100,6 @@ jobs:
           name: macos-app
           path: |
             web/src-tauri/target/*/release/bundle/dmg/*.dmg
-            web/src-tauri/target/*/release/bundle/macos/*.app
           retention-days: 30
           
 
@@ -111,7 +110,6 @@ jobs:
           name: windows-app
           path: |
             web/src-tauri/target/release/bundle/nsis/*.exe
-            web/src-tauri/target/release/memory-app.exe
           retention-days: 30
           
   release:
