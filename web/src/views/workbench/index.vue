@@ -1,6 +1,20 @@
 <template>
   <AppPage :show-footer="false">
     <div flex-1>
+      <!-- 返回首页按钮 -->
+      <div mb-15>
+        <n-button @click="goToHome" type="primary" ghost>
+          <template #icon>
+            <n-icon>
+              <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M19 12H5M12 19L5 12L12 5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </n-icon>
+          </template>
+          返回首页
+        </n-button>
+      </div>
+      
       <n-card rounded-10>
         <div flex items-center justify-between>
           <div flex items-center>
@@ -57,12 +71,19 @@
 </template>
 
 <script setup>
+import { useRouter } from 'vue-router'
 import { useUserStore, useSettingStore } from '@/store'
 import api from '@/api'
 import { useI18n } from 'vue-i18n'
 import { isValueNotEmpty } from '@/utils'
 
 const { t } = useI18n({ useScope: 'global' })
+const router = useRouter()
+
+// 返回首页函数
+const goToHome = () => {
+  router.push('/')
+}
 
 var statisticData = ref([])
 var blogData = ref([])

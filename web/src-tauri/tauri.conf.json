@@ -1,0 +1,46 @@
+{
+  "productName": "Memory-不负时光相册程序",
+  "version": "1.0.0",
+  "identifier": "com.memory.app",
+  "build": {
+    "beforeDevCommand": "npm run dev",
+    "beforeBuildCommand": "npm run build",
+    "frontendDist": "../../dist",
+    "devUrl": "http://localhost:9999"
+  },
+  "app": {
+    "windows": [
+      {
+        "title": "Memory-不负时光相册程序",
+        "width": 1200,
+        "height": 800,
+        "minWidth": 800,
+        "minHeight": 600,
+        "resizable": true,
+        "fullscreen": false
+      }
+    ],
+    "security": {
+      "csp": null
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ],
+    "resources": [
+      "../../run.py",
+      "../../app/**/*",
+      "../../requirements.txt",
+      "../../data/db.sqlite3",
+      "../../migrations/**/*",
+      "../../uvicorn_loggin_config.json"
+    ]
+  }
+}

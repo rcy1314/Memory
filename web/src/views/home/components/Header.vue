@@ -71,20 +71,47 @@ function togglePanel() {
   document.querySelector('#header-about').classList.toggle('active')
   document.querySelector('body').classList.toggle('content-active')
 }
-function isFullScreen() {
-  var isFull = document.fullScreen || document.fullscreenElement !== null
-  if (isFull === undefined) isFull = false
-  return isFull
-}
-function toggleFullScreen() {
-  if (isFullScreen()) {
-    document.exitFullscreen()
-    $('#fullscreen').removeClass('ctrlOn')
-    fullScreenText.value = '全屏'
+async function isFullScreen() {
+  if (window.__TAURI__) {
+    try {
+      const { invoke } = window.__TAURI__.core
+      return await invoke('is_fullscreen')
+    } catch (error) {
+      console.error('Failed to check fullscreen status:', error)
+      return false
+    }
   } else {
-    document.documentElement.requestFullscreen()
-    $('#fullscreen').addClass('ctrlOn')
-    fullScreenText.value = '退出全屏'
+    return document.fullScreen || document.fullscreenElement !== null
+  }
+}
+
+async function toggleFullScreen() {
+  if (window.__TAURI__) {
+    try {
+      const { invoke } = window.__TAURI__.core
+      await invoke('toggle_fullscreen')
+      const isFullscreenNow = await isFullScreen()
+      fullScreenText.value = isFullscreenNow ? '退出全屏' : '全屏'
+      if (isFullscreenNow) {
+        $('#fullscreen').addClass('ctrlOn')
+      } else {
+        $('#fullscreen').removeClass('ctrlOn')
+      }
+    } catch (error) {
+      console.error('Failed to toggle fullscreen:', error)
+    }
+  } else {
+    // 浏览器环境
+    const currentlyFullscreen = await isFullScreen()
+    if (currentlyFullscreen) {
+      document.exitFullscreen()
+      $('#fullscreen').removeClass('ctrlOn')
+      fullScreenText.value = '全屏'
+    } else {
+      document.documentElement.requestFullscreen()
+      $('#fullscreen').addClass('ctrlOn')
+      fullScreenText.value = '退出全屏'
+    }
   }
 }
 api.getCategoriesVisitor().then((response) => {

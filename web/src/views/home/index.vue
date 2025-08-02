@@ -93,6 +93,7 @@
       <div class="top-actions" :class="{ hidden: isNavHidden }">
         <button class="action-btn" @click="toggleFullScreen">{{ fullScreenText }}</button>
         <button class="action-btn" @click="showAboutModal">关于</button>
+        <button class="action-btn" @click="goToAdmin">后台</button>
       </div>
 
       <!-- 分类导航 -->
@@ -172,6 +173,7 @@
 
 <script setup>
 import { ref, reactive, computed, watch, onMounted, onUnmounted } from 'vue'
+import { useRouter } from 'vue-router'
 import Footer from './components/Footer.vue'
 import Main from './components/Main.vue'
 import TheIcon from '@/components/icon/TheIcon.vue'
@@ -179,6 +181,7 @@ import { useSettingStore } from '@/store'
 import api from '@/api'
 import { isValueNotEmpty } from '@/utils'
 
+const router = useRouter()
 const settingStore = useSettingStore()
 const categories = ref([])
 const heroSlides = ref([])
@@ -302,17 +305,43 @@ const stopAutoSlide = () => {
 }
 
 // 全屏功能
-const isFullScreen = () => {
-  return document.fullScreen || document.fullscreenElement !== null
+const isFullScreen = async () => {
+  // 检查是否在Tauri环境中
+  if (window.__TAURI__) {
+    try {
+      const { invoke } = window.__TAURI__.core
+      return await invoke('is_fullscreen')
+    } catch (error) {
+      console.error('Failed to check fullscreen status:', error)
+      return false
+    }
+  } else {
+    // 浏览器环境
+    return document.fullScreen || document.fullscreenElement !== null
+  }
 }
 
-const toggleFullScreen = () => {
-  if (isFullScreen()) {
-    document.exitFullscreen()
-    fullScreenText.value = '全屏'
+const toggleFullScreen = async () => {
+  // 检查是否在Tauri环境中
+  if (window.__TAURI__) {
+    try {
+      const { invoke } = window.__TAURI__.core
+      await invoke('toggle_fullscreen')
+      const isFullscreenNow = await isFullScreen()
+      fullScreenText.value = isFullscreenNow ? '退出全屏' : '全屏'
+    } catch (error) {
+      console.error('Failed to toggle fullscreen:', error)
+    }
   } else {
-    document.documentElement.requestFullscreen()
-    fullScreenText.value = '退出全屏'
+    // 浏览器环境
+    const currentlyFullscreen = await isFullScreen()
+    if (currentlyFullscreen) {
+      document.exitFullscreen()
+      fullScreenText.value = '全屏'
+    } else {
+      document.documentElement.requestFullscreen()
+      fullScreenText.value = '退出全屏'
+    }
   }
 }
 
@@ -327,6 +356,11 @@ const showAboutModal = () => {
 const closeAboutModal = () => {
   showAbout.value = false
   document.body.style.overflow = 'auto'
+}
+
+// 跳转到后台
+const goToAdmin = () => {
+  router.push('/admin/workbench')
 }
 
 // 滚动到相册区域
@@ -421,19 +455,29 @@ const loadHeroSlides = async () => {
       // 默认封面图
       heroSlides.value = [
         {
-          image: '/assets/20200212-38ce26bb0bd0d.gif',
+          image: '/assets/Cover/1.jpg',
           title: '欢迎来到时光工作室',
           description: '记录生活中的美好瞬间',
         },
         {
-          image: '/assets/20200212-6dafa53ecf4e3.gif',
+          image: '/assets/Cover/2.jpg',
           title: '摄影作品集',
           description: '用镜头捕捉世界的精彩',
         },
         {
-          image: '/assets/20200212-e056a5f2914d6.gif',
+          image: '/assets/Cover/3.jpg',
           title: '创意无限',
           description: '探索视觉艺术的无限可能',
+        },
+        {
+          image: '/assets/Cover/4.jpg',
+          title: '精彩瞬间',
+          description: '捕捉生活中的每一个精彩时刻',
+        },
+        {
+          image: '/assets/Cover/5.jpg',
+          title: '美好回忆',
+          description: '珍藏那些值得纪念的美好时光',
         },
       ]
     }
@@ -442,9 +486,29 @@ const loadHeroSlides = async () => {
     // 使用默认封面图
     heroSlides.value = [
       {
-        image: '/assets/20200212-38ce26bb0bd0d.gif',
+        image: '/assets/Cover/1.jpg',
         title: '欢迎来到时光工作室',
         description: '记录生活中的美好瞬间',
+      },
+      {
+        image: '/assets/Cover/2.jpg',
+        title: '摄影作品集',
+        description: '用镜头捕捉世界的精彩',
+      },
+      {
+        image: '/assets/Cover/3.jpg',
+        title: '创意无限',
+        description: '探索视觉艺术的无限可能',
+      },
+      {
+        image: '/assets/Cover/4.jpg',
+        title: '精彩瞬间',
+        description: '捕捉生活中的每一个精彩时刻',
+      },
+      {
+        image: '/assets/Cover/5.jpg',
+        title: '美好回忆',
+        description: '珍藏那些值得纪念的美好时光',
       },
     ]
   }

@@ -135,13 +135,18 @@ async def _init_default_settings():
                     },
                     {
                         "url": "/assets/Cover/3.jpg",
-                        "title": "摄影作品集",
-                        "description": "用镜头捕捉世界的精彩"
-                    },
-                    {
-                        "url": "/assets/20200212-e056a5f2914d6.gif",
                         "title": "创意无限",
                         "description": "探索视觉艺术的无限可能"
+                    },
+                    {
+                        "url": "/assets/Cover/4.jpg",
+                        "title": "精彩瞬间",
+                        "description": "捕捉生活中的每一个精彩时刻"
+                    },
+                    {
+                        "url": "/assets/Cover/5.jpg",
+                        "title": "美好回忆",
+                        "description": "珍藏那些值得纪念的美好时光"
                     }
                     ],
                     "site_title": "时光工作室",
@@ -190,13 +195,18 @@ async def _init_default_settings():
                     },
                     {
                         "url": "/assets/Cover/3.jpg",
-                        "title": "摄影作品集",
-                        "description": "用镜头捕捉世界的精彩"
-                    },
-                    {
-                        "url": "/assets/20200212-e056a5f2914d6.gif",
                         "title": "创意无限",
                         "description": "探索视觉艺术的无限可能"
+                    },
+                    {
+                        "url": "/assets/Cover/4.jpg",
+                        "title": "精彩瞬间",
+                        "description": "捕捉生活中的每一个精彩时刻"
+                    },
+                    {
+                        "url": "/assets/Cover/5.jpg",
+                        "title": "美好回忆",
+                        "description": "珍藏那些值得纪念的美好时光"
                     }
                 ]
                 updated = True

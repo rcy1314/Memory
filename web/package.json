@@ -10,7 +10,10 @@
     "lint": "eslint --ext .js,.vue .",
     "lint:fix": "eslint --fix --ext .js,.vue .",
     "lint:staged": "lint-staged",
-    "prettier": "npx prettier --write ."
+    "prettier": "npx prettier --write .",
+    "tauri": "tauri",
+    "tauri:dev": "tauri dev",
+    "tauri:build": "tauri build"
   },
   "dependencies": {
     "@iconify/json": "^2.2.101",
@@ -44,6 +47,8 @@
     "vuedraggable": "^4.1.0"
   },
   "devDependencies": {
+    "@tauri-apps/api": "^2.7.0",
+    "@tauri-apps/cli": "^2.7.1",
     "@vitejs/plugin-vue": "^5.0.0",
     "eslint-plugin-local-rules": "^3.0.2",
     "vite": "^5.0.0"

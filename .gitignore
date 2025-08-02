@@ -35,3 +35,15 @@ logs/
 
 # Environment files
 .env.local
+
+# Tauri build outputs
+web/src-tauri/target/
+web/src-tauri/gen/
+
+# Performance reports
+performance_report_*.json
+
+# Test files (optional, uncomment if you want to ignore)
+# *_test.html
+# test_*.py
+# te.html
