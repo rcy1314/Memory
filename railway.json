@@ -1,0 +1,36 @@
+{
+  "$schema": "https://railway.app/railway.schema.json",
+  "build": {
+    "builder": "DOCKERFILE",
+    "dockerfilePath": "Dockerfile"
+  },
+  "deploy": {
+    "numReplicas": 1,
+    "sleepApplication": false,
+    "restartPolicyType": "ON_FAILURE"
+  },
+  "environments": {
+    "production": {
+      "variables": {
+        "PORT": "9999",
+        "HOST": "0.0.0.0",
+        "DATABASE_URL": "sqlite:///app/data/db.sqlite3",
+        "CORS_ORIGINS": "*",
+        "RAILWAY_STATIC_URL": "https://${{RAILWAY_STATIC_URL}}"
+      }
+    }
+  },
+  "regions": ["us-west1"],
+  "services": [
+    {
+      "name": "memory",
+      "source": {
+        "image": "noise233/memory:latest"
+      },
+      "variables": {
+        "PORT": "9999",
+        "HOST": "0.0.0.0"
+      }
+    }
+  ]
+}

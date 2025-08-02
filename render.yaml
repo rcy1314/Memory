@@ -1,0 +1,41 @@
+# Render 部署配置文件
+services:
+  - type: web
+    name: memory-app
+    runtime: image
+    image:
+      url: noise233/memory:latest
+    region: singapore  # 可选择其他区域如 oregon, frankfurt
+    plan: starter  # 免费套餐
+    numInstances: 1
+    healthCheckPath: /api/v1/health
+    envVars:
+      - key: PORT
+        value: 9999
+      - key: HOST
+        value: 0.0.0.0
+      - key: DATABASE_URL
+        value: sqlite:///app/data/db.sqlite3
+      - key: CORS_ORIGINS
+        value: "*"
+      - key: RENDER_EXTERNAL_URL
+        fromService:
+          type: web
+          name: memory-app
+          property: url
+    disk:
+      name: memory-data
+      mountPath: /app/data
+      sizeGB: 1
+
+databases: []
+
+# 可选：添加静态站点服务
+# - type: static
+#   name: memory-static
+#   buildCommand: cd web && npm install && npm run build
+#   staticPublishPath: ./web/dist
+#   routes:
+#     - type: rewrite
+#       source: /*
+#       destination: /index.html

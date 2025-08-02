@@ -703,18 +703,32 @@ scrollToload(null, loadMore)
 @media screen and (max-width: 1280px) {
   #blog-main {
     column-count: 3;
+    column-gap: 12px;
   }
 }
 
 @media screen and (max-width: 768px) {
   #blog-main {
     column-count: 2;
+    column-gap: 10px;
+    padding: 6px;
   }
 }
 
 @media screen and (max-width: 480px) {
   #blog-main {
-    column-count: 1;
+    column-count: 2; /* 改为2列布局 */
+    column-gap: 8px;
+    padding: 4px;
+  }
+}
+
+/* 超小屏幕优化 */
+@media screen and (max-width: 360px) {
+  #blog-main {
+    column-count: 2;
+    column-gap: 6px;
+    padding: 2px;
   }
 }
 

@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>优化后的图片画廊测试页面</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #1a1a1a;
+            color: #fff;
+            line-height: 1.6;
+        }
+
+        .header {
+            text-align: center;
+            padding: 40px 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .device-info {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 10px 15px;
+            border-radius: 8px;
+            font-size: 14px;
+            z-index: 1000;
+        }
+
+        .gallery-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 40px 20px;
+        }
+
+        .gallery {
+            column-count: 4;
+            column-gap: 16px;
+            column-fill: balance;
+        }
+
+        .gallery-item {
+            display: inline-block;
+            width: 100%;
+            margin-bottom: 16px;
+            break-inside: avoid;
+            page-break-inside: avoid;
+            background: #2a2a2a;
+            border-radius: 8px;
+            overflow: hidden;
+            cursor: pointer;
+            transition: transform 0.15s ease, box-shadow 0.15s ease;
+            contain: layout style paint;
+            will-change: transform;
+            transform: translateZ(0);
+        }
+
+        .gallery-item:hover {
+            transform: translateZ(0) scale(0.97);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+        }
+
+        .image-container {
+            position: relative;
+            width: 100%;
+            overflow: hidden;
+        }
+
+        .gallery-image {
+            width: 100%;
+            height: auto;
+            display: block;
+            transition: opacity 0.2s ease, transform 0.2s ease;
+            image-rendering: auto;
+            transform: translateZ(0);
+            will-change: opacity;
+            backface-visibility: hidden;
+        }
+
+        .image-placeholder {
+            width: 100%;
+            height: 200px;
+            background: #f0f2f5;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #666;
+        }
+
+        .image-info {
+            padding: 15px;
+        }
+
+        .image-title {
+            font-size: 1rem;
+            font-weight: 600;
+            margin-bottom: 5px;
+        }
+
+        .image-meta {
+            font-size: 0.85rem;
+            opacity: 0.7;
+        }
+
+        .loading-indicator {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #666;
+        }
+
+        /* 平板端优化 */
+        @media screen and (min-width: 769px) and (max-width: 1024px) {
+            .gallery {
+                column-count: 3;
+            }
+            
+            .gallery-item {
+                transition: transform 0.18s ease, box-shadow 0.18s ease;
+                margin-bottom: 12px;
+            }
+            
+            .gallery-item:hover {
+                transform: scale(0.98);
+            }
+            
+            .gallery-image {
+                transition: opacity 0.25s ease;
+                image-rendering: -webkit-optimize-contrast;
+            }
+        }
+
+        /* 手机端优化 */
+        @media screen and (max-width: 768px) {
+            .header h1 {
+                font-size: 2rem;
+            }
+            
+            .gallery {
+                column-count: 2;
+                column-gap: 8px;
+            }
+            
+            .gallery-item {
+                margin-bottom: 8px;
+                border-radius: 6px;
+                transition: transform 0.15s ease;
+            }
+            
+            .gallery-item:hover {
+                transform: scale(0.99);
+            }
+            
+            .image-placeholder {
+                height: 150px;
+                background: #e8eaed;
+            }
+            
+            .gallery-image {
+                image-rendering: -webkit-optimize-contrast;
+                image-rendering: crisp-edges;
+            }
+            
+            .device-info {
+                top: 10px;
+                right: 10px;
+                font-size: 12px;
+            }
+        }
+
+        @media screen and (max-width: 480px) {
+            .gallery {
+                column-gap: 6px;
+            }
+            
+            .gallery-item {
+                margin-bottom: 6px;
+                border-radius: 4px;
+            }
+            
+            .image-placeholder {
+                height: 120px;
+            }
+        }
+
+        @media screen and (max-width: 360px) {
+            .gallery {
+                column-gap: 4px;
+            }
+        }
+
+        .performance-stats {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 15px;
+            border-radius: 8px;
+            font-size: 12px;
+            max-width: 200px;
+        }
+
+        .stat-item {
+            margin-bottom: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>优化后的图片画廊</h1>
+        <p>响应式图片加载与渲染性能测试</p>
+    </div>
+
+    <div class="device-info" id="deviceInfo">
+        <div>设备类型: <span id="deviceType"></span></div>
+        <div>屏幕尺寸: <span id="screenSize"></span></div>
+        <div>列数: <span id="columnCount"></span></div>
+    </div>
+
+    <div class="performance-stats" id="performanceStats">
+        <div class="stat-item">加载图片: <span id="loadedImages">0</span></div>
+        <div class="stat-item">失败图片: <span id="failedImages">0</span></div>
+        <div class="stat-item">平均加载时间: <span id="avgLoadTime">0ms</span></div>
+        <div class="stat-item">总加载时间: <span id="totalLoadTime">0ms</span></div>
+    </div>
+
+    <div class="gallery-container">
+        <div class="gallery" id="gallery">
+            <!-- 图片将通过JavaScript动态生成 -->
+        </div>
+    </div>
+
+    <script>
+        // 性能统计
+        let loadedImages = 0;
+        let failedImages = 0;
+        let loadTimes = [];
+        let totalStartTime = Date.now();
+
+        // 设备检测
+        function getDeviceType() {
+            const width = window.innerWidth;
+            if (width <= 768) return 'Mobile';
+            if (width <= 1024) return 'Tablet';
+            return 'Desktop';
+        }
+
+        function getColumnCount() {
+            const width = window.innerWidth;
+            if (width <= 480) return 2;
+            if (width <= 768) return 2;
+            if (width <= 1024) return 3;
+            return 4;
+        }
+
+        // 更新设备信息
+        function updateDeviceInfo() {
+            document.getElementById('deviceType').textContent = getDeviceType();
+            document.getElementById('screenSize').textContent = `${window.innerWidth}x${window.innerHeight}`;
+            document.getElementById('columnCount').textContent = getColumnCount();
+        }
+
+        // 更新性能统计
+        function updatePerformanceStats() {
+            document.getElementById('loadedImages').textContent = loadedImages;
+            document.getElementById('failedImages').textContent = failedImages;
+            
+            if (loadTimes.length > 0) {
+                const avgTime = loadTimes.reduce((a, b) => a + b, 0) / loadTimes.length;
+                document.getElementById('avgLoadTime').textContent = Math.round(avgTime) + 'ms';
+            }
+            
+            const totalTime = Date.now() - totalStartTime;
+            document.getElementById('totalLoadTime').textContent = totalTime + 'ms';
+        }
+
+        // 生成优化的图片URL
+        function getOptimizedImageUrl(baseUrl, index) {
+            const isMobile = window.innerWidth <= 768;
+            const isTablet = window.innerWidth <= 1024 && window.innerWidth > 768;
+            
+            // 模拟不同尺寸的图片
+            const sizes = {
+                mobile: 'w=400&h=600&fit=crop&auto=compress,format&q=75',
+                tablet: 'w=600&h=800&fit=crop&auto=compress,format&q=80',
+                desktop: 'w=800&h=1000&fit=crop&auto=compress,format&q=85'
+            };
+            
+            let params;
+            if (isMobile) {
+                params = sizes.mobile;
+            } else if (isTablet) {
+                params = sizes.tablet;
+            } else {
+                params = sizes.desktop;
+            }
+            
+            return `${baseUrl}?${params}`;
+        }
+
+        // 创建图片元素
+        function createImageElement(index) {
+            const item = document.createElement('div');
+            item.className = 'gallery-item';
+            
+            const imageContainer = document.createElement('div');
+            imageContainer.className = 'image-container';
+            
+            const placeholder = document.createElement('div');
+            placeholder.className = 'image-placeholder';
+            placeholder.innerHTML = '<div class="loading-indicator">加载中...</div>';
+            
+            const img = document.createElement('img');
+            img.className = 'gallery-image';
+            img.style.display = 'none';
+            
+            // 使用Unsplash作为测试图片源
+            const baseUrl = `https://picsum.photos/800/1200?random=${index}`;
+            const optimizedUrl = getOptimizedImageUrl(baseUrl, index);
+            
+            const startTime = Date.now();
+            
+            img.onload = function() {
+                const loadTime = Date.now() - startTime;
+                loadTimes.push(loadTime);
+                loadedImages++;
+                
+                placeholder.style.display = 'none';
+                img.style.display = 'block';
+                updatePerformanceStats();
+            };
+            
+            img.onerror = function() {
+                failedImages++;
+                placeholder.innerHTML = '<div class="loading-indicator">加载失败</div>';
+                updatePerformanceStats();
+            };
+            
+            img.src = optimizedUrl;
+            
+            const info = document.createElement('div');
+            info.className = 'image-info';
+            info.innerHTML = `
+                <div class="image-title">测试图片 ${index + 1}</div>
+                <div class="image-meta">${getDeviceType()} 优化 • ${new Date().toLocaleTimeString()}</div>
+            `;
+            
+            imageContainer.appendChild(placeholder);
+            imageContainer.appendChild(img);
+            item.appendChild(imageContainer);
+            item.appendChild(info);
+            
+            return item;
+        }
+
+        // 使用Intersection Observer实现懒加载
+        function setupLazyLoading() {
+            const isMobile = window.innerWidth <= 768;
+            const isTablet = window.innerWidth <= 1024 && window.innerWidth > 768;
+            
+            const observer = new IntersectionObserver(
+                (entries) => {
+                    entries.forEach((entry) => {
+                        if (entry.isIntersecting) {
+                            const img = entry.target.querySelector('.gallery-image');
+                            if (img && img.style.display === 'none') {
+                                // 根据设备类型添加延迟
+                                let delay = 0;
+                                if (isMobile) {
+                                    delay = Math.random() * 100 + 50;
+                                } else if (isTablet) {
+                                    delay = Math.random() * 50 + 25;
+                                } else {
+                                    delay = Math.random() * 30 + 10;
+                                }
+                                
+                                setTimeout(() => {
+                                    img.src = img.src; // 触发加载
+                                }, delay);
+                            }
+                            observer.unobserve(entry.target);
+                        }
+                    });
+                },
+                {
+                    rootMargin: isMobile ? '100px' : isTablet ? '75px' : '50px',
+                    threshold: isMobile ? 0.05 : isTablet ? 0.1 : 0.2
+                }
+            );
+            
+            return observer;
+        }
+
+        // 初始化画廊
+        function initGallery() {
+            const gallery = document.getElementById('gallery');
+            const observer = setupLazyLoading();
+            
+            // 生成30张测试图片
+            for (let i = 0; i < 30; i++) {
+                const item = createImageElement(i);
+                gallery.appendChild(item);
+                observer.observe(item);
+            }
+        }
+
+        // 窗口大小改变时更新信息
+        window.addEventListener('resize', () => {
+            updateDeviceInfo();
+        });
+
+        // 页面加载完成后初始化
+        document.addEventListener('DOMContentLoaded', () => {
+            updateDeviceInfo();
+            initGallery();
+            
+            // 每秒更新一次性能统计
+            setInterval(updatePerformanceStats, 1000);
+        });
+    </script>
+</body>
+</html>

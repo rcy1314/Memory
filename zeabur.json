@@ -1,0 +1,38 @@
+{
+  "name": "memory",
+  "services": [
+    {
+      "name": "memory-app",
+      "image": "noise233/memory:latest",
+      "ports": [
+        {
+          "containerPort": 9999,
+          "protocol": "HTTP"
+        }
+      ],
+      "env": {
+        "PORT": "9999",
+        "HOST": "0.0.0.0",
+        "DATABASE_URL": "sqlite:///app/data/db.sqlite3",
+        "SECRET_KEY": "your-secret-key-here",
+        "CORS_ORIGINS": "*"
+      },
+      "volumes": [
+        {
+          "name": "data",
+          "mountPath": "/app/data"
+        }
+      ],
+      "resources": {
+        "cpu": "0.5",
+        "memory": "512Mi"
+      }
+    }
+  ],
+  "volumes": [
+    {
+      "name": "data",
+      "size": "1Gi"
+    }
+  ]
+}

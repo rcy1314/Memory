@@ -3,6 +3,7 @@ from fastapi.middleware import Middleware
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
+from starlette.responses import Response
 from contextlib import asynccontextmanager
 
 from tortoise import Tortoise
@@ -27,6 +28,20 @@ from app.utils.config import settings
 from app.api import api_router
 from app.controllers.user import UserCreate, user_controller
 from app.controllers.setting import SettingCreate, setting_controller
+
+
+class CachedStaticFiles(StaticFiles):
+    def file_response(
+        self,
+        full_path,
+        stat_result,
+        scope,
+        status_code: int = 200,
+    ) -> Response:
+        response = super().file_response(full_path, stat_result, scope, status_code)
+        # 为静态资源添加缓存头
+        response.headers["Cache-Control"] = "public, max-age=86400"  # 1天缓存
+        return response
 
 
 def register_db(app: FastAPI, db_url=None):
@@ -79,7 +94,7 @@ async def lifespan(app: FastAPI):
 
     app.mount(
         "/assets",
-        StaticFiles(directory=f"./dist/assets"),
+        CachedStaticFiles(directory=f"./dist/assets"),
         name="assets",
     )
 
@@ -122,5 +137,5 @@ async def index(request=None, exc=None):
     return HTMLResponse(
         content=open(f"./dist/index.html", "r", encoding="utf-8").read(),
         media_type="text/html",
-        headers={"Cache-Control": "no-cache"},
+        headers={"Cache-Control": "public, max-age=300"},
     )

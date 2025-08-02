@@ -75,12 +75,17 @@ let observer = null
 
 const onImageLoad = () => {
   imageLoaded.value = true
+  // 手机端性能优化：图片加载完成后移除observer
+  if (observer && thumbRef.value) {
+    observer.unobserve(thumbRef.value)
+  }
 }
 
 const onImageError = () => {
   // 图片加载失败时不显示错误图片，保持占位符状态
   imageLoaded.value = false
   imageSrc.value = ''
+  console.warn('图片加载失败:', props.data.title)
 }
 
 const loadImage = () => {
@@ -94,6 +99,23 @@ const loadImage = () => {
   }
   
   if (imageUrl && !imageSrc.value) {
+    // 响应式图片优化：根据设备类型添加不同尺寸参数
+    const isMobile = window.innerWidth <= 768
+    const isTablet = window.innerWidth <= 1024 && window.innerWidth > 768
+    
+    if (imageUrl.includes('http')) {
+      // 如果是外部图片URL，根据设备类型添加优化参数
+      const separator = imageUrl.includes('?') ? '&' : '?'
+      if (isMobile) {
+        imageUrl = `${imageUrl}${separator}w=400&h=600&fit=crop&auto=compress,format&q=75`
+      } else if (isTablet) {
+        imageUrl = `${imageUrl}${separator}w=600&h=800&fit=crop&auto=compress,format&q=80`
+      } else {
+        // 电脑端优化：适中的压缩以平衡质量和加载速度
+        imageUrl = `${imageUrl}${separator}w=800&h=1000&fit=crop&auto=compress,format&q=85`
+      }
+    }
+    
     // 预加载图片以确保加载成功
     const img = new Image()
     img.onload = () => {
@@ -109,13 +131,25 @@ const loadImage = () => {
 onMounted(() => {
   // 使用 Intersection Observer 实现懒加载
   if ('IntersectionObserver' in window && thumbRef.value) {
+    // 响应式优化的Intersection Observer配置
+    const isMobile = window.innerWidth <= 768
+    const isTablet = window.innerWidth <= 1024 && window.innerWidth > 768
+    
     observer = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
           if (entry.isIntersecting) {
             isIntersecting.value = true
-            // 添加轻微延迟，优化加载体验
-            const delay = Math.random() * 100 + 50 // 50-150ms随机延迟
+            // 根据设备类型优化加载延迟
+            let delay = 0
+            if (isMobile) {
+              delay = Math.random() * 100 + 50 // 手机端：50-150ms随机延迟
+            } else if (isTablet) {
+              delay = Math.random() * 50 + 25 // 平板端：25-75ms随机延迟
+            } else {
+              delay = Math.random() * 30 + 10 // 电脑端：10-40ms随机延迟，更快响应
+            }
+            
             setTimeout(() => {
               loadImage()
             }, delay)
@@ -125,8 +159,8 @@ onMounted(() => {
         })
       },
       {
-        rootMargin: '50px', // 减少提前加载距离，避免一次性加载太多
-        threshold: 0.3 // 增加阈值，确保图片更多进入视口才开始加载
+        rootMargin: isMobile ? '100px' : isTablet ? '75px' : '50px', // 电脑端适中的预加载距离
+        threshold: isMobile ? 0.05 : isTablet ? 0.1 : 0.2 // 电脑端更精确的触发阈值
       }
     )
     observer.observe(thumbRef.value)
@@ -169,6 +203,28 @@ onUnmounted(() => {
   justify-content: center;
 }
 
+/* 手机端图片容器优化 */
+@media screen and (max-width: 768px) {
+  .image-placeholder {
+    height: 150px; /* 减少占位符高度 */
+    background: #e8eaed;
+  }
+  
+  .image-container {
+    border-radius: 6px;
+  }
+}
+
+@media screen and (max-width: 480px) {
+  .image-placeholder {
+    height: 120px;
+  }
+  
+  .image-container {
+    border-radius: 4px;
+  }
+}
+
 .placeholder-content {
   display: flex;
   align-items: center;
@@ -201,6 +257,31 @@ onUnmounted(() => {
   border-radius: 8px;
   will-change: opacity, transform;
   transform: translateZ(0);
+  /* 图片渲染优化 */
+  image-rendering: -webkit-optimize-contrast;
+  image-rendering: crisp-edges;
+  backface-visibility: hidden;
+}
+
+/* 电脑端图片优化 */
+@media screen and (min-width: 1025px) {
+  .thumb-image {
+    /* 电脑端更平滑的过渡效果 */
+    transition: opacity 0.2s ease, transform 0.2s ease;
+    image-rendering: auto; /* 电脑端使用默认渲染以获得更好质量 */
+  }
+  
+  .image-container:hover .thumb-image {
+    transform: translateZ(0) scale(1.02); /* 轻微的悬停缩放效果 */
+  }
+}
+
+/* 平板端图片优化 */
+@media screen and (min-width: 769px) and (max-width: 1024px) {
+  .thumb-image {
+    transition: opacity 0.25s ease;
+    image-rendering: -webkit-optimize-contrast;
+  }
 }
 
 .thumb:hover .thumb-image {
@@ -352,6 +433,54 @@ onUnmounted(() => {
   /* 优化渲染性能 */
   contain: layout style paint;
   will-change: transform;
+}
+
+/* 电脑端缩略图优化 */
+@media screen and (min-width: 1025px) {
+  #blog-main .thumb {
+    /* 电脑端更快的过渡效果 */
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+    /* 启用硬件加速 */
+    transform: translateZ(0);
+  }
+  
+  #blog-main .thumb:hover {
+    transform: translateZ(0) scale(0.97); /* 电脑端更精细的悬停效果 */
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+  }
+}
+
+/* 平板端缩略图优化 */
+@media screen and (min-width: 769px) and (max-width: 1024px) {
+  #blog-main .thumb {
+    transition: transform 0.18s ease, box-shadow 0.18s ease;
+    margin: 0 0 12px 0;
+  }
+  
+  #blog-main .thumb:hover {
+    transform: scale(0.98);
+  }
+}
+
+/* 手机端缩略图优化 */
+@media screen and (max-width: 768px) {
+  #blog-main .thumb {
+    margin: 0 0 8px 0;
+    border-radius: 6px;
+    /* 减少动画以提升性能 */
+    transition: transform 0.15s ease;
+  }
+  
+  #blog-main .thumb:hover {
+    transform: scale(0.99); /* 减少缩放效果 */
+  }
+}
+
+@media screen and (max-width: 480px) {
+  #blog-main .thumb {
+    margin: 0 0 6px 0;
+    border-radius: 4px;
+  }
 }
 
 #blog-main .thumb:hover {

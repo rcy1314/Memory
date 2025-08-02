@@ -1,0 +1,42 @@
+# Fly.io 部署配置文件
+app = "memory-app"
+primary_region = "hkg"  # 香港区域，可根据需要调整
+
+[build]
+  image = "noise233/memory:latest"
+
+[env]
+  PORT = "9999"
+  HOST = "0.0.0.0"
+  DATABASE_URL = "sqlite:///app/data/db.sqlite3"
+  CORS_ORIGINS = "*"
+
+[http_service]
+  internal_port = 9999
+  force_https = true
+  auto_stop_machines = true
+  auto_start_machines = true
+  min_machines_running = 0
+  processes = ["app"]
+
+[[http_service.checks]]
+  grace_period = "10s"
+  interval = "30s"
+  method = "GET"
+  timeout = "5s"
+  path = "/api/v1/health"
+
+[mounts]
+  source = "memory_data"
+  destination = "/app/data"
+
+[[vm]]
+  cpu_kind = "shared"
+  cpus = 1
+  memory_mb = 512
+
+[deploy]
+  strategy = "rolling"
+
+[processes]
+  app = "python run.py"

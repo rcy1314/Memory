@@ -1,5 +1,21 @@
 <template>
   <div class="home-container">
+    <!-- 首次访问提示弹窗 -->
+    <div v-if="showFirstVisitModal" class="first-visit-modal">
+      <div class="modal-backdrop" @click="closeFirstVisitModal"></div>
+      <div class="modal-content">
+        <div class="modal-icon">
+          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M21 12a9 9 0 11-6.219-8.56" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+        <h3 class="modal-title">首次载入页面，请等待加载缓存</h3>
+        <div class="modal-progress">
+          <div class="progress-bar"></div>
+        </div>
+      </div>
+    </div>
+
     <!-- 页面加载状态 -->
     <div v-if="isPageLoading" class="page-loading">
       <div class="loading-spinner">
@@ -169,10 +185,35 @@ const heroSlides = ref([])
 const currentSlide = ref(0)
 const fullScreenText = ref('全屏')
 const isPageLoading = ref(true)
+const showFirstVisitModal = ref(false)
 let slideInterval = null
 
 // 当前选中的分类
 const currentCategory = ref(null)
+
+// 检测是否为首次访问
+const checkFirstVisit = () => {
+  // 检查localStorage中是否有访问记录
+  const hasVisited = localStorage.getItem('memory_visited')
+  // 检查是否有任何cookie
+  const hasCookies = document.cookie.length > 0
+  
+  // 如果没有访问记录且没有cookie，则显示首次访问提示
+  if (!hasVisited && !hasCookies) {
+    showFirstVisitModal.value = true
+    // 3秒后自动关闭
+    setTimeout(() => {
+      closeFirstVisitModal()
+    }, 3000)
+  }
+}
+
+// 关闭首次访问弹窗
+const closeFirstVisitModal = () => {
+  showFirstVisitModal.value = false
+  // 设置访问记录
+  localStorage.setItem('memory_visited', 'true')
+}
 
 // 分类切换处理函数
 const handleCategoryClick = (categoryAlias = null) => {
@@ -431,6 +472,10 @@ onMounted(async () => {
     // 数据加载完成，隐藏loading
     setTimeout(() => {
       isPageLoading.value = false
+      // 检测首次访问（在页面加载完成后）
+      setTimeout(() => {
+        checkFirstVisit()
+      }, 500)
     }, 300)
   }
 })
@@ -462,6 +507,166 @@ body {
   background: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 100%);
   padding-top: 0;
   position: relative;
+}
+
+/* 首次访问弹窗样式 */
+.first-visit-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: fadeIn 0.3s ease-out;
+}
+
+.modal-backdrop {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+.modal-content {
+  position: relative;
+  background: linear-gradient(145deg, rgba(30, 30, 35, 0.98), rgba(20, 20, 25, 0.95));
+  backdrop-filter: blur(25px);
+  -webkit-backdrop-filter: blur(25px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 20px;
+  padding: 48px 40px;
+  text-align: center;
+  box-shadow: 0 25px 50px rgba(0, 0, 0, 0.5), 
+              0 0 0 1px rgba(255, 255, 255, 0.08),
+              inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  max-width: 420px;
+  width: 90%;
+  animation: modalSlideIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+.modal-content::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+}
+
+.modal-icon {
+  margin-bottom: 24px;
+  color: #4fc3f7;
+  animation: iconSpin 1.5s linear infinite;
+  filter: drop-shadow(0 0 8px rgba(79, 195, 247, 0.4));
+}
+
+.modal-title {
+  color: #ffffff;
+  font-size: 19px;
+  font-weight: 600;
+  margin: 0 0 28px 0;
+  line-height: 1.4;
+  letter-spacing: 0.3px;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+.modal-progress {
+  width: 100%;
+  height: 6px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 3px;
+  overflow: hidden;
+  position: relative;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+.progress-bar {
+  height: 100%;
+  background: linear-gradient(90deg, #4fc3f7, #29b6f6, #03a9f4);
+  border-radius: 3px;
+  animation: progressAnimation 3s ease-out;
+  box-shadow: 0 0 12px rgba(79, 195, 247, 0.6),
+              0 0 24px rgba(79, 195, 247, 0.3);
+  position: relative;
+}
+
+.progress-bar::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+  animation: progressShimmer 1.5s ease-in-out infinite;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes modalSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-20px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes iconSpin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes progressAnimation {
+  from {
+    width: 0%;
+  }
+  to {
+    width: 100%;
+  }
+}
+
+@keyframes progressShimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+@media screen and (max-width: 480px) {
+  .modal-content {
+    padding: 32px 24px;
+    margin: 20px;
+  }
+  
+  .modal-title {
+    font-size: 16px;
+  }
 }
 
 /* 页面加载样式 */
@@ -547,6 +752,27 @@ body {
   height: 100%;
   object-fit: cover;
   filter: brightness(0.7);
+  /* 手机端优化 */
+  image-rendering: -webkit-optimize-contrast;
+  image-rendering: crisp-edges;
+}
+
+/* 手机端封面优化 */
+@media screen and (max-width: 768px) {
+  .hero-section {
+    height: 60vh; /* 减少手机端封面高度 */
+  }
+  
+  .hero-image {
+    object-position: center 30%; /* 优化手机端显示位置 */
+    transform: scale(1.1); /* 轻微放大避免黑边 */
+  }
+}
+
+@media screen and (max-width: 480px) {
+  .hero-section {
+    height: 50vh; /* 进一步减少小屏幕封面高度 */
+  }
 }
 
 .hero-overlay {
@@ -1103,14 +1329,6 @@ body {
 }
 
 @media (max-width: 480px) {
-  .hero-title {
-    font-size: 7.5rem;
-  }
-
-  .hero-description {
-    font-size: 4.5rem;
-  }
-
   .top-brand {
     top: 15px;
     left: 15px;
@@ -1128,17 +1346,17 @@ body {
   }
 
   .categories-nav-section {
-    padding: 10px 0;
+    padding: 8px 0;
   }
 
   .site-logo {
-    width: 30px;
-    height: 30px;
+    width: 32px;
+    height: 32px;
     margin-right: 10px;
   }
 
   .site-name {
-    font-size: 11px;
+    font-size: 14px;
   }
 
   .categories-container {
@@ -1146,8 +1364,8 @@ body {
   }
 
   .category-item {
-    padding: 5px 10px;
-    font-size: 10px;
+    padding: 6px 12px;
+    font-size: 14px;
   }
 
   .about-content {
@@ -1160,11 +1378,13 @@ body {
   }
 
   .hero-title {
-    font-size: 2rem;
+    font-size: 2.5rem;
+    margin-bottom: 0.5rem;
   }
 
   .hero-description {
-    font-size: 1rem;
+    font-size: 1.1rem;
+    line-height: 1.4;
   }
 
   .hero-controls {
@@ -1173,9 +1393,13 @@ body {
 
   .hero-prev,
   .hero-next {
-    width: 45px;
-    height: 45px;
-    font-size: 1.5rem;
+    width: 40px;
+    height: 40px;
+    font-size: 1.2rem;
+  }
+  
+  .hero-content {
+    padding: 0 20px;
   }
 }
 
