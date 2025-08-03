@@ -62,16 +62,30 @@ jobs:
         working-directory: ./web
         run: npm ci
         
+      - name: Prepare Android environment
+        working-directory: ./web
+        run: |
+          # Copy Android-specific environment for build
+          cp .env.android .env.production
+          
       - name: Build frontend
         working-directory: ./web
         run: npm run build
-        
+          
       - name: Install Tauri CLI
         run: |
           cargo install tauri-cli --version "2.7.1" --locked
           echo "Tauri CLI installed successfully"
           cargo tauri --version
         
+      - name: Prepare Android Tauri config
+        working-directory: ./web
+        run: |
+          # Backup original config and use Android-specific config
+          cp src-tauri/tauri.conf.json src-tauri/tauri.conf.json.backup
+          cp src-tauri/tauri.conf.android.json src-tauri/tauri.conf.json
+          echo "Using Android-specific Tauri configuration"
+          
       - name: Initialize Tauri Android project
         working-directory: ./web
         run: |
@@ -142,6 +156,14 @@ jobs:
           TAURI_PRIVATE_KEY: ${{ secrets.TAURI_PRIVATE_KEY }}
           TAURI_KEY_PASSWORD: ${{ secrets.TAURI_KEY_PASSWORD }}
           ANDROID_NDK_ROOT: ${{ env.ANDROID_NDK_ROOT }}
+          
+      - name: Restore original Tauri config
+        working-directory: ./web
+        run: |
+          # Restore original Tauri configuration
+          cp src-tauri/tauri.conf.json.backup src-tauri/tauri.conf.json
+          echo "Original Tauri configuration restored"
+        if: always()
           
       - name: Upload Android APK artifacts
         uses: actions/upload-artifact@v4
