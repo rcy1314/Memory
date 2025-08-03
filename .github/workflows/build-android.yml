@@ -65,7 +65,11 @@ jobs:
       - name: Initialize Tauri Android project
         working-directory: ./web
         run: |
-          cargo tauri android init || echo "Android project already initialized"
+          echo "Initializing Tauri Android project..."
+          cargo tauri android init
+          echo "Android project initialization completed"
+          ls -la src-tauri/gen/ || echo "gen directory not found"
+          ls -la src-tauri/gen/android/ || echo "android directory not found"
           
       - name: Build Android APK (ARM64)
         working-directory: ./web
