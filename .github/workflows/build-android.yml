@@ -120,7 +120,20 @@ jobs:
             echo "WARNING: adb not found in platform-tools"
           fi
           
+          # Install required Android components
+          echo "Installing required Android SDK components..."
+          yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses || echo "License acceptance failed"
+          $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager "platform-tools" "platforms;android-33" "build-tools;33.0.0" || echo "SDK component installation failed"
+          
           echo "Android SDK verification completed"
+          
+      - name: Clean previous Android build
+        working-directory: ./web
+        run: |
+          echo "=== Cleaning previous Android build ==="
+          rm -rf src-tauri/gen/android || echo "No previous Android build to clean"
+          rm -rf src-tauri/target/android || echo "No previous Android target to clean"
+          echo "Cleanup completed"
           
       - name: Initialize Tauri Android project
         working-directory: ./web
@@ -131,6 +144,8 @@ jobs:
           cargo tauri --version
           echo "Available Tauri commands:"
           cargo tauri --help | head -30
+          echo "Checking if Android command is available:"
+          cargo tauri android --help || echo "Android command not available in Tauri CLI"
           echo "Checking Android environment variables:"
           echo "ANDROID_HOME: $ANDROID_HOME"
           echo "ANDROID_SDK_ROOT: $ANDROID_SDK_ROOT"
@@ -155,6 +170,11 @@ jobs:
           if [ $INIT_EXIT_CODE -ne 0 ]; then
             echo "=== Android initialization failed ==="
             echo "Exit code: $INIT_EXIT_CODE"
+            echo "Possible causes:"
+            echo "1. Tauri CLI version doesn't support Android"
+            echo "2. Missing Android SDK components"
+            echo "3. Incorrect Android environment setup"
+            echo "4. Missing mobile feature in Cargo.toml"
             echo "Checking for any generated files:"
             find src-tauri -name "*.android*" -o -name "gen" -type d 2>/dev/null || echo "No android-related files found"
             echo "Checking Rust toolchain:"
@@ -163,6 +183,8 @@ jobs:
             ls -la $ANDROID_HOME/ || echo "Android SDK not found"
             echo "Checking cmdline-tools:"
             find $ANDROID_HOME -name "sdkmanager" 2>/dev/null || echo "sdkmanager not found"
+            echo "Checking if Tauri supports mobile:"
+            cargo tauri --help | grep -i mobile || echo "Mobile support not found in Tauri CLI"
             exit 1
           fi
           echo "Android project initialization completed successfully"
@@ -179,6 +201,8 @@ jobs:
           echo "Verifying Android project exists:"
           if [ ! -d "src-tauri/gen/android" ]; then
             echo "ERROR: Android project directory not found!"
+            echo "This indicates that the Android initialization step failed."
+            echo "Please check the previous 'Initialize Tauri Android project' step for errors."
             echo "Current directory structure:"
             find src-tauri -type d 2>/dev/null || echo "src-tauri not found"
             exit 1
