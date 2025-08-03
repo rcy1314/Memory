@@ -220,7 +220,9 @@ const closeFirstVisitModal = () => {
 
 // 分类切换处理函数
 const handleCategoryClick = (categoryAlias = null) => {
+  // 立即显示加载状态
   currentCategory.value = categoryAlias
+  
   // 滚动到相册区域
   setTimeout(() => {
     const gallerySection = document.querySelector('.gallery-section')

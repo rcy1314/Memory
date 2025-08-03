@@ -29,14 +29,16 @@ export async function resetRouter() {
 
 export async function addDynamicRoutes() {
   const settingStore = useSettingStore()
-  // 并行执行所有设置API调用以提升加载速度
-  await Promise.all([
-     settingStore.getGeneralSetting(),
-     settingStore.getContentSetting(),
-     settingStore.getMetaSetting(),
-     settingStore.getStorageSetting(),
-     settingStore.getDatabaseSetting(),
-   ])
+  // 异步加载设置，不阻塞路由初始化
+  Promise.all([
+    settingStore.getGeneralSetting(),
+    settingStore.getContentSetting(),
+    settingStore.getMetaSetting(),
+    settingStore.getStorageSetting(),
+    settingStore.getDatabaseSetting(),
+  ]).catch((error) => {
+    console.warn('设置加载失败，但不影响页面正常使用:', error)
+  })
   const token = getToken()
 
   // 没有token情况

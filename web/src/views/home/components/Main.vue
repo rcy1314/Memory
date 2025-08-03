@@ -1,10 +1,16 @@
 <template>
   <div id="blog-main" ref="listRef" :class="{ loading: isLoading }">
+<<<<<<< Updated upstream
     <!-- 整体相册加载动画 -->
     <div v-if="isLoading" class="gallery-loading-message">
       <div class="loading-text">
         正在加载，请稍后...
       </div>
+=======
+    <!-- 简化的加载状态 -->
+    <div v-if="isLoading" class="gallery-loading-message">
+      正在加载图片，请稍后...
+>>>>>>> Stashed changes
     </div>
     
     <!-- 只有在不加载且有数据时才显示图片 -->
@@ -23,6 +29,7 @@
       <div class="pagination-buttons">
         <button 
           @click="goToPrevPage" 
+<<<<<<< Updated upstream
           :disabled="page <= 1" 
           class="pagination-button prev-button"
           :class="{ disabled: page <= 1 }"
@@ -40,6 +47,27 @@
         >
           下一页
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+=======
+          :disabled="page <= 1 || isLoading" 
+          class="pagination-button prev-button"
+          :class="{ disabled: page <= 1 || isLoading }"
+        >
+          <svg v-if="!isLoading" width="16" height="16" viewBox="0 0 24 24" fill="none">
+            <path d="M15 18L9 12L15 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          <div v-if="isLoading" class="button-loading-spinner"></div>
+          {{ isLoading ? '加载中...' : '上一页' }}
+        </button>
+        <button 
+          @click="goToNextPage" 
+          :disabled="page >= Math.ceil(total / page_size) || isLoading" 
+          class="pagination-button next-button"
+          :class="{ disabled: page >= Math.ceil(total / page_size) || isLoading }"
+        >
+          {{ isLoading ? '加载中...' : '下一页' }}
+          <div v-if="isLoading" class="button-loading-spinner"></div>
+          <svg v-if="!isLoading" width="16" height="16" viewBox="0 0 24 24" fill="none">
+>>>>>>> Stashed changes
             <path d="M9 18L15 12L9 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
           </svg>
         </button>
@@ -70,7 +98,10 @@
         }"
         @transitionend="onTransitionEnd"
       >
-        <div v-if="!imageVisible" class="loader"></div>
+        <div v-if="!imageVisible" class="lightbox-loading-container">
+          <div class="lightbox-spinner"></div>
+          <div class="lightbox-loading-text">加载中，请稍后</div>
+        </div>
         <transition name="fade" mode="out-in">
           <div class="pic" style="display: block; text-indent: 0px">
             <img
@@ -401,8 +432,13 @@ async function getBlogs(silentError = false) {
     const res = await api.getBlogsVisitor(params)
 
     if (res.code == 200) {
+<<<<<<< Updated upstream
       // 确保加载提示至少显示3秒钟
       await new Promise((resolve) => setTimeout(resolve, 3000))
+=======
+      // 移除强制3秒延迟，改为最小延迟以确保加载状态可见
+      await new Promise((resolve) => setTimeout(resolve, 300))
+>>>>>>> Stashed changes
 
       // 分页模式下，每次都替换数据
       blogs.value = [...res.data]
@@ -419,13 +455,13 @@ async function getBlogs(silentError = false) {
     
     // 如果是首次加载失败，可以尝试重新加载
     if (page === 1 && blogs.value.length === 0 && !silentError) {
-      // 延迟3秒后自动重试一次
+      // 延迟1秒后自动重试一次，减少等待时间
       setTimeout(() => {
         if (blogs.value.length === 0) {
           console.log('自动重试加载图片...')
           getBlogs(true) // 重试时使用静默模式
         }
-      }, 3000)
+      }, 1000)
     }
   }
 }
@@ -1145,6 +1181,7 @@ body.modal-active #wrapper:after {
   align-items: center;
   padding: 60px 20px;
   width: 100%;
+<<<<<<< Updated upstream
   min-height: 300px;
   opacity: 1;
   position: relative;
@@ -1169,6 +1206,22 @@ body.modal-active #wrapper:after {
     opacity: 1;
     transform: translateY(0);
   }
+=======
+  min-height: 200px;
+  height: 30vh;
+  color: #666;
+  font-size: 16px;
+  text-align: center;
+}
+
+.button-loading-spinner {
+  width: 14px;
+  height: 14px;
+  border: 2px solid transparent;
+  border-top: 2px solid currentColor;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+>>>>>>> Stashed changes
 }
 
 @keyframes textFadeIn {
@@ -1182,6 +1235,7 @@ body.modal-active #wrapper:after {
   }
 }
 
+<<<<<<< Updated upstream
 @keyframes textPulse {
   0%, 100% {
     opacity: 1;
@@ -1196,6 +1250,56 @@ body.modal-active #wrapper:after {
   display: flex;
   flex-direction: column;
   align-items: center;
+=======
+
+
+/* 加载动画样式 */
+.lightbox-loading-container {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  z-index: 10;
+  background: rgba(0, 0, 0, 0.8);
+}
+
+.lightbox-spinner {
+  width: 32px;
+  height: 32px;
+  border: 3px solid rgba(255, 255, 255, 0.3);
+  border-top: 3px solid white;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+.lightbox-loading-text {
+  color: white;
+  font-size: 16px;
+  font-weight: 500;
+  text-align: center;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+  margin-top: 8px;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+
+
+/* 分页导航样式 */
+.pagination-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+>>>>>>> Stashed changes
   padding: 30px 20px;
   column-span: all;
   width: 100%;
@@ -1344,6 +1448,28 @@ body.modal-active #wrapper:after {
   .total-count {
     font-size: 11px;
   }
+<<<<<<< Updated upstream
+=======
+}
+
+/* 响应式优化 - 确保在所有设备上完美居中 */
+@media (max-width: 768px) {
+  .gallery-loading-message {
+    min-height: 150px;
+    height: 25vh;
+    padding: 30px 20px;
+    font-size: 15px;
+  }
+}
+
+@media (max-width: 480px) {
+  .gallery-loading-message {
+    min-height: 120px;
+    height: 20vh;
+    padding: 20px 15px;
+    font-size: 14px;
+  }
+>>>>>>> Stashed changes
 }
 
 /* 加载完成提示样式 */

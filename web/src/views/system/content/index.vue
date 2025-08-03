@@ -86,7 +86,12 @@ async function updateSetting() {
     try {
       const response = await api.updateContentSetting(setting)
       console.log('保存成功响应:', response)
-      settingStore.setContentSetting(infoForm.value)
+      
+      // 保存成功后重新获取最新数据并更新表单显示
+      await settingStore.getContentSetting()
+      await nextTick()
+      initFormData()
+      
       message.success(t('common.text.save_success'))
     } catch (error) {
       console.error('保存失败:', error)
