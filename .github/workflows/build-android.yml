@@ -86,6 +86,42 @@ jobs:
           cp src-tauri/tauri.conf.android.json src-tauri/tauri.conf.json
           echo "Using Android-specific Tauri configuration"
           
+      - name: Add Android targets
+        run: |
+          echo "=== Adding Android Rust targets ==="
+          rustup target add aarch64-linux-android
+          rustup target add armv7-linux-androideabi
+          rustup target add i686-linux-android
+          rustup target add x86_64-linux-android
+          echo "Installed Android targets:"
+          rustup target list | grep android
+          
+      - name: Verify Android SDK setup
+        run: |
+          echo "=== Verifying Android SDK Setup ==="
+          echo "ANDROID_HOME: $ANDROID_HOME"
+          echo "ANDROID_SDK_ROOT: $ANDROID_SDK_ROOT"
+          echo "ANDROID_NDK_ROOT: $ANDROID_NDK_ROOT"
+          echo "JAVA_HOME: $JAVA_HOME"
+          
+          # Check if required directories exist
+          if [ ! -d "$ANDROID_HOME" ]; then
+            echo "ERROR: ANDROID_HOME directory does not exist: $ANDROID_HOME"
+            exit 1
+          fi
+          
+          if [ ! -d "$ANDROID_NDK_ROOT" ]; then
+            echo "ERROR: ANDROID_NDK_ROOT directory does not exist: $ANDROID_NDK_ROOT"
+            exit 1
+          fi
+          
+          # Check for essential tools
+          if [ ! -f "$ANDROID_HOME/platform-tools/adb" ]; then
+            echo "WARNING: adb not found in platform-tools"
+          fi
+          
+          echo "Android SDK verification completed"
+          
       - name: Initialize Tauri Android project
         working-directory: ./web
         run: |
@@ -110,19 +146,25 @@ jobs:
           cat src-tauri/tauri.conf.json
           echo "Checking Cargo.toml:"
           cat src-tauri/Cargo.toml
+          echo "Checking Android targets:"
+          rustup target list | grep android
           echo "Initializing Tauri Android project..."
           export RUST_LOG=debug
-          cargo tauri android init --verbose 2>&1 || {
+          cargo tauri android init --verbose 2>&1
+          INIT_EXIT_CODE=$?
+          if [ $INIT_EXIT_CODE -ne 0 ]; then
             echo "=== Android initialization failed ==="
-            echo "Exit code: $?"
+            echo "Exit code: $INIT_EXIT_CODE"
             echo "Checking for any generated files:"
             find src-tauri -name "*.android*" -o -name "gen" -type d 2>/dev/null || echo "No android-related files found"
             echo "Checking Rust toolchain:"
             rustup show
-            echo "Checking Android targets:"
-            rustup target list | grep android
+            echo "Checking Android SDK installation:"
+            ls -la $ANDROID_HOME/ || echo "Android SDK not found"
+            echo "Checking cmdline-tools:"
+            find $ANDROID_HOME -name "sdkmanager" 2>/dev/null || echo "sdkmanager not found"
             exit 1
-          }
+          fi
           echo "Android project initialization completed successfully"
           echo "Verifying generated directories:"
           ls -la src-tauri/gen/ || echo "gen directory not found"
@@ -133,6 +175,15 @@ jobs:
       - name: Build Android APK (ARM64)
         working-directory: ./web
         run: |
+          echo "=== Building Android APK for ARM64 ==="
+          echo "Verifying Android project exists:"
+          if [ ! -d "src-tauri/gen/android" ]; then
+            echo "ERROR: Android project directory not found!"
+            echo "Current directory structure:"
+            find src-tauri -type d 2>/dev/null || echo "src-tauri not found"
+            exit 1
+          fi
+          echo "Android project directory exists, proceeding with build..."
           cargo tauri android build --target aarch64
         env:
           TAURI_PRIVATE_KEY: ${{ secrets.TAURI_PRIVATE_KEY }}
@@ -142,6 +193,11 @@ jobs:
       - name: Build Android APK (ARMv7)
         working-directory: ./web
         run: |
+          echo "=== Building Android APK for ARMv7 ==="
+          if [ ! -d "src-tauri/gen/android" ]; then
+            echo "ERROR: Android project directory not found!"
+            exit 1
+          fi
           cargo tauri android build --target armv7
         env:
           TAURI_PRIVATE_KEY: ${{ secrets.TAURI_PRIVATE_KEY }}
@@ -151,6 +207,11 @@ jobs:
       - name: Build Android APK (x86_64)
         working-directory: ./web
         run: |
+          echo "=== Building Android APK for x86_64 ==="
+          if [ ! -d "src-tauri/gen/android" ]; then
+            echo "ERROR: Android project directory not found!"
+            exit 1
+          fi
           cargo tauri android build --target x86_64
         env:
           TAURI_PRIVATE_KEY: ${{ secrets.TAURI_PRIVATE_KEY }}
