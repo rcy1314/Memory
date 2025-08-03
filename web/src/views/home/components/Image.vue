@@ -99,21 +99,32 @@ const loadImage = () => {
   }
   
   if (imageUrl && !imageSrc.value) {
-    // 响应式图片优化：根据设备类型添加不同尺寸参数
+    // 响应式图片优化：根据设备类型和网络状况添加不同尺寸参数
     const isMobile = window.innerWidth <= 768
     const isTablet = window.innerWidth <= 1024 && window.innerWidth > 768
+    const isSlowConnection = navigator.connection && navigator.connection.effectiveType && 
+                           ['slow-2g', '2g'].includes(navigator.connection.effectiveType)
     
-    if (imageUrl.includes('http')) {
-      // 如果是外部图片URL，根据设备类型添加优化参数
+    // 优化图片URL参数
+    if (imageUrl.includes('http') || imageUrl.includes('/api/')) {
       const separator = imageUrl.includes('?') ? '&' : '?'
+      let optimizedUrl = imageUrl
+      
       if (isMobile) {
-        imageUrl = `${imageUrl}${separator}w=400&h=600&fit=crop&auto=compress,format&q=75`
+        // 移动端：更小的尺寸和更高的压缩
+        const quality = isSlowConnection ? 60 : 70
+        optimizedUrl = `${imageUrl}${separator}w=350&h=500&fit=crop&auto=compress,format&q=${quality}`
       } else if (isTablet) {
-        imageUrl = `${imageUrl}${separator}w=600&h=800&fit=crop&auto=compress,format&q=80`
+        // 平板端：中等尺寸
+        const quality = isSlowConnection ? 70 : 75
+        optimizedUrl = `${imageUrl}${separator}w=500&h=700&fit=crop&auto=compress,format&q=${quality}`
       } else {
-        // 电脑端优化：适中的压缩以平衡质量和加载速度
-        imageUrl = `${imageUrl}${separator}w=800&h=1000&fit=crop&auto=compress,format&q=85`
+        // 电脑端：较大尺寸但仍然压缩
+        const quality = isSlowConnection ? 75 : 80
+        optimizedUrl = `${imageUrl}${separator}w=600&h=800&fit=crop&auto=compress,format&q=${quality}`
       }
+      
+      imageUrl = optimizedUrl
     }
     
     // 预加载图片以确保加载成功
@@ -122,7 +133,18 @@ const loadImage = () => {
       imageSrc.value = imageUrl
     }
     img.onerror = () => {
-      console.warn('图片加载失败:', imageUrl)
+      console.warn('图片加载失败，尝试加载原图:', imageUrl)
+      // 如果优化后的图片加载失败，尝试加载原图
+      if (imageUrl !== props.data.images[0].image_url) {
+        const originalImg = new Image()
+        originalImg.onload = () => {
+          imageSrc.value = props.data.images[0].image_url
+        }
+        originalImg.onerror = () => {
+          console.error('原图也加载失败:', props.data.images[0].image_url)
+        }
+        originalImg.src = props.data.images[0].image_url
+      }
     }
     img.src = imageUrl
   }
@@ -140,14 +162,14 @@ onMounted(() => {
         entries.forEach((entry) => {
           if (entry.isIntersecting) {
             isIntersecting.value = true
-            // 根据设备类型优化加载延迟
+            // 优化延迟：减少等待时间，提升用户体验
             let delay = 0
             if (isMobile) {
-              delay = Math.random() * 100 + 50 // 手机端：50-150ms随机延迟
+              delay = Math.random() * 50 + 25 // 手机端：25-75ms随机延迟
             } else if (isTablet) {
-              delay = Math.random() * 50 + 25 // 平板端：25-75ms随机延迟
+              delay = Math.random() * 30 + 15 // 平板端：15-45ms随机延迟
             } else {
-              delay = Math.random() * 30 + 10 // 电脑端：10-40ms随机延迟，更快响应
+              delay = Math.random() * 20 + 5 // 电脑端：5-25ms随机延迟，更快响应
             }
             
             setTimeout(() => {
@@ -159,8 +181,8 @@ onMounted(() => {
         })
       },
       {
-        rootMargin: isMobile ? '100px' : isTablet ? '75px' : '50px', // 电脑端适中的预加载距离
-        threshold: isMobile ? 0.05 : isTablet ? 0.1 : 0.2 // 电脑端更精确的触发阈值
+        rootMargin: isMobile ? '200px' : isTablet ? '150px' : '100px', // 优化预加载：增加预加载距离
+        threshold: isMobile ? 0.02 : isTablet ? 0.05 : 0.1 // 减少阈值，更早触发加载
       }
     )
     observer.observe(thumbRef.value)
