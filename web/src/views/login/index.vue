@@ -1,5 +1,5 @@
 <template>
-  <AppPage :show-footer="true" bg-cover :style="{ backgroundImage: `url(${bgImg})` }">
+  <AppPage :show-footer="true" bg-cover class="bg-gray-900">
     <div
       style="transform: translateY(25px)"
       class="m-auto max-w-1500 min-w-345 f-c-c rounded-10 bg-white bg-opacity-60 p-15 card-shadow"
@@ -11,7 +11,7 @@
 
       <div w-320 flex-col px-20 py-35>
         <h5 f-c-c text-24 font-normal color="#6a6a6a">
-          <NImage width="50" :src="site_icon" class="icon"></NImage>
+          <NImage width="45" :src="site_icon" class="icon" style="margin-right: 15px;"></NImage>
           {{ site_name }}
         </h5>
         <div mt-30>
@@ -19,7 +19,7 @@
             v-model:value="loginInfo.username"
             autofocus
             class="h-50 items-center pl-10 text-16"
-            placeholder="admin"
+            placeholder="请输入用户名"
             :maxlength="20"
           />
         </div>
@@ -29,7 +29,7 @@
             class="h-50 items-center pl-10 text-16"
             type="password"
             show-password-on="mousedown"
-            placeholder="123456"
+            placeholder="请输入密码"
             :maxlength="20"
             @keypress.enter="handleLogin"
           />
@@ -47,6 +47,10 @@
           >
             {{ $t('views.login.text_login') }}
           </n-button>
+        </div>
+        
+        <div mt-15 text-center>
+          <span class="text-12 text-gray-500">默认用户名：admin 默认密码：123456</span>
         </div>
       </div>
     </div>

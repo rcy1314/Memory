@@ -65,11 +65,37 @@ jobs:
       - name: Initialize Tauri Android project
         working-directory: ./web
         run: |
+          echo "=== Tauri Android Initialization Debug ==="
+          echo "Current working directory: $(pwd)"
+          echo "Tauri CLI version:"
+          cargo tauri --version
+          echo "Available Tauri commands:"
+          cargo tauri --help | grep -A 20 "SUBCOMMANDS"
+          echo "Checking Android environment variables:"
+          echo "ANDROID_HOME: $ANDROID_HOME"
+          echo "ANDROID_SDK_ROOT: $ANDROID_SDK_ROOT"
+          echo "ANDROID_NDK_ROOT: $ANDROID_NDK_ROOT"
+          echo "JAVA_HOME: $JAVA_HOME"
+          echo "Checking if Android SDK tools exist:"
+          ls -la $ANDROID_HOME/cmdline-tools/ || echo "cmdline-tools not found"
+          ls -la $ANDROID_HOME/platform-tools/ || echo "platform-tools not found"
           echo "Initializing Tauri Android project..."
-          cargo tauri android init
-          echo "Android project initialization completed"
+          cargo tauri android init --verbose || {
+            echo "Android initialization failed, checking error details:"
+            echo "Current directory contents:"
+            ls -la
+            echo "src-tauri directory contents:"
+            ls -la src-tauri/ || echo "src-tauri directory not found"
+            echo "Tauri config file:"
+            cat src-tauri/tauri.conf.json || echo "tauri.conf.json not found"
+            exit 1
+          }
+          echo "Android project initialization completed successfully"
+          echo "Verifying generated directories:"
           ls -la src-tauri/gen/ || echo "gen directory not found"
           ls -la src-tauri/gen/android/ || echo "android directory not found"
+          echo "Android project structure:"
+          find src-tauri/gen/android -type d 2>/dev/null || echo "No android directories found"
           
       - name: Build Android APK (ARM64)
         working-directory: ./web

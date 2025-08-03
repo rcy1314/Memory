@@ -94,7 +94,8 @@ class SettingUpdateStorage(BaseModel):
     suffix: Optional[str] = None
 
     def update_dict(self):
-        return self.model_dump(exclude_unset=True, exclude={"id"})
+        data = self.model_dump(exclude_unset=True, exclude={"id"})
+        return {"storage": data}
 
 class SettingUpdateDatabase(BaseModel):
     database: Optional[dict]= Field(example={
