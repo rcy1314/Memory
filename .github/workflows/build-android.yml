@@ -46,10 +46,17 @@ jobs:
         with:
           workspaces: './web/src-tauri -> target'
           
-      - name: Install Android NDK
+      - name: Install Android NDK and tools
         run: |
+          echo "Installing Android SDK components..."
+          sdkmanager --update
+          sdkmanager "platform-tools" "build-tools;34.0.0" "platforms;android-34"
           sdkmanager "ndk;25.2.9519653"
           echo "ANDROID_NDK_ROOT=$ANDROID_SDK_ROOT/ndk/25.2.9519653" >> $GITHUB_ENV
+          echo "Android SDK components installed successfully"
+          echo "Verifying installations:"
+          ls -la $ANDROID_SDK_ROOT/
+          ls -la $ANDROID_SDK_ROOT/ndk/
           
       - name: Install frontend dependencies
         working-directory: ./web
@@ -60,7 +67,10 @@ jobs:
         run: npm run build
         
       - name: Install Tauri CLI
-        run: cargo install tauri-cli --version "^2.0"
+        run: |
+          cargo install tauri-cli --version "2.7.1" --locked
+          echo "Tauri CLI installed successfully"
+          cargo tauri --version
         
       - name: Initialize Tauri Android project
         working-directory: ./web
@@ -70,24 +80,33 @@ jobs:
           echo "Tauri CLI version:"
           cargo tauri --version
           echo "Available Tauri commands:"
-          cargo tauri --help | grep -A 20 "SUBCOMMANDS"
+          cargo tauri --help | head -30
           echo "Checking Android environment variables:"
           echo "ANDROID_HOME: $ANDROID_HOME"
           echo "ANDROID_SDK_ROOT: $ANDROID_SDK_ROOT"
           echo "ANDROID_NDK_ROOT: $ANDROID_NDK_ROOT"
           echo "JAVA_HOME: $JAVA_HOME"
+          echo "PATH: $PATH"
           echo "Checking if Android SDK tools exist:"
           ls -la $ANDROID_HOME/cmdline-tools/ || echo "cmdline-tools not found"
           ls -la $ANDROID_HOME/platform-tools/ || echo "platform-tools not found"
+          echo "Checking src-tauri directory:"
+          ls -la src-tauri/
+          echo "Checking Tauri config:"
+          cat src-tauri/tauri.conf.json
+          echo "Checking Cargo.toml:"
+          cat src-tauri/Cargo.toml
           echo "Initializing Tauri Android project..."
-          cargo tauri android init --verbose || {
-            echo "Android initialization failed, checking error details:"
-            echo "Current directory contents:"
-            ls -la
-            echo "src-tauri directory contents:"
-            ls -la src-tauri/ || echo "src-tauri directory not found"
-            echo "Tauri config file:"
-            cat src-tauri/tauri.conf.json || echo "tauri.conf.json not found"
+          export RUST_LOG=debug
+          cargo tauri android init --verbose 2>&1 || {
+            echo "=== Android initialization failed ==="
+            echo "Exit code: $?"
+            echo "Checking for any generated files:"
+            find src-tauri -name "*.android*" -o -name "gen" -type d 2>/dev/null || echo "No android-related files found"
+            echo "Checking Rust toolchain:"
+            rustup show
+            echo "Checking Android targets:"
+            rustup target list | grep android
             exit 1
           }
           echo "Android project initialization completed successfully"
