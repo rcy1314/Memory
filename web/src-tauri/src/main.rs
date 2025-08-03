@@ -37,19 +37,22 @@ fn start_backend() {
             .unwrap_or_else(|| std::path::PathBuf::from("."));
         
         // 在开发模式下，后端在项目根目录
-        // 在生产模式下，需要相对于应用程序包的位置
-        let backend_path = if cfg!(debug_assertions) {
-            exe_dir.join("../../run.py")
+        // 动态检测路径，支持应用包和直接运行两种情况
+        let (backend_path, working_dir) = if cfg!(debug_assertions) {
+            (exe_dir.join("../../run.py"), exe_dir.join("../.."))
         } else {
-            // 在macOS应用包中，可执行文件在 Contents/MacOS/
-            // 后端文件在 Contents/Resources/_up_/_up_/ 目录中
-            exe_dir.join("../Resources/_up_/_up_/run.py")
-        };
-        
-        let working_dir = if cfg!(debug_assertions) {
-            exe_dir.join("../..")
-        } else {
-            exe_dir.join("../Resources/_up_/_up_")
+            // 首先尝试应用包路径
+            let app_bundle_path = exe_dir.join("../Resources/_up_/_up_/run.py");
+            let app_bundle_working = exe_dir.join("../Resources/_up_/_up_");
+            
+            // 如果应用包路径不存在，尝试直接运行路径
+            if app_bundle_path.exists() {
+                (app_bundle_path, app_bundle_working)
+            } else {
+                let direct_path = exe_dir.join("./_up_/_up_/run.py");
+                let direct_working = exe_dir.join("./_up_/_up_");
+                (direct_path, direct_working)
+            }
         };
         
         let mut cmd = if cfg!(target_os = "windows") {
@@ -62,13 +65,24 @@ fn start_backend() {
             cmd
         };
         
-        cmd.current_dir(working_dir);
+        println!("Attempting to start backend at: {:?}", backend_path);
+        println!("Working directory: {:?}", working_dir);
+        
+        cmd.current_dir(&working_dir);
         
         match cmd.stdout(Stdio::piped())
            .stderr(Stdio::piped())
            .spawn() {
-            Ok(_) => println!("Backend server started successfully"),
-            Err(e) => eprintln!("Failed to start backend server: {}", e),
+            Ok(child) => {
+                println!("Backend server started successfully with PID: {}", child.id());
+                // 保持子进程运行
+                std::mem::forget(child);
+            },
+            Err(e) => {
+                eprintln!("Failed to start backend server: {}", e);
+                eprintln!("Backend path: {:?}", backend_path);
+                eprintln!("Working dir: {:?}", working_dir);
+            },
         }
     });
 }

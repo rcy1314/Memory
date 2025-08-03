@@ -9,7 +9,7 @@ services:
     volumes:
       - ./.moment:/app/data
     ports:
-      - 9573:9999
+      - 9999:9999
     environment:
       # 数据库连接配置
       - DB_HOST=host.docker.internal

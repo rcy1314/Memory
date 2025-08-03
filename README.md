@@ -90,6 +90,13 @@ podman build --platform linux/arm64 --manifest noise233/memory:latest .
 podman manifest push noise233/memory:latest
 ```
 
+```
+podman manifest create noise233/memory:dev
+podman build --platform linux/amd64 --manifest noise233/memory:dev .
+podman build --platform linux/arm64 --manifest noise233/memory:dev .
+podman manifest push noise233/memory:dev
+```
+
 
 
 ## 使用
