@@ -1,12 +1,5 @@
 <template>
   <div id="blog-main" ref="listRef" :class="{ loading: isLoading }">
-<<<<<<< Updated upstream
-    <!-- 整体相册加载动画 -->
-    <div v-if="isLoading" class="gallery-loading-message">
-      <div class="loading-text">
-        正在加载，请稍后...
-      </div>
-=======
     <!-- 简化的加载状态 -->
     <div v-if="isLoading" class="gallery-loading-message">
       正在加载图片，请稍后...
