@@ -40,6 +40,17 @@
       "../../data/db.sqlite3",
       "../../migrations/**/*",
       "../../uvicorn_loggin_config.json"
-    ]
+    ],
+    "android": {
+      "minSdkVersion": 24,
+      "compileSdkVersion": 34,
+      "targetSdkVersion": 34
+    }
+  },
+  "plugins": {
+    "shell": {
+      "all": false,
+      "open": true
+    }
   }
 }
