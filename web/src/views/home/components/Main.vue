@@ -10,7 +10,6 @@
     <!-- 简化的加载状态 -->
     <div v-if="isLoading" class="gallery-loading-message">
       正在加载图片，请稍后...
->>>>>>> Stashed changes
     </div>
     
     <!-- 只有在不加载且有数据时才显示图片 -->
@@ -29,25 +28,6 @@
       <div class="pagination-buttons">
         <button 
           @click="goToPrevPage" 
-<<<<<<< Updated upstream
-          :disabled="page <= 1" 
-          class="pagination-button prev-button"
-          :class="{ disabled: page <= 1 }"
-        >
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-            <path d="M15 18L9 12L15 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-          </svg>
-          上一页
-        </button>
-        <button 
-          @click="goToNextPage" 
-          :disabled="page >= Math.ceil(total / page_size)" 
-          class="pagination-button next-button"
-          :class="{ disabled: page >= Math.ceil(total / page_size) }"
-        >
-          下一页
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-=======
           :disabled="page <= 1 || isLoading" 
           class="pagination-button prev-button"
           :class="{ disabled: page <= 1 || isLoading }"
@@ -67,7 +47,6 @@
           {{ isLoading ? '加载中...' : '下一页' }}
           <div v-if="isLoading" class="button-loading-spinner"></div>
           <svg v-if="!isLoading" width="16" height="16" viewBox="0 0 24 24" fill="none">
->>>>>>> Stashed changes
             <path d="M9 18L15 12L9 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
           </svg>
         </button>
@@ -432,13 +411,8 @@ async function getBlogs(silentError = false) {
     const res = await api.getBlogsVisitor(params)
 
     if (res.code == 200) {
-<<<<<<< Updated upstream
-      // 确保加载提示至少显示3秒钟
-      await new Promise((resolve) => setTimeout(resolve, 3000))
-=======
       // 移除强制3秒延迟，改为最小延迟以确保加载状态可见
       await new Promise((resolve) => setTimeout(resolve, 300))
->>>>>>> Stashed changes
 
       // 分页模式下，每次都替换数据
       blogs.value = [...res.data]
@@ -1181,32 +1155,6 @@ body.modal-active #wrapper:after {
   align-items: center;
   padding: 60px 20px;
   width: 100%;
-<<<<<<< Updated upstream
-  min-height: 300px;
-  opacity: 1;
-  position: relative;
-  z-index: 9999;
-}
-
-.loading-text {
-  color: #555;
-  font-size: 16px;
-  font-weight: 500;
-  text-align: center;
-  opacity: 1;
-  animation: textPulse 2s ease-in-out infinite;
-}
-
-@keyframes fadeInUp {
-  0% {
-    opacity: 0;
-    transform: translateY(20px);
-  }
-  100% {
-    opacity: 1;
-    transform: translateY(0);
-  }
-=======
   min-height: 200px;
   height: 30vh;
   color: #666;
@@ -1221,36 +1169,13 @@ body.modal-active #wrapper:after {
   border-top: 2px solid currentColor;
   border-radius: 50%;
   animation: spin 1s linear infinite;
->>>>>>> Stashed changes
 }
 
-@keyframes textFadeIn {
-  0% {
-    opacity: 0;
-    transform: translateY(10px);
-  }
-  100% {
-    opacity: 1;
-    transform: translateY(0);
-  }
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
 }
 
-<<<<<<< Updated upstream
-@keyframes textPulse {
-  0%, 100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.6;
-  }
-}
-
-/* 分页导航样式 */
-.pagination-container {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-=======
 
 
 /* 加载动画样式 */
@@ -1299,7 +1224,6 @@ body.modal-active #wrapper:after {
   display: flex;
   flex-direction: column;
   align-items: center;
->>>>>>> Stashed changes
   padding: 30px 20px;
   column-span: all;
   width: 100%;
@@ -1448,8 +1372,6 @@ body.modal-active #wrapper:after {
   .total-count {
     font-size: 11px;
   }
-<<<<<<< Updated upstream
-=======
 }
 
 /* 响应式优化 - 确保在所有设备上完美居中 */
@@ -1469,7 +1391,6 @@ body.modal-active #wrapper:after {
     padding: 20px 15px;
     font-size: 14px;
   }
->>>>>>> Stashed changes
 }
 
 /* 加载完成提示样式 */
