@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta
 import time
 import boto3
-from fastapi import APIRouter, File, UploadFile
+from fastapi import APIRouter, File, UploadFile, Request
 import urllib
 
 from app.controllers.user import UserController, user_controller
@@ -72,10 +72,11 @@ async def login_access_token(credentials: CredentialsSchema):
 
 
 @base_router.post("/upload", summary="上传图片", dependencies=[DependAuth])
-async def upload(file: UploadFile = File()):
+async def upload(request: Request, file: UploadFile = File()):
     storage_setting = (await setting_controller.get(id=1)).storage
     enableStorage = storage_setting.get("enable_storage", True)
     max_size = storage_setting.get("max_size", 32) or 32
+    storage_type = storage_setting.get("storage_type", "local")
 
     if file.size > max_size * 1024 * 1024:
         return Fail(
@@ -86,39 +87,80 @@ async def upload(file: UploadFile = File()):
         return Fail(msg="已禁止上传图片")
 
     t = time.localtime()
-    path_template = storage_setting.get("path", "")
-    access_key = storage_setting.get("access_id", None)
-    secret_key = storage_setting.get("secret_key", None)
-    bucket_name = storage_setting.get("bucket", None)
-    endpoint_url = storage_setting.get("endpoint", None)
-    region = storage_setting.get("region", None)
-    final_path = (
-        path_template.replace("{year}", str(t.tm_year))
-        .replace("{month}", str(t.tm_mon).zfill(2))
-        .replace("{day}", str(t.tm_mday).zfill(2))
-        .replace("{timestamp}", str(int(time.time())))
-        .replace("{filename}", file.filename)
-    )
-    if not access_key or not secret_key or not bucket_name or not endpoint_url:
-        return Fail(msg="请在存储设置中完善相关参数")
-    try:
-        storage = S3FileStorage(
-            {
-                "access_key_id": access_key,
-                "secret_access_key": secret_key,
-                "bucket_name": bucket_name,
-                "endpoint_url": endpoint_url,
-                "region_name": region,
-            }
+    
+    if storage_type == "local":
+        # 本地存储逻辑
+        import os
+        import shutil
+        from pathlib import Path
+        
+        local_path = storage_setting.get("local_path", "images")
+        
+        # 创建基于时间的目录结构
+        year_month = f"{t.tm_year}/{str(t.tm_mon).zfill(2)}"
+        upload_dir = Path(local_path) / year_month
+        upload_dir.mkdir(parents=True, exist_ok=True)
+        
+        # 生成文件名
+        timestamp = str(int(time.time()))
+        filename = f"{timestamp}_{file.filename}"
+        file_path = upload_dir / filename
+        
+        try:
+            # 保存文件到本地
+            with open(file_path, "wb") as buffer:
+                shutil.copyfileobj(file.file, buffer)
+            
+            # 获取URL前缀设置
+            local_prefix = storage_setting.get("local_prefix", "")
+            
+            # 如果没有设置前缀，使用程序运行地址作为默认前缀
+            if not local_prefix:
+                base_url = str(request.base_url).rstrip('/')
+                file_url = f"{base_url}/{local_path}/{year_month}/{filename}"
+            else:
+                # 使用自定义前缀组成完整URL
+                file_url = f"{local_prefix.rstrip('/')}/{local_path}/{year_month}/{filename}"
+            
+            return Success(data=file_url, msg="Upload Success")
+            
+        except Exception as e:
+            return Fail(msg=f"本地上传失败：{str(e)}")
+    
+    else:
+        # 云端存储逻辑
+        path_template = storage_setting.get("path", "")
+        access_key = storage_setting.get("access_id", None)
+        secret_key = storage_setting.get("secret_key", None)
+        bucket_name = storage_setting.get("bucket", None)
+        endpoint_url = storage_setting.get("endpoint", None)
+        region = storage_setting.get("region", None)
+        final_path = (
+            path_template.replace("{year}", str(t.tm_year))
+            .replace("{month}", str(t.tm_mon).zfill(2))
+            .replace("{day}", str(t.tm_mday).zfill(2))
+            .replace("{timestamp}", str(int(time.time())))
+            .replace("{filename}", file.filename)
         )
-        await storage.save_file(file, final_path)
-    except Exception as e:
-        return Fail(msg=f"上传失败：{str(e)}")
+        if not access_key or not secret_key or not bucket_name or not endpoint_url:
+            return Fail(msg="请在存储设置中完善相关参数")
+        try:
+            storage = S3FileStorage(
+                {
+                    "access_key_id": access_key,
+                    "secret_access_key": secret_key,
+                    "bucket_name": bucket_name,
+                    "endpoint_url": endpoint_url,
+                    "region_name": region,
+                }
+            )
+            await storage.save_file(file, final_path)
+        except Exception as e:
+            return Fail(msg=f"云端上传失败：{str(e)}")
 
-    prefix = storage_setting.get("prefix", "")
-    file_url = prefix.rstrip("/") + "/" + final_path.lstrip("/")
-
-    return Success(data=file_url, msg="Upload Success")
+        prefix = storage_setting.get("prefix", "")
+        file_url = prefix.rstrip("/") + "/" + final_path.lstrip("/")
+        return Success(data=file_url, msg="Upload Success")
 
 
 class PresignRequest(BaseModel):
@@ -135,9 +177,13 @@ async def get_presigned_url(payload: PresignRequest):
     enableStorage = storage_setting.get("enable_storage", True)
     max_size = storage_setting.get("max_size", 32)
     max_size = max_size if max_size else 32
+    storage_type = storage_setting.get("storage_type", "local")
 
     if not enableStorage:
         return Fail(msg="已禁止上传图片")
+    
+    if storage_type == "local":
+        return Fail(msg="本地存储不支持预签名URL，请使用直接上传接口")
 
     if payload.size > max_size * 1024 * 1024:
         return Fail(

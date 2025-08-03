@@ -78,11 +78,22 @@ async def init_superuser():
 
 
 async def init_setting():
-    setting = await setting_controller.model.exists()
-    if not setting:
-        await setting_controller.create(
-            SettingCreate(general={}, content={}, meta={}, storage={})
-        )
+    """初始化设置，确保所有字段都有默认值"""
+    from migrations.init_default_settings import init_all_default_settings
+    
+    # 使用完整的默认设置初始化
+    try:
+        await init_all_default_settings(standalone=False)
+        logger.info("设置初始化完成")
+    except Exception as e:
+        logger.error(f"设置初始化失败: {str(e)}")
+        # 如果新的初始化失败，使用原有的简单初始化作为备用
+        setting = await setting_controller.model.exists()
+        if not setting:
+            await setting_controller.create(
+                SettingCreate(general={}, content={}, meta={}, storage={}, database={})
+            )
+            logger.info("使用简单设置初始化完成")
 
 
 @asynccontextmanager
@@ -96,6 +107,28 @@ async def lifespan(app: FastAPI):
         "/assets",
         CachedStaticFiles(directory=f"./dist/assets"),
         name="assets",
+    )
+    
+    # 挂载本地存储的图片目录
+    import os
+    from pathlib import Path
+    
+    # 获取存储设置中的本地路径
+    try:
+        setting = await setting_controller.get(id=1)
+        local_path = setting.storage.get("local_path", "images")
+    except:
+        local_path = "images"
+    
+    # 确保图片目录存在
+    images_dir = Path(local_path)
+    images_dir.mkdir(parents=True, exist_ok=True)
+    
+    # 挂载图片静态文件服务
+    app.mount(
+        f"/{local_path}",
+        CachedStaticFiles(directory=str(images_dir)),
+        name="images",
     )
 
     logger.info("应用初始化完成")

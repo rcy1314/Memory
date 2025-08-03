@@ -21,7 +21,13 @@ export function reqReject(error) {
 }
 
 export function resResolve(response) {
-  const { data, status, statusText } = response
+  const { data, status, statusText, config } = response
+
+  // 对于blob类型的响应，直接返回response对象
+  if (config.responseType === 'blob') {
+    return Promise.resolve(response)
+  }
+
   if (data?.code !== 200) {
     const code = data?.code ?? status
     /** 根据code处理对应的操作，并返回处理后的message */
@@ -66,9 +72,10 @@ export async function resReject(error) {
   const message = resolveResError(code, data?.msg ?? error.message)
   
   // 检查是否为静默请求（图片加载相关）
-  const isSilentRequest = error.config?.silentError || 
-                         error.config?.url?.includes('/visitor/blog/list')
-  
+  const isSilentRequest =
+    error.config?.silentError ||
+    error.config?.url?.includes('/visitor/blog/list')
+
   if (!isSilentRequest) {
     window.$message?.error(message, { keepAliveOnHover: true })
   }

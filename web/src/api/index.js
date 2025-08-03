@@ -1,4 +1,4 @@
-import { request, createAxios, imageRequest, migrationRequest } from '@/utils'
+import { request, imageRequest, migrationRequest } from '@/utils'
 
 export default {
   uploadApi: import.meta.env.VITE_BASE_API + '/admin/base/upload',
@@ -53,6 +53,9 @@ export default {
   testDatabaseConnection: (data = {}) => request.post('/admin/database/test-connection', data),
   migrateDatabaseData: (data = {}) =>
     migrationRequest.post('/admin/database/migrate', data, { silentError: true }),
+  // backup
+  backupPhotos: () => request.get('/admin/setting/backup/photos', { responseType: 'blob' }),
+  backupDatabase: () => request.get('/admin/setting/backup/database', { responseType: 'blob' }),
   // visitor
   getOrderOptionVisitor: () => request.get('/visitor/order/list'),
   getBlogsVisitor: (params = {}) =>

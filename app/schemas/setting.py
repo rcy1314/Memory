@@ -78,7 +78,20 @@ class SettingUpdateContent(BaseModel):
         return self.model_dump(exclude_unset=True, exclude={"id"})
     
 class SettingUpdateStorage(BaseModel):
-    storage: Optional[dict]= Field(example={})
+    storage_type: Optional[str] = "local"  # 'local' 或 'cloud'
+    local_path: Optional[str] = "images"  # 本地存储路径
+    local_prefix: Optional[str] = None  # 本地存储URL前缀
+    enable_storage: Optional[bool] = None
+    max_size: Optional[float] = None
+    timeout_time: Optional[int] = None
+    endpoint: Optional[str] = None
+    region: Optional[str] = None
+    access_id: Optional[str] = None
+    secret_key: Optional[str] = None
+    bucket: Optional[str] = None
+    path: Optional[str] = None
+    prefix: Optional[str] = None
+    suffix: Optional[str] = None
 
     def update_dict(self):
         return self.model_dump(exclude_unset=True, exclude={"id"})
