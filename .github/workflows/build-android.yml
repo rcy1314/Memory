@@ -59,8 +59,8 @@ jobs:
         working-directory: ./web
         run: npm run build
         
-      - name: Install Tauri CLI with Android support
-        run: cargo install tauri-cli --version "^2.0" --features android
+      - name: Install Tauri CLI
+        run: cargo install tauri-cli --version "^2.0"
         
       - name: Initialize Tauri Android project
         working-directory: ./web
