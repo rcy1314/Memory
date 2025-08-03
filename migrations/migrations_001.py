@@ -110,7 +110,7 @@ async def _init_default_settings():
             await Setting.create(
                 general={},
                 content={
-                    "page_size": 80,
+                    "page_size": 24,
                     "thumbnail_suffix": "",
                     "detail_suffix": "",
                     "thumbnail_show_location": False,
@@ -162,7 +162,7 @@ async def _init_default_settings():
             # 检查并补充content字段
             content = setting.content or {}
             default_content = {
-                "page_size": 80,
+                "page_size": 24,
                 "thumbnail_suffix": "",
                 "detail_suffix": "",
                 "thumbnail_show_location": False,

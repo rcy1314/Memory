@@ -114,7 +114,7 @@
       "placeholder_entry_url": "快捷入口链接",
       "label_content_setting": "内容设置",
       "label_page_size": "首页每次加载图片数",
-      "placeholder_page_size": "请输入首页每次加载图片数，默认为999",
+      "placeholder_page_size": "请输入首页每次加载图片数，默认为24",
       "label_thumbnail_suffix": "缩略图片后缀",
       "label_detail_suffix": "详情图片后缀",
       "label_thumbnail_show_location": "查看缩略图时显示地点",

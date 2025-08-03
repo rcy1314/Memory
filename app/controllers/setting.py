@@ -28,7 +28,7 @@ class SettingController(CRUDBase[Setting, SettingCreate, SettingUpdate]):
                 default_setting = await Setting.create(
                     general={},
                     content={
-                        "page_size": 80,
+                        "page_size": 24,
                         "thumbnail_suffix": "",
                         "detail_suffix": "",
                         "thumbnail_show_location": False,

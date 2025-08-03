@@ -3,11 +3,11 @@
     <div flex-1>
       <!-- 返回首页按钮 -->
       <div mb-15>
-        <n-button @click="goToHome" type="primary" ghost>
+        <n-button @click="goToHome" type="primary" ghost title="返回首页">
           <template #icon>
             <n-icon>
               <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M19 12H5M12 19L5 12L12 5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z" fill="currentColor"/>
               </svg>
             </n-icon>
           </template>

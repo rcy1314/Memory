@@ -1,28 +1,49 @@
 <template>
   <div id="blog-main" ref="listRef" :class="{ loading: isLoading }">
     <!-- 整体相册加载动画 -->
-    <div v-if="isLoading && page === 1" class="gallery-loading-overlay">
-      <div class="gallery-loading-spinner">
-        <div class="spinner-ring"></div>
-        <p>正在加载图片...</p>
+    <div v-if="isLoading" class="gallery-loading-message">
+      <div class="loading-text">
+        正在加载，请稍后...
       </div>
     </div>
     
-    <transition-group name="fade-slide" tag="div" class="images-container">
+    <!-- 只有在不加载且有数据时才显示图片 -->
+    <transition-group v-if="!isLoading && blogs.length > 0" name="fade-slide" tag="div" class="images-container">
       <Image v-for="blog in blogs" :key="blog.id" :data="blog" @click="showImage(blog)" />
     </transition-group>
     
-    <!-- 下拉加载更多提示 -->
-    <div v-if="isLoadingMore" class="load-more-indicator">
-      <div class="load-more-spinner"></div>
-      <span>加载剩余图片中...</span>
-    </div>
+
     
-    <!-- 加载更多按钮 -->
-    <div v-if="page * page_size < total && !isLoadingMore" class="load-more-button-container">
-      <button @click="loadMore" class="load-more-button">
-        加载更多
-      </button>
+    <!-- 分页导航 -->
+    <div v-if="total > 0 && !isLoading" class="pagination-container">
+      <div class="pagination-info">
+        <span>第 {{ page }} 页，共 {{ Math.ceil(total / page_size) }} 页</span>
+        <span class="total-count">（共 {{ total }} 张图片）</span>
+      </div>
+      <div class="pagination-buttons">
+        <button 
+          @click="goToPrevPage" 
+          :disabled="page <= 1" 
+          class="pagination-button prev-button"
+          :class="{ disabled: page <= 1 }"
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+            <path d="M15 18L9 12L15 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          上一页
+        </button>
+        <button 
+          @click="goToNextPage" 
+          :disabled="page >= Math.ceil(total / page_size)" 
+          class="pagination-button next-button"
+          :class="{ disabled: page >= Math.ceil(total / page_size) }"
+        >
+          下一页
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+            <path d="M9 18L15 12L9 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </button>
+      </div>
     </div>
     
     <!-- 已加载完成提示 -->
@@ -138,8 +159,8 @@ var current_category = props.currentCategory
 var current_location = router.currentRoute.value.params.location
 const blogs = ref([])
 const listRef = ref(null)
-const isLoading = ref(false)
-const isLoadingMore = ref(false)
+const isLoading = ref(true)
+// 移除isLoadingMore变量，分页模式下不再需要
 const currentBlog = ref(null)
 const currentSize = ref({
   width: Math.min(400, window.innerWidth - 40),
@@ -163,8 +184,8 @@ const splitter = isValueNotEmpty(settingStore.metaSetting?.site_splitter)
   ? settingStore.metaSetting?.site_splitter
   : import.meta.env.VITE_TITLE_SPLITTER
 const page_size = isValueNotEmpty(settingStore.contentSetting?.page_size)
-  ? settingStore.contentSetting?.page_size
-  : import.meta.env.VITE_PAGE_SIZE
+  ? parseInt(settingStore.contentSetting?.page_size)
+  : parseInt(import.meta.env.VITE_PAGE_SIZE)
 var thumbnail_suffix = isValueNotEmpty(settingStore.contentSetting?.thumbnail_suffix)
   ? settingStore.contentSetting?.thumbnail_suffix
   : ''
@@ -372,9 +393,7 @@ function onImageLoad() {
 }
 async function getBlogs(silentError = false) {
   try {
-    if (page === 1) {
-      isLoading.value = true
-    }
+    isLoading.value = true
 
     var params = { page: page, page_size: page_size }
     if (isValueNotEmpty(current_category)) params.category = current_category
@@ -382,18 +401,13 @@ async function getBlogs(silentError = false) {
     const res = await api.getBlogsVisitor(params)
 
     if (res.code == 200) {
-      // 添加延迟以实现平滑过渡
-      await new Promise((resolve) => setTimeout(resolve, page === 1 ? 300 : 0))
+      // 确保加载提示至少显示3秒钟
+      await new Promise((resolve) => setTimeout(resolve, 3000))
 
-      if (page === 1) {
-        // 首次加载或分类切换时，替换数据
-        blogs.value = [...res.data]
-        isLoading.value = false
-      } else {
-        // 加载更多时，追加数据
-        res.data.forEach((e) => blogs.value.push(e))
-        isLoadingMore.value = false
-      }
+      // 分页模式下，每次都替换数据
+      blogs.value = [...res.data]
+      isLoading.value = false
+      
       formatBlogs()
       page = res.page
       total = res.total
@@ -402,7 +416,6 @@ async function getBlogs(silentError = false) {
     // 静默处理加载错误，不显示错误提示
     console.log('图片加载失败，静默处理:', e)
     isLoading.value = false
-    isLoadingMore.value = false
     
     // 如果是首次加载失败，可以尝试重新加载
     if (page === 1 && blogs.value.length === 0 && !silentError) {
@@ -463,13 +476,51 @@ async function getCategory() {
   } catch (e) {}
   return []
 }
-function loadMore() {
-  if (page * page_size < total && !isLoadingMore.value) {
-    isLoadingMore.value = true
-    page++
-    // 滚动加载更多时也使用静默错误处理
-    getBlogs(true) // 传入silentError参数
+// 上一页
+function goToPrevPage() {
+  if (page > 1 && !isLoading.value) {
+    page--
+    blogs.value = [] // 清空当前数据
+    isLoading.value = true // 设置加载状态
+    getBlogs()
+    // 滚动到分类栏下方（相册区域开始位置）
+    scrollToGallery()
   }
+}
+
+// 下一页
+function goToNextPage() {
+  if (page < Math.ceil(total / page_size) && !isLoading.value) {
+    page++
+    blogs.value = [] // 清空当前数据
+    isLoading.value = true // 设置加载状态
+    getBlogs()
+    // 滚动到分类栏下方（相册区域开始位置）
+    scrollToGallery()
+  }
+}
+
+// 滚动到相册区域
+function scrollToGallery() {
+  // 查找分类导航区域
+  const categoriesSection = document.querySelector('.categories-nav-section')
+  if (categoriesSection) {
+    // 滚动到分类导航下方，留一些间距
+    const targetPosition = categoriesSection.offsetTop + categoriesSection.offsetHeight + 20
+    window.scrollTo({ top: targetPosition, behavior: 'smooth' })
+  } else {
+    // 如果找不到分类导航，则滚动到相册区域
+    const gallerySection = document.querySelector('.gallery-section')
+    if (gallerySection) {
+      window.scrollTo({ top: gallerySection.offsetTop, behavior: 'smooth' })
+    }
+  }
+}
+
+// 保留原有的loadMore函数以兼容其他可能的调用
+function loadMore() {
+  // 分页模式下不再使用滚动加载
+  return
 }
 // 监听当前分类变化
 watch(
@@ -480,9 +531,8 @@ watch(
     page = 1
     total = 0
 
-    // 延迟清空数据，先显示加载状态
+    // 立即显示加载状态并清空数据
     isLoading.value = true
-    await new Promise((resolve) => setTimeout(resolve, 150))
     blogs.value = []
 
     getBlogs()
@@ -500,6 +550,10 @@ watch(
     blogs.value = []
     page = 1
     total = 0
+    
+    // 显示加载状态
+    isLoading.value = true
+    
     getBlogs()
     if (isValueNotEmpty(current_location)) {
       document.title = `${current_location} ${splitter} ${baseTitle}`
@@ -507,8 +561,9 @@ watch(
   },
   { immediate: true }
 )
-scrollToload(listRef, loadMore)
-scrollToload(null, loadMore)
+// 移除滚动加载监听器，改为分页模式
+// scrollToload(listRef, loadMore)
+// scrollToload(null, loadMore)
 </script>
 <style>
 .img {
@@ -1083,108 +1138,212 @@ body.modal-active #wrapper:after {
 }
 
 /* 整体相册加载动画 */
-.gallery-loading-overlay {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: transparent;
+/* 加载提示样式 */
+.gallery-loading-message {
   display: flex;
-  align-items: center;
   justify-content: center;
-  z-index: 100;
+  align-items: center;
+  padding: 60px 20px;
+  width: 100%;
+  min-height: 300px;
+  opacity: 1;
+  position: relative;
+  z-index: 9999;
 }
 
-.gallery-loading-spinner {
+.loading-text {
+  color: #555;
+  font-size: 16px;
+  font-weight: 500;
   text-align: center;
-  color: #666;
+  opacity: 1;
+  animation: textPulse 2s ease-in-out infinite;
 }
 
-.spinner-ring {
-  width: 40px;
-  height: 40px;
-  border: 3px solid #f3f3f3;
-  border-top: 3px solid #3498db;
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
-  margin: 0 auto 10px;
+@keyframes fadeInUp {
+  0% {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
-@keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
+@keyframes textFadeIn {
+  0% {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
-/* 下拉加载更多提示 */
-.load-more-indicator {
+@keyframes textPulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.6;
+  }
+}
+
+/* 分页导航样式 */
+.pagination-container {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  justify-content: center;
-  padding: 20px;
+  padding: 30px 20px;
+  column-span: all;
+  width: 100%;
+  gap: 20px;
+}
+
+.pagination-info {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
   color: #666;
   font-size: 14px;
 }
 
-.load-more-spinner {
-  width: 16px;
-  height: 16px;
-  border: 2px solid #f3f3f3;
-  border-top: 2px solid #3498db;
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
-  margin-right: 8px;
+.total-count {
+  font-size: 12px;
+  opacity: 0.8;
 }
 
-/* 加载更多按钮样式 */
-.load-more-button-container {
+.pagination-buttons {
   display: flex;
-  justify-content: center;
-  padding: 30px 0;
-  opacity: 1;
-  transition: opacity 0.3s ease;
-  column-span: all;
-  width: 100%;
+  gap: 15px;
+  align-items: center;
 }
 
-.load-more-button {
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.05) 100%);
-  border: 2px solid rgba(255, 255, 255, 0.3);
-  color: white;
-  font-size: 16px;
+.pagination-button {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(255, 255, 255, 0.7) 100%);
+  border: 2px solid rgba(255, 107, 53, 0.3);
+  border-radius: 20px;
+  color: #333;
+  font-size: 13px;
   font-weight: 600;
   cursor: pointer;
-  padding: 16px 32px;
-  border-radius: 12px;
   transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-  outline: none;
-  backdrop-filter: blur(15px);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-  position: relative;
-  overflow: hidden;
+  backdrop-filter: blur(10px);
+  box-shadow: 0 4px 16px rgba(255, 107, 53, 0.1);
+  min-width: 80px;
+  justify-content: center;
 }
 
-.load-more-button::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: -100%;
-  width: 100%;
-  height: 100%;
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
-  transition: left 0.6s ease;
-}
-
-.load-more-button:hover::before {
-  left: 100%;
-}
-
-.load-more-button:hover {
+.pagination-button:hover:not(.disabled) {
   color: #ff6b35;
   background: linear-gradient(135deg, rgba(255, 107, 53, 0.2) 0%, rgba(255, 165, 0, 0.1) 100%);
   border-color: #ff6b35;
-  transform: translateY(-4px) scale(1.05);
-  box-shadow: 0 12px 40px rgba(255, 107, 53, 0.3);
+  transform: translateY(-2px) scale(1.02);
+  box-shadow: 0 8px 24px rgba(255, 107, 53, 0.2);
+}
+
+.pagination-button.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  background: rgba(255, 255, 255, 0.5);
+  border-color: rgba(200, 200, 200, 0.5);
+  color: #999;
+}
+
+.pagination-button.disabled:hover {
+  transform: none;
+  box-shadow: 0 4px 16px rgba(255, 107, 53, 0.1);
+}
+
+.prev-button svg {
+  order: -1;
+}
+
+.next-button svg {
+  order: 1;
+}
+
+@media (max-width: 768px) {
+  .pagination-container {
+    padding: 25px 20px;
+    gap: 25px;
+  }
+  
+  .pagination-buttons {
+    gap: 15px;
+    width: 100%;
+    justify-content: center;
+  }
+  
+  .pagination-button {
+    padding: 10px 20px;
+    font-size: 14px;
+    font-weight: 600;
+    min-width: 90px;
+    min-height: 40px;
+    border-radius: 25px;
+    border-width: 2px;
+    box-shadow: 0 4px 16px rgba(255, 107, 53, 0.12);
+    backdrop-filter: blur(10px);
+  }
+  
+  .pagination-button:hover:not(.disabled) {
+    transform: translateY(-1px) scale(1.01);
+    box-shadow: 0 10px 30px rgba(255, 107, 53, 0.25);
+  }
+  
+  .pagination-button:active:not(.disabled) {
+    transform: translateY(0) scale(0.98);
+    transition: all 0.1s ease;
+  }
+  
+  .pagination-info {
+    font-size: 14px;
+    gap: 8px;
+  }
+  
+  .total-count {
+    font-size: 12px;
+  }
+}
+
+@media (max-width: 480px) {
+  .pagination-container {
+    padding: 20px 15px;
+    gap: 20px;
+  }
+  
+  .pagination-buttons {
+    gap: 12px;
+    flex-direction: row;
+    width: 100%;
+  }
+  
+  .pagination-button {
+    padding: 8px 16px;
+    font-size: 13px;
+    min-width: 80px;
+    min-height: 36px;
+    border-radius: 20px;
+    flex: 1;
+    max-width: 120px;
+  }
+  
+  .pagination-info {
+    font-size: 13px;
+    text-align: center;
+  }
+  
+  .total-count {
+    font-size: 11px;
+  }
 }
 
 /* 加载完成提示样式 */
