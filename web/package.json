@@ -13,7 +13,7 @@
     "prettier": "npx prettier --write .",
     "tauri": "tauri",
     "tauri:dev": "tauri dev",
-    "tauri:build": "tauri build",
+    "tauri:build": "node -e \"require('fs').copyFileSync('.env.tauri', '.env.production')\" && tauri build",
     "tauri:android:init": "tauri android init",
     "tauri:android:dev": "tauri android dev",
     "tauri:android:build": "tauri android build",

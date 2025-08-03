@@ -61,17 +61,13 @@ jobs:
         working-directory: ./web
         run: npm ci
         
-      - name: Build frontend
-        working-directory: ./web
-        run: npm run build
-        
       - name: Build Tauri app (macOS Universal)
         if: matrix.platform == 'macos-latest'
         working-directory: ./web
         run: |
-          npm run tauri build -- --target universal-apple-darwin || {
+          npm run tauri:build -- --target universal-apple-darwin || {
             echo "Universal build failed, trying x86_64 build..."
-            npm run tauri build -- --target x86_64-apple-darwin
+            npm run tauri:build -- --target x86_64-apple-darwin
           }
         env:
           TAURI_PRIVATE_KEY: ${{ secrets.TAURI_PRIVATE_KEY }}
@@ -80,7 +76,7 @@ jobs:
       - name: Build Tauri app (Linux)
         if: matrix.platform == 'ubuntu-20.04'
         working-directory: ./web
-        run: npm run tauri build
+        run: npm run tauri:build
         env:
           TAURI_PRIVATE_KEY: ${{ secrets.TAURI_PRIVATE_KEY }}
           TAURI_KEY_PASSWORD: ${{ secrets.TAURI_KEY_PASSWORD }}
@@ -88,7 +84,7 @@ jobs:
       - name: Build Tauri app (Windows)
         if: matrix.platform == 'windows-latest'
         working-directory: ./web
-        run: npm run tauri build -- --bundles nsis
+        run: npm run tauri:build -- --bundles nsis
         env:
           TAURI_PRIVATE_KEY: ${{ secrets.TAURI_PRIVATE_KEY }}
           TAURI_KEY_PASSWORD: ${{ secrets.TAURI_KEY_PASSWORD }}
