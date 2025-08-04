@@ -142,14 +142,15 @@ jobs:
         with:
           path: artifacts
           
-      - name: Create Release
-        uses: softprops/action-gh-release@v2
-        with:
-          files: |
-            artifacts/windows-app/**/*
-            artifacts/macos-app/**/*
-          draft: false
-          prerelease: false
-          generate_release_notes: true
+      - name: Create Release with GitHub CLI
+        run: |
+          # Create release
+          gh release create ${{ github.ref_name }} \
+            --title "Release ${{ github.ref_name }}" \
+            --generate-notes \
+            --latest
+          
+          # Upload artifacts
+          find artifacts -type f \( -name "*.dmg" -o -name "*.exe" -o -name "*.msi" \) -exec gh release upload ${{ github.ref_name }} {} \;
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
