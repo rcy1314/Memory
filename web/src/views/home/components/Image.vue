@@ -70,11 +70,15 @@ const props = defineProps({
   },
 })
 
+const emit = defineEmits(['image-loaded'])
+
 // 懒加载逻辑
 let observer = null
 
 const onImageLoad = () => {
   imageLoaded.value = true
+  // 通知父组件图片已加载完成
+  emit('image-loaded')
   // 手机端性能优化：图片加载完成后移除observer
   if (observer && thumbRef.value) {
     observer.unobserve(thumbRef.value)
@@ -88,7 +92,7 @@ const onImageError = () => {
   console.warn('图片加载失败:', props.data.title)
 }
 
-const loadImage = () => {
+const loadImage = (forceLoad = false) => {
   // 从images数组中获取第一张图片的image_url
   let imageUrl = null
   
@@ -98,7 +102,7 @@ const loadImage = () => {
     imageUrl = props.data.image_url
   }
   
-  if (imageUrl && !imageSrc.value) {
+  if (imageUrl && (!imageSrc.value || forceLoad)) {
     // 响应式图片优化：根据设备类型和网络状况添加不同尺寸参数
     const isMobile = window.innerWidth <= 768
     const isTablet = window.innerWidth <= 1024 && window.innerWidth > 768
@@ -131,6 +135,7 @@ const loadImage = () => {
     const img = new Image()
     img.onload = () => {
       imageSrc.value = imageUrl
+      imageLoaded.value = true
     }
     img.onerror = () => {
       console.warn('图片加载失败，尝试加载原图:', imageUrl)
@@ -139,11 +144,17 @@ const loadImage = () => {
         const originalImg = new Image()
         originalImg.onload = () => {
           imageSrc.value = props.data.images[0].image_url
+          imageLoaded.value = true
         }
         originalImg.onerror = () => {
           console.error('原图也加载失败:', props.data.images[0].image_url)
+          // 即使加载失败，也要设置一个占位状态
+          imageLoaded.value = false
         }
         originalImg.src = props.data.images[0].image_url
+      } else {
+        // 如果原图也加载失败，设置失败状态
+        imageLoaded.value = false
       }
     }
     img.src = imageUrl
@@ -191,11 +202,32 @@ onMounted(() => {
     isIntersecting.value = true
     loadImage()
   }
+  
+  // 添加强制加载事件监听器
+  const forceLoadHandler = () => {
+    // 强制加载，即使图片已经加载过
+    isIntersecting.value = true
+    imageLoaded.value = false
+    loadImage(true) // 传入true表示强制加载
+  }
+  
+  if (thumbRef.value) {
+    thumbRef.value.addEventListener('forceLoad', forceLoadHandler)
+  }
+  
+  // 存储清理函数以便在onUnmounted中使用
+  window._forceLoadHandler = forceLoadHandler
 })
 
 onUnmounted(() => {
   if (observer && thumbRef.value) {
     observer.unobserve(thumbRef.value)
+  }
+  
+  // 清理强制加载事件监听器
+  if (thumbRef.value && window._forceLoadHandler) {
+    thumbRef.value.removeEventListener('forceLoad', window._forceLoadHandler)
+    delete window._forceLoadHandler
   }
 })
 </script>

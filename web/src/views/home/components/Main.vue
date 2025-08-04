@@ -1,19 +1,16 @@
 <template>
   <div id="blog-main" ref="listRef" :class="{ loading: isLoading }">
-    <!-- 优化的加载状态 -->
+    <!-- 简化的加载状态 -->
     <div v-if="isLoading" class="gallery-loading-message">
       <div class="loading-content">
         <div class="loading-spinner-main"></div>
-        <div class="loading-text">正在加载图片，请稍后...</div>
-        <div class="loading-progress">
-          <div class="progress-bar"></div>
-        </div>
+        <div class="loading-text">图片请稍后</div>
       </div>
     </div>
     
-    <!-- 只有在不加载且有数据时才显示图片 -->
+    <!-- 图片显示区域 -->
     <transition-group v-if="!isLoading && blogs.length > 0" name="fade-slide" tag="div" class="images-container">
-      <Image v-for="blog in blogs" :key="blog.id" :data="blog" @click="showImage(blog)" />
+      <Image v-for="blog in blogs" :key="blog.id" :data="blog" @click="showImage(blog)" @image-loaded="onImageLoaded" />
     </transition-group>
     
 
@@ -142,6 +139,13 @@
         <span class="closer" style="cursor: pointer; display: block" @click="close"></span>
         <div class="nav-previous" style="display: block" @click.stop="prev"></div>
         <div class="nav-next" style="display: block" @click.stop="next"></div>
+        <div v-if="imageVisible" class="download-button" @click="downloadImage" title="下载图片">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+            <polyline points="7,10 12,15 17,10"/>
+            <line x1="12" y1="15" x2="12" y2="3"/>
+          </svg>
+        </div>
       </div>
     </VueFinalModal>
   </div>
@@ -170,6 +174,7 @@ var current_location = router.currentRoute.value.params.location
 const blogs = ref([])
 const listRef = ref(null)
 const isLoading = ref(true)
+// 移除了复杂的图片加载状态跟踪
 // 移除isLoadingMore变量，分页模式下不再需要
 const currentBlog = ref(null)
 const currentSize = ref({
@@ -296,6 +301,39 @@ function next() {
   if (index < blogs.value.length - 1) {
     showImage(blogs.value[index + 1])
   }
+}
+
+// 处理单个图片加载完成
+function onImageLoaded() {
+  // 简化逻辑，不再需要复杂的计数
+}
+
+// 下载图片函数
+function downloadImage() {
+  if (!currentBlog.value || !imageSrc.value) return
+  
+  const link = document.createElement('a')
+  link.href = imageSrc.value
+  link.download = `${currentBlog.value.current_title || 'image'}_${Date.now()}.jpg`
+  link.target = '_blank'
+  
+  // 对于跨域图片，使用fetch下载
+  fetch(imageSrc.value)
+    .then(response => response.blob())
+    .then(blob => {
+      const url = window.URL.createObjectURL(blob)
+      link.href = url
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      window.URL.revokeObjectURL(url)
+    })
+    .catch(() => {
+      // 如果fetch失败，直接使用原链接
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+    })
 }
 // 预加载图片函数
 function preloadImage(imageUrl) {
@@ -519,8 +557,41 @@ async function getBlogs(silentError = false) {
       page = res.page
       total = res.total
       
-      // 数据处理完成后再关闭加载状态
+      // 数据处理完成后关闭加载状态
       isLoading.value = false
+      
+      // 强制触发图片加载，特别是在移动端
+      nextTick(() => {
+        setTimeout(() => {
+          // 强制重新触发所有图片的懒加载检测
+          const imageElements = document.querySelectorAll('.thumb')
+          imageElements.forEach((element, index) => {
+            // 添加延迟确保DOM完全渲染
+            setTimeout(() => {
+              // 触发重新检测
+              const event = new Event('scroll')
+              window.dispatchEvent(event)
+              
+              // 对于移动端，强制触发图片加载
+              const isMobile = window.innerWidth <= 768
+              if (isMobile) {
+                const imgContainer = element.querySelector('.image-container')
+                if (imgContainer) {
+                  // 强制触发intersection observer
+                  const rect = imgContainer.getBoundingClientRect()
+                  if (rect.top < window.innerHeight + 200) {
+                    const img = imgContainer.querySelector('img')
+                    if (!img || !img.src) {
+                      // 强制加载图片
+                      element.dispatchEvent(new Event('forceLoad'))
+                    }
+                  }
+                }
+              }
+            }, index * 50) // 错开加载时间
+          })
+        }, 100)
+      })
     }
   } catch (e) {
     // 静默处理加载错误，不显示错误提示
@@ -615,19 +686,28 @@ function goToNextPage() {
 
 // 滚动到相册区域
 function scrollToGallery() {
-  // 查找分类导航区域
-  const categoriesSection = document.querySelector('.categories-nav-section')
-  if (categoriesSection) {
-    // 滚动到分类导航下方，留一些间距
-    const targetPosition = categoriesSection.offsetTop + categoriesSection.offsetHeight + 20
-    window.scrollTo({ top: targetPosition, behavior: 'smooth' })
-  } else {
-    // 如果找不到分类导航，则滚动到相册区域
-    const gallerySection = document.querySelector('.gallery-section')
-    if (gallerySection) {
-      window.scrollTo({ top: gallerySection.offsetTop, behavior: 'smooth' })
+  // 延迟滚动，确保加载状态已经显示
+  setTimeout(() => {
+    // 查找分类导航区域
+    const categoriesSection = document.querySelector('.categories-nav-section')
+    if (categoriesSection) {
+      // 滚动到分类导航下方，留一些间距
+      const targetPosition = categoriesSection.offsetTop + categoriesSection.offsetHeight + 20
+      window.scrollTo({ top: targetPosition, behavior: 'smooth' })
+    } else {
+      // 如果找不到分类导航，则滚动到相册区域
+      const gallerySection = document.querySelector('.gallery-section')
+      if (gallerySection) {
+        window.scrollTo({ top: gallerySection.offsetTop, behavior: 'smooth' })
+      } else {
+        // 如果都找不到，滚动到页面顶部
+        const mainSection = document.querySelector('#blog-main')
+        if (mainSection) {
+          window.scrollTo({ top: mainSection.offsetTop, behavior: 'smooth' })
+        }
+      }
     }
-  }
+  }, 100)
 }
 
 // 保留原有的loadMore函数以兼容其他可能的调用
@@ -794,13 +874,15 @@ watch(
 
 .lightbox-content:hover .closer,
 .lightbox-content:hover .nav-previous,
-.lightbox-content:hover .nav-next {
+.lightbox-content:hover .nav-next,
+.lightbox-content:hover .download-button {
   opacity: 0.5;
 }
 
 .lightbox-content:hover .closer:hover,
 .lightbox-content:hover .nav-previous:hover,
-.lightbox-content:hover .nav-next:hover {
+.lightbox-content:hover .nav-next:hover,
+.lightbox-content:hover .download-button:hover {
   opacity: 1;
 }
 
@@ -817,6 +899,47 @@ watch(
   top: 0;
   width: 5em;
   z-index: 2;
+}
+
+.lightbox-content .download-button {
+  transition: all 0.2s ease-in-out;
+  background: rgba(0, 0, 0, 0.6);
+  border-radius: 8px;
+  cursor: pointer;
+  height: 40px;
+  width: 40px;
+  opacity: 0;
+  position: absolute;
+  right: 12px;
+  bottom: 12px;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  backdrop-filter: blur(4px);
+}
+
+.lightbox-content .download-button:hover {
+  background: rgba(0, 0, 0, 0.8);
+  transform: scale(1.05);
+}
+
+/* 移动端下载按钮优化 */
+@media screen and (max-width: 768px) {
+  .lightbox-content .download-button {
+    height: 44px;
+    width: 44px;
+    right: 16px;
+    bottom: 16px;
+    opacity: 0.6;
+  }
+  
+  .lightbox-content .download-button:active {
+    opacity: 1;
+    background: rgba(0, 0, 0, 0.9);
+    transform: scale(0.95);
+  }
 }
 
 .lightbox-content .caption {
@@ -1258,8 +1381,11 @@ body.modal-active #wrapper:after {
   padding: 60px 20px;
   width: 100%;
   min-height: 200px;
-  height: 30vh;
+  height: 40vh;
   text-align: center;
+  position: relative;
+  /* 确保在所有设备上完美居中 */
+  box-sizing: border-box;
 }
 
 .loading-content {
@@ -1283,6 +1409,13 @@ body.modal-active #wrapper:after {
   font-size: 16px;
   font-weight: 500;
   animation: textPulse 2s ease-in-out infinite;
+}
+
+.loading-text.secondary {
+  font-size: 14px;
+  color: #888;
+  margin-top: -10px;
+  animation: textFadeIn 0.5s ease-in-out;
 }
 
 .loading-progress {
@@ -1325,8 +1458,12 @@ body.modal-active #wrapper:after {
 @media screen and (max-width: 768px) {
   .gallery-loading-message {
     padding: 40px 20px;
-    min-height: 150px;
-    height: 25vh;
+    min-height: 180px;
+    height: 35vh;
+    /* 移动端确保垂直居中 */
+    display: flex;
+    justify-content: center;
+    align-items: center;
   }
   
   .loading-spinner-main {
@@ -1358,10 +1495,21 @@ body.modal-active #wrapper:after {
 
 @keyframes textPulse {
   0%, 100% {
-    opacity: 1;
+    opacity: 0.6;
   }
   50% {
-    opacity: 0.6;
+    opacity: 1;
+  }
+}
+
+@keyframes textFadeIn {
+  0% {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
   }
 }
 
@@ -1562,19 +1710,46 @@ body.modal-active #wrapper:after {
 /* 响应式优化 - 确保在所有设备上完美居中 */
 @media (max-width: 768px) {
   .gallery-loading-message {
-    min-height: 150px;
-    height: 25vh;
+    min-height: 180px;
+    height: 35vh;
     padding: 30px 20px;
     font-size: 15px;
+    /* 确保移动端垂直居中 */
+    display: flex !important;
+    justify-content: center !important;
+    align-items: center !important;
   }
 }
 
 @media (max-width: 480px) {
   .gallery-loading-message {
-    min-height: 120px;
-    height: 20vh;
+    min-height: 160px;
+    height: 30vh;
     padding: 20px 15px;
     font-size: 14px;
+    /* 超小屏幕设备优化 */
+    display: flex !important;
+    justify-content: center !important;
+    align-items: center !important;
+  }
+  
+  .loading-content {
+    gap: 15px;
+  }
+  
+  .loading-spinner-main {
+    width: 28px !important;
+    height: 28px !important;
+    border-width: 2px !important;
+  }
+  
+  .loading-text {
+    font-size: 13px !important;
+  }
+  
+  .loading-progress {
+    width: 120px !important;
+    height: 2px !important;
   }
 }
 
