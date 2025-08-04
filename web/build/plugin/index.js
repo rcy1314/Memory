@@ -10,6 +10,8 @@ import Unocss from 'unocss/vite'
 import { visualizer } from 'rollup-plugin-visualizer'
 // 压缩
 import viteCompression from 'vite-plugin-compression'
+// 图片压缩
+import viteImagemin from 'vite-plugin-imagemin'
 
 import { configHtmlPlugin } from './html'
 import unplugin from './unplugin'
@@ -27,6 +29,13 @@ export function createVitePlugins(viteEnv, isBuild) {
         open: true,
         gzipSize: true,
         brotliSize: true,
+      }),
+      // 图片压缩插件
+      viteImagemin({
+        gifsicle: { optimizationLevel: 7, interlaced: false },
+        mozjpeg: { quality: 80 },
+        pngquant: { quality: [0.65, 0.8], speed: 4 },
+        webp: { quality: 75 },
       })
     )
   }

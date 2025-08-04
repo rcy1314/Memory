@@ -2,11 +2,20 @@
   <article class="thumb img-area" ref="thumbRef">
     <a class="thumb-a my-photo">
       <div class="image-container">
+        <!-- 加载蒙版 -->
+        <div v-if="!imageLoaded" class="image-loading-mask">
+          <div class="loading-mask-content">
+            <div v-if="isIntersecting" class="loading-spinner"></div>
+            <div v-if="isIntersecting" class="loading-text">加载中...</div>
+          </div>
+        </div>
+        <!-- 占位符 -->
         <div v-if="!imageSrc" class="image-placeholder">
           <div class="placeholder-content">
             <div v-if="isIntersecting" class="loading-spinner"></div>
           </div>
         </div>
+        <!-- 图片 -->
         <img
           v-if="imageSrc"
           class="thumb-image my-photo"
@@ -14,7 +23,7 @@
           :src="imageSrc"
           @load="onImageLoad"
           @error="onImageError"
-          :style="{ opacity: imageLoaded ? 1 : 0.3 }"
+          :style="{ opacity: imageLoaded ? 1 : 0, transition: 'opacity 0.3s ease-in-out' }"
         />
       </div>
     </a>
@@ -72,6 +81,11 @@ const props = defineProps({
 
 const emit = defineEmits(['image-loaded'])
 
+// 图片加载并发控制
+let loadingQueue = []
+let currentLoadingCount = 0
+const maxConcurrentLoads = window.innerWidth <= 768 ? 3 : 5 // 移动端限制更严格
+
 // 懒加载逻辑
 let observer = null
 
@@ -92,6 +106,13 @@ const onImageError = () => {
   console.warn('图片加载失败:', props.data.title)
 }
 
+const processLoadingQueue = () => {
+  if (loadingQueue.length > 0 && currentLoadingCount < maxConcurrentLoads) {
+    const nextLoad = loadingQueue.shift()
+    nextLoad()
+  }
+}
+
 const loadImage = (forceLoad = false) => {
   // 从images数组中获取第一张图片的image_url
   let imageUrl = null
@@ -103,11 +124,19 @@ const loadImage = (forceLoad = false) => {
   }
   
   if (imageUrl && (!imageSrc.value || forceLoad)) {
+    // 如果当前加载数量已达上限，加入队列
+    if (currentLoadingCount >= maxConcurrentLoads) {
+      loadingQueue.push(() => loadImage(forceLoad))
+      return
+    }
+    
+    currentLoadingCount++
     // 响应式图片优化：根据设备类型和网络状况添加不同尺寸参数
     const isMobile = window.innerWidth <= 768
     const isTablet = window.innerWidth <= 1024 && window.innerWidth > 768
+    // 更宽松的慢网络检测：包括3G网络
     const isSlowConnection = navigator.connection && navigator.connection.effectiveType && 
-                           ['slow-2g', '2g'].includes(navigator.connection.effectiveType)
+                           ['slow-2g', '2g', '3g'].includes(navigator.connection.effectiveType)
     
     // 优化图片URL参数
     if (imageUrl.includes('http') || imageUrl.includes('/api/')) {
@@ -115,17 +144,17 @@ const loadImage = (forceLoad = false) => {
       let optimizedUrl = imageUrl
       
       if (isMobile) {
-        // 移动端：更小的尺寸和更高的压缩
-        const quality = isSlowConnection ? 60 : 70
-        optimizedUrl = `${imageUrl}${separator}w=350&h=500&fit=crop&auto=compress,format&q=${quality}`
+        // 移动端：极小缩略图尺寸和极高压缩
+        const quality = isSlowConnection ? 30 : 40
+        optimizedUrl = `${imageUrl}${separator}w=180&h=250&fit=crop&auto=compress,format&q=${quality}`
       } else if (isTablet) {
-        // 平板端：中等尺寸
-        const quality = isSlowConnection ? 70 : 75
-        optimizedUrl = `${imageUrl}${separator}w=500&h=700&fit=crop&auto=compress,format&q=${quality}`
+        // 平板端：小缩略图尺寸
+        const quality = isSlowConnection ? 35 : 45
+        optimizedUrl = `${imageUrl}${separator}w=250&h=350&fit=crop&auto=compress,format&q=${quality}`
       } else {
-        // 电脑端：较大尺寸但仍然压缩
-        const quality = isSlowConnection ? 75 : 80
-        optimizedUrl = `${imageUrl}${separator}w=600&h=800&fit=crop&auto=compress,format&q=${quality}`
+        // 电脑端：中等缩略图尺寸，优先加载速度
+        const quality = isSlowConnection ? 40 : 50
+        optimizedUrl = `${imageUrl}${separator}w=280&h=400&fit=crop&auto=compress,format&q=${quality}`
       }
       
       imageUrl = optimizedUrl
@@ -136,6 +165,9 @@ const loadImage = (forceLoad = false) => {
     img.onload = () => {
       imageSrc.value = imageUrl
       imageLoaded.value = true
+      emit('image-loaded')
+      currentLoadingCount--
+      processLoadingQueue()
     }
     img.onerror = () => {
       console.warn('图片加载失败，尝试加载原图:', imageUrl)
@@ -145,16 +177,23 @@ const loadImage = (forceLoad = false) => {
         originalImg.onload = () => {
           imageSrc.value = props.data.images[0].image_url
           imageLoaded.value = true
+          emit('image-loaded')
+          currentLoadingCount--
+          processLoadingQueue()
         }
         originalImg.onerror = () => {
           console.error('原图也加载失败:', props.data.images[0].image_url)
           // 即使加载失败，也要设置一个占位状态
           imageLoaded.value = false
+          currentLoadingCount--
+          processLoadingQueue()
         }
         originalImg.src = props.data.images[0].image_url
       } else {
         // 如果原图也加载失败，设置失败状态
         imageLoaded.value = false
+        currentLoadingCount--
+        processLoadingQueue()
       }
     }
     img.src = imageUrl
@@ -173,14 +212,14 @@ onMounted(() => {
         entries.forEach((entry) => {
           if (entry.isIntersecting) {
             isIntersecting.value = true
-            // 优化延迟：减少等待时间，提升用户体验
+            // 减少延迟，提高加载速度
             let delay = 0
             if (isMobile) {
-              delay = Math.random() * 50 + 25 // 手机端：25-75ms随机延迟
+              delay = 5 // 手机端：减少到5ms延迟
             } else if (isTablet) {
-              delay = Math.random() * 30 + 15 // 平板端：15-45ms随机延迟
+              delay = 3 // 平板端：减少到3ms延迟
             } else {
-              delay = Math.random() * 20 + 5 // 电脑端：5-25ms随机延迟，更快响应
+              delay = 1 // 电脑端：减少到1ms延迟
             }
             
             setTimeout(() => {
@@ -192,8 +231,8 @@ onMounted(() => {
         })
       },
       {
-        rootMargin: isMobile ? '200px' : isTablet ? '150px' : '100px', // 优化预加载：增加预加载距离
-        threshold: isMobile ? 0.02 : isTablet ? 0.05 : 0.1 // 减少阈值，更早触发加载
+        rootMargin: isMobile ? '500px' : isTablet ? '400px' : '350px', // 大幅增加预加载距离
+        threshold: 0.001 // 极低阈值，图片一出现就开始加载
       }
     )
     observer.observe(thumbRef.value)
@@ -300,6 +339,35 @@ onUnmounted(() => {
 @keyframes spin {
   0% { transform: rotate(0deg); }
   100% { transform: rotate(360deg); }
+}
+
+/* 加载蒙版样式 */
+.image-loading-mask {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(135deg, rgba(0, 0, 0, 0.7) 0%, rgba(0, 0, 0, 0.5) 100%);
+  backdrop-filter: blur(2px);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2;
+  transition: opacity 0.3s ease-out;
+}
+
+.loading-mask-content {
+  text-align: center;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.loading-mask-content .loading-text {
+  margin-top: 8px;
+  font-size: 12px;
+  font-weight: 500;
+  opacity: 0.8;
 }
 
 .thumb-image {

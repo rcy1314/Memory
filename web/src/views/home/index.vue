@@ -192,7 +192,7 @@ const showFirstVisitModal = ref(false)
 let slideInterval = null
 
 // 当前选中的分类
-const currentCategory = ref(null)
+const currentCategory = ref(router.currentRoute.value.params.category || null)
 
 // 检测是否为首次访问
 const checkFirstVisit = () => {
@@ -218,10 +218,45 @@ const closeFirstVisitModal = () => {
   localStorage.setItem('memory_visited', 'true')
 }
 
+// 预加载分类图片
+const preloadCategoryImages = (category) => {
+  const params = {
+    page: 1,
+    page_size: 6, // 预加载前6张
+    category: category,
+    location: router.currentRoute.value.params.location || null
+  }
+  
+  // 静默预加载分类的前几张图片
+  api.getBlogsVisitor(params).then(res => {
+    if (res.code === 200 && res.data.length > 0) {
+      // 预加载前6张图片的缩略图
+      res.data.forEach(blog => {
+        if (blog.images && blog.images.length > 0) {
+          const img = new Image()
+          img.src = blog.images[0].thumbnail || blog.images[0].image_url
+        }
+      })
+      console.log(`预加载分类 ${category} 的前${res.data.length}张图片`)
+    }
+  }).catch(e => {
+    console.log('预加载分类图片失败:', e)
+  })
+}
+
 // 分类切换处理函数
 const handleCategoryClick = (categoryAlias = null) => {
-  // 立即显示加载状态
-  currentCategory.value = categoryAlias
+  // 如果不是当前分类，预加载该分类的图片
+  if (categoryAlias !== currentCategory.value) {
+    preloadCategoryImages(categoryAlias)
+  }
+  
+  // 使用路由导航到对应的分类页面
+  if (categoryAlias) {
+    router.push(`/category/${categoryAlias}`)
+  } else {
+    router.push('/')
+  }
   
   // 滚动到相册区域
   setTimeout(() => {
@@ -516,6 +551,14 @@ const loadHeroSlides = async () => {
   }
 }
 
+// 监听路由变化
+watch(
+  () => router.currentRoute.value.params.category,
+  (newCategory) => {
+    currentCategory.value = newCategory || null
+  }
+)
+
 onMounted(async () => {
   try {
     await loadCategories()
@@ -742,42 +785,136 @@ body {
   left: 0;
   width: 100%;
   height: 100%;
-  background: rgba(0, 0, 0, 0.3);
-  backdrop-filter: blur(4px);
+  background: linear-gradient(135deg, rgba(0, 0, 0, 0.4) 0%, rgba(0, 0, 0, 0.6) 100%);
+  backdrop-filter: blur(8px);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 9999;
-  transition: opacity 0.3s ease;
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .loading-spinner {
   text-align: center;
+  animation: fadeInUp 0.6s ease-out;
 }
 
 .spinner {
-  width: 40px;
-  height: 40px;
-  border: 3px solid rgba(255, 255, 255, 0.1);
-  border-top: 3px solid #ffffff;
+  width: 50px;
+  height: 50px;
+  position: relative;
+  margin: 0 auto 30px;
+}
+
+.spinner::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  border: 3px solid transparent;
+  border-top: 3px solid #ff6b35;
+  border-right: 3px solid #ff6b35;
   border-radius: 50%;
-  animation: spin 1s linear infinite;
-  margin: 0 auto 20px;
+  animation: spinPrimary 1.2s cubic-bezier(0.68, -0.55, 0.265, 1.55) infinite;
+}
+
+.spinner::after {
+  content: '';
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  width: calc(100% - 12px);
+  height: calc(100% - 12px);
+  border: 2px solid transparent;
+  border-bottom: 2px solid #ffa500;
+  border-left: 2px solid #ffa500;
+  border-radius: 50%;
+  animation: spinSecondary 1s cubic-bezier(0.68, -0.55, 0.265, 1.55) infinite reverse;
 }
 
 .loading-text {
   color: #ffffff;
-  font-size: 16px;
+  font-size: 18px;
+  font-weight: 500;
   margin: 0;
-  opacity: 0.8;
+  opacity: 0.9;
+  animation: textPulse 2s ease-in-out infinite;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
 }
 
-@keyframes spin {
+@keyframes spinPrimary {
   0% {
     transform: rotate(0deg);
+    border-top-color: #ff6b35;
+    border-right-color: #ff6b35;
+  }
+  25% {
+    border-top-color: #ffa500;
+    border-right-color: #ff6b35;
+  }
+  50% {
+    transform: rotate(180deg);
+    border-top-color: #ffa500;
+    border-right-color: #ffa500;
+  }
+  75% {
+    border-top-color: #ff6b35;
+    border-right-color: #ffa500;
   }
   100% {
     transform: rotate(360deg);
+    border-top-color: #ff6b35;
+    border-right-color: #ff6b35;
+  }
+}
+
+@keyframes spinSecondary {
+  0% {
+    transform: rotate(0deg);
+    border-bottom-color: #ffa500;
+    border-left-color: #ffa500;
+  }
+  25% {
+    border-bottom-color: #ff6b35;
+    border-left-color: #ffa500;
+  }
+  50% {
+    transform: rotate(-180deg);
+    border-bottom-color: #ff6b35;
+    border-left-color: #ff6b35;
+  }
+  75% {
+    border-bottom-color: #ffa500;
+    border-left-color: #ff6b35;
+  }
+  100% {
+    transform: rotate(-360deg);
+    border-bottom-color: #ffa500;
+    border-left-color: #ffa500;
+  }
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px) scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes textPulse {
+  0%, 100% {
+    opacity: 0.9;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.7;
+    transform: scale(1.02);
   }
 }
 

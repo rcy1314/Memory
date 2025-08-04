@@ -1,19 +1,47 @@
 <template>
   <div id="blog-main" ref="listRef" :class="{ loading: isLoading }">
-    <!-- 简化的加载状态 -->
-    <div v-if="isLoading" class="gallery-loading-message">
+    <!-- 普通加载状态 -->
+    <div v-if="isLoading && !isFirstLoad" class="gallery-loading-message">
       <div class="loading-content">
         <div class="loading-spinner-main"></div>
         <div class="loading-text">图片请稍后</div>
       </div>
     </div>
     
-    <!-- 图片显示区域 -->
-    <transition-group v-if="!isLoading && blogs.length > 0" name="fade-slide" tag="div" class="images-container">
-      <Image v-for="blog in blogs" :key="blog.id" :data="blog" @click="showImage(blog)" @image-loaded="onImageLoaded" />
-    </transition-group>
+    <!-- 首次加载弹窗状态 -->
+    <div v-if="isLoading && isFirstLoad" class="loading-modal-overlay">
+      <div class="loading-modal">
+        <div class="loading-content">
+          <div class="loading-spinner-main"></div>
+          <div class="loading-text">正在为您加载缓存，请稍后</div>
+          <div class="loading-progress-container">
+            <div class="loading-progress-bar">
+              <div class="loading-progress-fill" :style="{ width: loadingProgress + '%' }"></div>
+            </div>
+            <div class="loading-progress-text">{{ loadingProgress }}%</div>
+          </div>
+        </div>
+      </div>
+    </div>
     
-
+    <!-- 图片显示区域 -->
+    <div class="gallery-container" :class="{ 'loading-state': isLoading || isImagesLoading }">
+      <!-- 图片网格 -->
+      <transition-group v-if="blogs.length > 0" name="fade-slide" tag="div" class="images-container" :class="{ 'images-loading': isLoading || isImagesLoading }">
+        <ImageOptimized v-for="blog in blogs" :key="blog.id" :data="blog" @click="showImage(blog)" @image-loaded="onImageLoaded" />
+      </transition-group>
+      
+      <!-- 图片展示区域加载遮罩 -->
+      <div v-if="isLoading || isImagesLoading" class="gallery-loading-overlay">
+        <div class="gallery-loading-content">
+          <div class="gallery-loading-spinner"></div>
+          <div class="gallery-loading-text">
+            <span v-if="isLoading">{{ page === 1 ? '正在加载图片...' : `正在加载第 ${page} 页...` }}</span>
+            <span v-else-if="isImagesLoading">图片加载中 {{ loadedImageCount }}/{{ totalImageCount }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
     
     <!-- 分页导航 -->
     <div v-if="total > 0 && !isLoading" class="pagination-container">
@@ -50,6 +78,15 @@
     </div>
     
     <!-- 已加载完成提示 -->
+    <!-- 底部加载状态 -->
+    <div v-if="isLoading && blogs.length > 0" class="bottom-loading-indicator">
+      <div class="bottom-loading-content">
+        <div class="loading-spinner-small"></div>
+        <span class="loading-text">正在加载第 {{ page }} 页...</span>
+      </div>
+    </div>
+    
+    <!-- 加载完成指示器 -->
     <div v-if="page * page_size >= total && total > 0 && !isLoading" class="load-complete-indicator">
       <span>已加载所有图片</span>
     </div>
@@ -72,10 +109,14 @@
           transformOrigin: 'center center',
         }"
         @transitionend="onTransitionEnd"
+        @touchstart="onTouchStart"
+        @touchmove="onTouchMove"
+        @touchend="onTouchEnd"
       >
-        <div v-if="!imageVisible" class="lightbox-loading-container">
+        <div v-if="!imageVisible" class="lightbox-loading-container" @click="close">
           <div class="lightbox-spinner"></div>
           <div class="lightbox-loading-text">加载中，请稍后</div>
+          <div class="loading-close-hint">点击此处关闭</div>
         </div>
         <transition name="fade" mode="out-in">
           <div class="pic" style="display: block; text-indent: 0px">
@@ -153,7 +194,7 @@
 
 <script setup>
 import { throttle } from 'lodash'
-import Image from './Image.vue'
+import ImageOptimized from './ImageOptimized.vue'
 import { useSettingStore } from '@/store'
 import api from '@/api'
 import { isValueNotEmpty, isValueEmpty, scrollToload, parseDateTime, formatDateTime } from '@/utils'
@@ -174,8 +215,21 @@ var current_location = router.currentRoute.value.params.location
 const blogs = ref([])
 const listRef = ref(null)
 const isLoading = ref(true)
-// 移除了复杂的图片加载状态跟踪
-// 移除isLoadingMore变量，分页模式下不再需要
+// 使用cookies和sessionStorage判断是否为首次访问
+const isFirstLoad = ref(
+  !document.cookie.includes('visited=true') && 
+  !sessionStorage.getItem('pageVisited')
+) // 标记是否为首次加载
+
+// 调试信息
+console.log('Cookie内容:', document.cookie)
+console.log('SessionStorage pageVisited:', sessionStorage.getItem('pageVisited'))
+console.log('是否首次加载:', isFirstLoad.value)
+console.log('是否正在加载:', isLoading.value)
+const loadingProgress = ref(0) // 加载进度
+const loadedImageCount = ref(0) // 已加载图片数量
+const totalImageCount = ref(0) // 总图片数量
+const isImagesLoading = ref(false) // 图片是否正在加载
 const currentBlog = ref(null)
 const currentSize = ref({
   width: Math.min(400, window.innerWidth - 40),
@@ -188,6 +242,14 @@ const imageSrc = ref('')
 const imageTransitioning = ref(false)
 const nextImageUrl = ref('')
 const preloadedImages = ref(new Map()) // 预加载的图片缓存
+const imageLoadingPromises = ref(new Map()) // 正在加载的图片Promise缓存
+
+// 触摸滑动相关变量
+const touchStartX = ref(0)
+const touchStartY = ref(0)
+const touchEndX = ref(0)
+const touchEndY = ref(0)
+const minSwipeDistance = 50 // 最小滑动距离
 
 var page = 1
 var total = 0
@@ -225,22 +287,40 @@ var detail_time_format =
     : 'YYYY-MM-DD HH:mm'
 
 function updateAttr(blog) {
+  // 安全检查：确保images数组存在且不为空
+  if (!blog.images || blog.images.length === 0) {
+    console.warn('Blog images array is empty or undefined:', blog)
+    return
+  }
+  
+  // 安全检查：确保currentIndex在有效范围内
+  if (blog.currentIndex < 0 || blog.currentIndex >= blog.images.length) {
+    console.warn('Invalid currentIndex:', blog.currentIndex, 'for blog:', blog)
+    blog.currentIndex = 0
+  }
+  
+  const currentImage = blog.images[blog.currentIndex]
+  if (!currentImage) {
+    console.warn('Current image is undefined at index:', blog.currentIndex, 'for blog:', blog)
+    return
+  }
+  
   blog.current_thumbnail = blog.images[0].thumbnail
-  blog.current_detail = blog.images[blog.currentIndex].detail
-  blog.current_desc = blog.images[blog.currentIndex].desc || blog.desc
-  blog.current_title = blog.images[blog.currentIndex].title || blog.title
-  blog.current_detail_time = blog.images[blog.currentIndex].detail_time || blog.detail_time
-  blog.current_location = blog.images[blog.currentIndex].location || blog.location
-  blog.current_metadata = blog.images[blog.currentIndex].metadata
+  blog.current_detail = currentImage.detail
+  blog.current_desc = currentImage.desc || blog.desc
+  blog.current_title = currentImage.title || blog.title
+  blog.current_detail_time = currentImage.detail_time || blog.detail_time
+  blog.current_location = currentImage.location || blog.location
+  blog.current_metadata = currentImage.metadata
   if (isValueNotEmpty(blog.location)) {
-    if (isValueNotEmpty(blog.images[blog.currentIndex].location)) {
-      blog.current_full_location = `${blog.location} - ${blog.images[blog.currentIndex].location}`
+    if (isValueNotEmpty(currentImage.location)) {
+      blog.current_full_location = `${blog.location} - ${currentImage.location}`
     } else {
       blog.current_full_location = blog.location
     }
   } else {
-    if (isValueNotEmpty(blog.images[blog.currentIndex].location)) {
-      blog.current_full_location = blog.images[blog.currentIndex].location
+    if (isValueNotEmpty(currentImage.location)) {
+      blog.current_full_location = currentImage.location
     } else {
       blog.current_full_location = null
     }
@@ -266,7 +346,7 @@ onMounted(() => {
           preloadImage(blogs.value[i].current_detail)
         }
       }
-    }, 500) // 减少延迟时间，但仍避免影响页面初始加载
+    }, 200) // 减少延迟时间，但仍避免影响页面初始加载
   })
 })
 
@@ -303,9 +383,105 @@ function next() {
   }
 }
 
+// 触摸事件处理函数
+function onTouchStart(event) {
+  touchStartX.value = event.touches[0].clientX
+  touchStartY.value = event.touches[0].clientY
+}
+
+function onTouchMove(event) {
+  // 阻止默认滚动行为
+  event.preventDefault()
+}
+
+function onTouchEnd(event) {
+  touchEndX.value = event.changedTouches[0].clientX
+  touchEndY.value = event.changedTouches[0].clientY
+  
+  const deltaX = touchEndX.value - touchStartX.value
+  const deltaY = touchEndY.value - touchStartY.value
+  
+  // 确保是水平滑动（水平距离大于垂直距离）
+  if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > minSwipeDistance) {
+    if (deltaX > 0) {
+      // 向右滑动，显示上一张图片
+      prev()
+    } else {
+      // 向左滑动，显示下一张图片
+      next()
+    }
+  }
+}
+
 // 处理单个图片加载完成
 function onImageLoaded() {
-  // 简化逻辑，不再需要复杂的计数
+  loadedImageCount.value++
+  console.log(`图片加载完成: ${loadedImageCount.value}/${totalImageCount.value}`)
+  
+  // 当所有图片加载完成时，隐藏加载提示
+  if (loadedImageCount.value >= totalImageCount.value) {
+    setTimeout(() => {
+      isImagesLoading.value = false
+      console.log('所有图片加载完成，隐藏加载提示')
+      // 开始预加载下一页
+      preloadNextPage()
+    }, 300) // 延迟300ms隐藏，让用户看到100%的进度
+  }
+}
+
+// 预加载下一页图片
+function preloadNextPage() {
+  if (page < Math.ceil(total / page_size)) {
+    const nextPage = page + 1
+    const params = {
+      page: nextPage,
+      page_size: page_size,
+      category: current_category,
+      location: current_location
+    }
+    
+    // 静默预加载下一页的前几张图片
+    api.getBlogsVisitor(params).then(res => {
+      if (res.code === 200 && res.data.length > 0) {
+        // 预加载前3张图片的缩略图
+        res.data.slice(0, 3).forEach(blog => {
+          if (blog.images && blog.images.length > 0) {
+            const img = new Image()
+            img.src = blog.images[0].thumbnail || blog.images[0].image_url
+          }
+        })
+        console.log(`预加载第${nextPage}页前3张图片`)
+      }
+    }).catch(e => {
+      console.log('预加载下一页失败:', e)
+    })
+  }
+}
+
+// 预加载分类图片
+function preloadCategoryImages(category) {
+  const params = {
+    page: 1,
+    page_size: 6, // 预加载前6张
+    category: category,
+    location: current_location
+  }
+  
+  // 静默预加载分类的前几张图片
+  api.getBlogsVisitor(params).then(res => {
+    if (res.code === 200 && res.data.length > 0) {
+      // 预加载前6张图片的缩略图
+      res.data.forEach(blog => {
+        if (blog.images && blog.images.length > 0) {
+          const img = new Image()
+          img.src = blog.images[0].thumbnail || blog.images[0].image_url
+        }
+      })
+      console.log(`预加载分类 ${category} 的前${res.data.length}张图片`)
+    }
+  }).catch(e => {
+    console.log('预加载分类图片失败:', e)
+  })
 }
 
 // 下载图片函数
@@ -337,20 +513,32 @@ function downloadImage() {
 }
 // 预加载图片函数
 function preloadImage(imageUrl) {
+  if (!imageUrl) return Promise.resolve(null)
+  
+  // 检查是否已经预加载过
   if (preloadedImages.value.has(imageUrl)) {
     return Promise.resolve(preloadedImages.value.get(imageUrl))
   }
+  
+  // 检查是否正在加载中
+  if (imageLoadingPromises.value.has(imageUrl)) {
+    return imageLoadingPromises.value.get(imageUrl)
+  }
 
-  return new Promise((resolve) => {
+  const loadingPromise = new Promise((resolve) => {
     const img = new window.Image()
     let resolved = false
     
     const resolveOnce = (data) => {
       if (!resolved) {
         resolved = true
+        imageLoadingPromises.value.delete(imageUrl) // 清理Promise缓存
         resolve(data)
       }
     }
+    
+    // 添加crossOrigin属性以支持跨域图片
+    img.crossOrigin = 'anonymous'
     
     img.onload = () => {
       const imageData = {
@@ -369,6 +557,7 @@ function preloadImage(imageUrl) {
       if (originalUrl !== imageUrl) {
         console.log('尝试加载原图:', originalUrl)
         const originalImg = new window.Image()
+        originalImg.crossOrigin = 'anonymous'
         originalImg.onload = () => {
           const imageData = {
             src: originalImg.src,
@@ -388,28 +577,35 @@ function preloadImage(imageUrl) {
       }
     }
     
-    // 添加超时处理（10秒）
+    // 添加超时处理
     setTimeout(() => {
       if (!resolved) {
         console.warn('图片加载超时:', imageUrl)
         resolveOnce(null)
       }
-    }, 10000)
+    }, 1500) // 进一步减少超时时间，提高响应速度
     
     img.src = imageUrl
   })
+  
+  // 缓存加载Promise
+  imageLoadingPromises.value.set(imageUrl, loadingPromise)
+  return loadingPromise
 }
 
 // 预加载相邻图片
 function preloadAdjacentImages(currentIndex) {
-  const preloadCount = 2 // 预加载前后各2张图片
+  const preloadCount = 3 // 增加预加载数量，预加载前后各3张图片
   for (
     let i = Math.max(0, currentIndex - preloadCount);
     i <= Math.min(blogs.value.length - 1, currentIndex + preloadCount);
     i++
   ) {
     if (i !== currentIndex && blogs.value[i]) {
-      preloadImage(blogs.value[i].current_detail)
+      // 异步预加载，不阻塞当前图片显示
+      setTimeout(() => {
+        preloadImage(blogs.value[i].current_detail)
+      }, i === currentIndex + 1 || i === currentIndex - 1 ? 0 : 100)
     }
   }
 }
@@ -438,7 +634,7 @@ function showImage(blog) {
       imageSrc.value = nextImageUrl.value
       imageTransitioning.value = false
       imageVisible.value = true
-    }, 300) // 减少延迟时间
+    }, 100) // 进一步减少延迟时间
   } else {
     // 图片未预加载，开始加载流程
     preloadImage(imageUrl).then((imageData) => {
@@ -456,7 +652,8 @@ function showImage(blog) {
         setTimeout(() => {
           imageSrc.value = nextImageUrl.value
           imageTransitioning.value = false
-        }, 100)
+          imageVisible.value = true
+        }, 50) // 减少延迟，提高响应速度
       } else {
         // 图片加载失败，使用默认尺寸并尝试显示
         console.warn('图片预加载失败，使用默认尺寸')
@@ -497,7 +694,7 @@ function showImage(blog) {
         imageTransitioning.value = false
         imageVisible.value = true
       }
-    }, 5000)
+    }, 3000) // 减少超时时间
   }
 
   // 预加载相邻图片
@@ -534,21 +731,57 @@ function onImageError() {
   }
 }
 async function getBlogs(silentError = false) {
+  let progressInterval = null
+  
   try {
     isLoading.value = true
-
+    
     var params = { page: page, page_size: page_size }
     if (isValueNotEmpty(current_category)) params.category = current_category
     if (isValueNotEmpty(current_location)) params.location = current_location
     
+    // 只在首次加载时显示进度条动画
+    if (isFirstLoad.value) {
+      loadingProgress.value = 0
+      progressInterval = setInterval(() => {
+        if (loadingProgress.value < 90) {
+          loadingProgress.value += Math.random() * 15 + 5
+        }
+      }, 100)
+    }
+    
     const res = await api.getBlogsVisitor(params)
 
     if (res.code == 200) {
-      // 确保加载状态至少显示500ms，让用户看到加载提示
-      const minLoadingTime = new Promise((resolve) => setTimeout(resolve, 500))
-      
-      // 等待最小加载时间
-      await minLoadingTime
+      if (isFirstLoad.value) {
+        // 快速完成进度条到90%
+        loadingProgress.value = 90
+        
+        // 确保加载状态至少显示400ms，让用户看到完整的加载动画
+        const minLoadingTime = new Promise((resolve) => setTimeout(resolve, 400))
+        
+        // 等待最小加载时间
+        await minLoadingTime
+        
+        // 完成进度条
+        loadingProgress.value = 100
+        if (progressInterval) clearInterval(progressInterval)
+        
+        // 等待进度条完成动画
+        await new Promise((resolve) => setTimeout(resolve, 200))
+        
+        // 标记首次加载完成并设置cookie和sessionStorage
+        isFirstLoad.value = false
+        // 设置cookie，标记用户已访问，有效期30天
+        const expires = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toUTCString()
+        document.cookie = `visited=true; expires=${expires}; path=/`
+        // 同时设置sessionStorage作为备用标记
+        sessionStorage.setItem('pageVisited', 'true')
+      } else {
+        // 非首次加载，减少最小加载时间到100ms
+        const minLoadingTime = new Promise((resolve) => setTimeout(resolve, 100))
+        await minLoadingTime
+      }
 
       // 分页模式下，每次都替换数据
       blogs.value = [...res.data]
@@ -556,6 +789,11 @@ async function getBlogs(silentError = false) {
       formatBlogs()
       page = res.page
       total = res.total
+      
+      // 初始化图片加载状态
+      totalImageCount.value = blogs.value.length
+      loadedImageCount.value = 0
+      isImagesLoading.value = totalImageCount.value > 0
       
       // 数据处理完成后关闭加载状态
       isLoading.value = false
@@ -588,7 +826,7 @@ async function getBlogs(silentError = false) {
                   }
                 }
               }
-            }, index * 50) // 错开加载时间
+            }, index * 5) // 减少延迟，提高加载速度
           })
         }, 100)
       })
@@ -596,6 +834,13 @@ async function getBlogs(silentError = false) {
   } catch (e) {
     // 静默处理加载错误，不显示错误提示
     console.log('图片加载失败，静默处理:', e)
+    if (progressInterval) clearInterval(progressInterval)
+    if (isFirstLoad.value) {
+      loadingProgress.value = 0
+      isFirstLoad.value = false
+      // 即使加载失败也要设置标记，避免重复显示首次加载弹窗
+      sessionStorage.setItem('pageVisited', 'true')
+    }
     isLoading.value = false
     
     // 如果是首次加载失败，可以尝试重新加载
@@ -637,7 +882,7 @@ function formatBlogs() {
       if (blogs.value.length > 0) {
         // 根据设备性能调整预加载数量
         const isMobile = window.innerWidth <= 768
-        const preloadCount = isMobile ? 2 : 3 // 移动端减少预加载数量
+        const preloadCount = isMobile ? 4 : 6 // 增加预加载数量
         
         for (let i = 0; i < Math.min(preloadCount, blogs.value.length); i++) {
           if (blogs.value[i] && blogs.value[i].current_detail) {
@@ -645,9 +890,18 @@ function formatBlogs() {
           }
         }
       }
-    }, 200) // 减少延迟时间，提升响应速度
-  })
+    }, 50) // 大幅减少延迟时间，提升响应速度
+  })  
 }
+
+// 处理图片加载完成事件
+function onImageLoadComplete() {
+  loadedImageCount.value++
+  if (loadedImageCount.value >= totalImageCount.value) {
+    isImagesLoading.value = false
+  }
+}
+
 async function getCategory() {
   if (isValueEmpty(current_category)) return []
   try {
@@ -664,9 +918,21 @@ async function getCategory() {
 function goToPrevPage() {
   if (page > 1 && !isLoading.value) {
     page--
-    blogs.value = [] // 清空当前数据
-    isLoading.value = true // 设置加载状态
-    getBlogs()
+    
+    // 立即显示加载状态
+    isLoading.value = true
+    isImagesLoading.value = false
+    
+    // 重置图片加载计数
+    loadedImageCount.value = 0
+    totalImageCount.value = 0
+    
+    // 延迟清空数据，确保加载状态先显示
+    setTimeout(() => {
+      blogs.value = []
+      getBlogs()
+    }, 50)
+    
     // 滚动到分类栏下方（相册区域开始位置）
     scrollToGallery()
   }
@@ -676,9 +942,21 @@ function goToPrevPage() {
 function goToNextPage() {
   if (page < Math.ceil(total / page_size) && !isLoading.value) {
     page++
-    blogs.value = [] // 清空当前数据
-    isLoading.value = true // 设置加载状态
-    getBlogs()
+    
+    // 立即显示加载状态
+    isLoading.value = true
+    isImagesLoading.value = false
+    
+    // 重置图片加载计数
+    loadedImageCount.value = 0
+    totalImageCount.value = 0
+    
+    // 延迟清空数据，确保加载状态先显示
+    setTimeout(() => {
+      blogs.value = []
+      getBlogs()
+    }, 50)
+    
     // 滚动到分类栏下方（相册区域开始位置）
     scrollToGallery()
   }
@@ -730,6 +1008,32 @@ watch(
 
     getBlogs()
     getCategory()
+  },
+  { immediate: true }
+)
+
+// 监听分类变化
+watch(
+  () => props.currentCategory,
+  (newCategory) => {
+    current_category = newCategory
+    close()
+    
+    // 立即显示加载状态，避免空白
+    isLoading.value = true
+    isImagesLoading.value = false
+    
+    // 重置状态
+    page = 1
+    total = 0
+    loadedImageCount.value = 0
+    totalImageCount.value = 0
+    
+    // 延迟清空数据，确保加载状态先显示
+    setTimeout(() => {
+      blogs.value = []
+      getBlogs()
+    }, 100)
   },
   { immediate: true }
 )
@@ -893,7 +1197,7 @@ watch(
   background-repeat: no-repeat;
   background-size: 3em;
   height: 5em;
-  opacity: 0;
+  opacity: 0.3;
   position: absolute;
   right: 0;
   top: 0;
@@ -981,6 +1285,13 @@ watch(
   width: 100%;
 }
 
+/* 默认瀑布流布局 - 大屏幕 */
+#blog-main {
+  column-count: 4;
+  column-gap: 15px;
+  column-fill: balance;
+}
+
 /* 过渡动画 */
 .fade-slide-enter-active {
   transition: all 0.4s ease;
@@ -1033,6 +1344,24 @@ watch(
     column-count: 2;
     column-gap: 6px;
     padding: 2px;
+  }
+  
+  /* 超小屏幕下的加载指示器优化 */
+  .images-loading-indicator {
+    padding: 8px 10px;
+    margin: 10px 0;
+    border-radius: 10px;
+  }
+  
+  .images-loading-content {
+    font-size: 10px;
+    gap: 4px;
+  }
+  
+  .loading-spinner-small {
+    width: 12px;
+    height: 12px;
+    border-width: 1.5px;
   }
 }
 
@@ -1200,6 +1529,7 @@ ul.tags {
   .lightbox-content .caption {
     bottom: 10px;
     position: fixed;
+    z-index: 10000;
   }
 
   /* .lightbox-content .closer,
@@ -1373,7 +1703,7 @@ body.modal-active #wrapper:after {
   transform: scale(1.2);
 }
 
-/* 优化的加载提示样式 */
+/* 普通加载状态样式 */
 .gallery-loading-message {
   display: flex;
   justify-content: center;
@@ -1384,9 +1714,63 @@ body.modal-active #wrapper:after {
   height: 40vh;
   text-align: center;
   position: relative;
-  /* 确保在所有设备上完美居中 */
   box-sizing: border-box;
 }
+
+/* 弹窗加载样式 */
+.loading-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.8);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 9999;
+  backdrop-filter: blur(10px);
+}
+
+.loading-modal {
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 16px;
+  padding: 40px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(20px);
+  max-width: 400px;
+  width: 90%;
+  text-align: center;
+}
+
+.loading-progress-container {
+  margin-top: 20px;
+  width: 100%;
+}
+
+.loading-progress-bar {
+  width: 100%;
+  height: 6px;
+  background: rgba(255, 107, 53, 0.2);
+  border-radius: 3px;
+  overflow: hidden;
+  margin-bottom: 10px;
+}
+
+.loading-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #ff6b35, #ffa500);
+  border-radius: 3px;
+  transition: width 0.3s ease;
+}
+
+.loading-progress-text {
+  font-size: 14px;
+  color: #666;
+  font-weight: 500;
+}
+
+/* 优化的加载提示样式 */
 
 .loading-content {
   display: flex;
@@ -1480,6 +1864,15 @@ body.modal-active #wrapper:after {
     width: 150px;
     height: 3px;
   }
+  
+  .loading-modal {
+    padding: 30px;
+    max-width: 350px;
+  }
+  
+  .loading-progress-bar {
+    height: 4px;
+  }
 }
 
 @keyframes textFadeIn {
@@ -1518,8 +1911,8 @@ body.modal-active #wrapper:after {
   position: absolute;
   top: 0;
   left: 0;
-  right: 0;
-  bottom: 0;
+  width: 100%;
+  height: 100%;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -1527,15 +1920,90 @@ body.modal-active #wrapper:after {
   gap: 16px;
   z-index: 10;
   background: rgba(0, 0, 0, 0.8);
+  cursor: pointer;
+}
+
+.loading-close-hint {
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 14px;
+  margin-top: 8px;
+  opacity: 0.8;
+  transition: opacity 0.3s ease;
+}
+
+.lightbox-loading-container:hover .loading-close-hint {
+  opacity: 1;
 }
 
 .lightbox-spinner {
-  width: 32px;
-  height: 32px;
-  border: 3px solid rgba(255, 255, 255, 0.3);
-  border-top: 3px solid white;
+  width: 40px;
+  height: 40px;
+  position: relative;
+  display: inline-block;
+}
+
+.lightbox-spinner::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  border: 3px solid transparent;
+  border-top: 3px solid #ffffff;
+  border-right: 3px solid #ffffff;
   border-radius: 50%;
-  animation: spin 1s linear infinite;
+  animation: lightboxSpinPrimary 1.2s cubic-bezier(0.68, -0.55, 0.265, 1.55) infinite;
+}
+
+.lightbox-spinner::after {
+  content: '';
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  width: calc(100% - 12px);
+  height: calc(100% - 12px);
+  border: 2px solid transparent;
+  border-bottom: 2px solid rgba(255, 255, 255, 0.7);
+  border-left: 2px solid rgba(255, 255, 255, 0.7);
+  border-radius: 50%;
+  animation: lightboxSpinSecondary 1s cubic-bezier(0.68, -0.55, 0.265, 1.55) infinite reverse;
+}
+
+@keyframes lightboxSpinPrimary {
+  0% {
+    transform: rotate(0deg);
+    border-top-color: #ffffff;
+    border-right-color: #ffffff;
+  }
+  50% {
+    transform: rotate(180deg);
+    border-top-color: rgba(255, 255, 255, 0.8);
+    border-right-color: rgba(255, 255, 255, 0.8);
+  }
+  100% {
+    transform: rotate(360deg);
+    border-top-color: #ffffff;
+    border-right-color: #ffffff;
+  }
+}
+
+@keyframes lightboxSpinSecondary {
+  0% {
+    transform: rotate(0deg);
+    border-bottom-color: rgba(255, 255, 255, 0.7);
+    border-left-color: rgba(255, 255, 255, 0.7);
+  }
+  50% {
+    transform: rotate(-180deg);
+    border-bottom-color: rgba(255, 255, 255, 0.5);
+    border-left-color: rgba(255, 255, 255, 0.5);
+  }
+  100% {
+    transform: rotate(-360deg);
+    border-bottom-color: rgba(255, 255, 255, 0.7);
+    border-left-color: rgba(255, 255, 255, 0.7);
+  }
 }
 
 .lightbox-loading-text {
@@ -1550,6 +2018,26 @@ body.modal-active #wrapper:after {
 @keyframes spin {
   0% { transform: rotate(0deg); }
   100% { transform: rotate(360deg); }
+}
+
+@keyframes slideInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    left: -100%;
+  }
+  100% {
+    left: 100%;
+  }
 }
 
 /* 分页导航样式 */
@@ -1707,6 +2195,326 @@ body.modal-active #wrapper:after {
   }
 }
 
+/* 底部加载指示器样式 */
+.bottom-loading-indicator {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 30px 20px;
+  margin: 20px 0;
+  background: linear-gradient(135deg, rgba(255, 107, 53, 0.1) 0%, rgba(255, 165, 0, 0.05) 100%);
+  border-radius: 16px;
+  backdrop-filter: blur(15px);
+  border: 1px solid rgba(255, 107, 53, 0.2);
+  box-shadow: 0 8px 32px rgba(255, 107, 53, 0.1);
+  animation: slideInUp 0.5s ease-out;
+  position: relative;
+  overflow: hidden;
+}
+
+.bottom-loading-indicator::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+  animation: shimmer 2s ease-in-out infinite;
+}
+
+/* 图片展示区域容器 */
+.gallery-container {
+  position: relative;
+  min-height: 400px;
+  width: 100%;
+}
+
+/* 图片展示区域加载遮罩 */
+.gallery-loading-overlay {
+  position: relative;
+  margin: 20px auto 0;
+  width: fit-content;
+  background: rgba(0, 0, 0, 0.8);
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+  border-radius: 12px;
+  animation: fadeIn 0.3s ease-out;
+  padding: 16px 24px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+  pointer-events: none;
+}
+
+/* 图片展示区域加载内容 */
+.gallery-loading-content {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 12px;
+  text-align: center;
+  color: white;
+  white-space: nowrap;
+}
+
+/* 图片展示区域加载旋转器 */
+.gallery-loading-spinner {
+  width: 24px;
+  height: 24px;
+  position: relative;
+  display: inline-block;
+  flex-shrink: 0;
+}
+
+.gallery-loading-spinner::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  border: 2px solid transparent;
+  border-top: 2px solid #ff6b35;
+  border-right: 2px solid #ff6b35;
+  border-radius: 50%;
+  animation: gallerySpinPrimary 1.5s cubic-bezier(0.68, -0.55, 0.265, 1.55) infinite;
+}
+
+.gallery-loading-spinner::after {
+  content: '';
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  width: calc(100% - 8px);
+  height: calc(100% - 8px);
+  border: 2px solid transparent;
+  border-bottom: 2px solid #ffa500;
+  border-left: 2px solid #ffa500;
+  border-radius: 50%;
+  animation: gallerySpinSecondary 1.2s cubic-bezier(0.68, -0.55, 0.265, 1.55) infinite reverse;
+}
+
+@keyframes gallerySpinPrimary {
+  0% {
+    transform: rotate(0deg);
+    border-top-color: #ff6b35;
+    border-right-color: #ff6b35;
+  }
+  50% {
+    transform: rotate(180deg);
+    border-top-color: #ffa500;
+    border-right-color: #ffa500;
+  }
+  100% {
+    transform: rotate(360deg);
+    border-top-color: #ff6b35;
+    border-right-color: #ff6b35;
+  }
+}
+
+@keyframes gallerySpinSecondary {
+  0% {
+    transform: rotate(0deg);
+    border-bottom-color: #ffa500;
+    border-left-color: #ffa500;
+  }
+  50% {
+    transform: rotate(-180deg);
+    border-bottom-color: #ff6b35;
+    border-left-color: #ff6b35;
+  }
+  100% {
+    transform: rotate(-360deg);
+    border-bottom-color: #ffa500;
+    border-left-color: #ffa500;
+  }
+}
+
+/* 图片展示区域加载文字 */
+.gallery-loading-text {
+  font-size: 14px;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.95);
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+/* 图片展示区域进度条 */
+.gallery-loading-progress {
+  width: 280px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.gallery-progress-bar {
+  width: 100%;
+  height: 6px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 3px;
+  overflow: hidden;
+  position: relative;
+}
+
+.gallery-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #ff6b35 0%, #ffa500 100%);
+  border-radius: 3px;
+  transition: width 0.3s ease;
+  position: relative;
+}
+
+.gallery-progress-fill::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+  animation: progressShimmer 2s ease-in-out infinite;
+}
+
+.gallery-progress-text {
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.8);
+  font-weight: 500;
+}
+
+/* 图片容器在加载时的样式 */
+.images-container.images-loading {
+  /* 移除遮罩效果，保持图片清晰可见 */
+  opacity: 1;
+  pointer-events: auto;
+  transition: all 0.3s ease;
+}
+
+/* 图片加载指示器样式 - 在分页栏上方 */
+.images-loading-indicator {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 18px 24px;
+  margin: 20px 0;
+  background: linear-gradient(135deg, rgba(255, 107, 53, 0.08) 0%, rgba(255, 165, 0, 0.04) 100%);
+  border-radius: 14px;
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 107, 53, 0.15);
+  box-shadow: 0 4px 20px rgba(255, 107, 53, 0.08);
+  animation: slideInUp 0.4s ease-out;
+  position: relative;
+  overflow: hidden;
+}
+
+.images-loading-indicator::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.08), transparent);
+  animation: shimmer 2.5s ease-in-out infinite;
+}
+
+.images-loading-content {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 15px;
+  font-weight: 500;
+  position: relative;
+  z-index: 1;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  white-space: nowrap;
+}
+
+.bottom-loading-content {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 15px;
+  font-weight: 500;
+  position: relative;
+  z-index: 1;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+.loading-spinner-small {
+  width: 18px;
+  height: 18px;
+  position: relative;
+  display: inline-block;
+}
+
+.loading-spinner-small::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  border: 2px solid transparent;
+  border-top: 2px solid #ff6b35;
+  border-right: 2px solid #ff6b35;
+  border-radius: 50%;
+  animation: spinSmallPrimary 1s cubic-bezier(0.68, -0.55, 0.265, 1.55) infinite;
+}
+
+.loading-spinner-small::after {
+  content: '';
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: calc(100% - 6px);
+  height: calc(100% - 6px);
+  border: 1px solid transparent;
+  border-bottom: 1px solid #ffa500;
+  border-left: 1px solid #ffa500;
+  border-radius: 50%;
+  animation: spinSmallSecondary 0.8s cubic-bezier(0.68, -0.55, 0.265, 1.55) infinite reverse;
+}
+
+@keyframes spinSmallPrimary {
+  0% {
+    transform: rotate(0deg);
+    border-top-color: #ff6b35;
+    border-right-color: #ff6b35;
+  }
+  50% {
+    transform: rotate(180deg);
+    border-top-color: #ffa500;
+    border-right-color: #ffa500;
+  }
+  100% {
+    transform: rotate(360deg);
+    border-top-color: #ff6b35;
+    border-right-color: #ff6b35;
+  }
+}
+
+@keyframes spinSmallSecondary {
+  0% {
+    transform: rotate(0deg);
+    border-bottom-color: #ffa500;
+    border-left-color: #ffa500;
+  }
+  50% {
+    transform: rotate(-180deg);
+    border-bottom-color: #ff6b35;
+    border-left-color: #ff6b35;
+  }
+  100% {
+    transform: rotate(-360deg);
+    border-bottom-color: #ffa500;
+    border-left-color: #ffa500;
+  }
+}
+
 /* 响应式优化 - 确保在所有设备上完美居中 */
 @media (max-width: 768px) {
   .gallery-loading-message {
@@ -1719,6 +2527,25 @@ body.modal-active #wrapper:after {
     justify-content: center !important;
     align-items: center !important;
   }
+  
+  .bottom-loading-indicator {
+    padding: 20px 15px;
+    margin: 15px 0;
+  }
+  
+  .bottom-loading-content {
+    font-size: 13px;
+  }
+  
+  .images-loading-indicator {
+    padding: 12px 16px;
+    margin: 15px 0;
+  }
+  
+  .images-loading-content {
+    font-size: 12px;
+    gap: 6px;
+  }
 }
 
 @media (max-width: 480px) {
@@ -1726,11 +2553,21 @@ body.modal-active #wrapper:after {
     min-height: 160px;
     height: 30vh;
     padding: 20px 15px;
-    font-size: 14px;
-    /* 超小屏幕设备优化 */
-    display: flex !important;
-    justify-content: center !important;
-    align-items: center !important;
+  }
+  
+  .loading-modal {
+    padding: 25px;
+    max-width: 300px;
+  }
+  
+  .images-loading-indicator {
+    padding: 10px 12px;
+    margin: 12px 0;
+  }
+  
+  .images-loading-content {
+    font-size: 11px;
+    gap: 5px;
   }
   
   .loading-content {
@@ -1747,9 +2584,8 @@ body.modal-active #wrapper:after {
     font-size: 13px !important;
   }
   
-  .loading-progress {
-    width: 120px !important;
-    height: 2px !important;
+  .loading-progress-bar {
+    height: 4px;
   }
 }
 
