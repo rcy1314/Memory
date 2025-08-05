@@ -55,6 +55,14 @@ fn start_backend() {
             }
         };
         
+        // 确保数据目录存在
+        let data_dir = working_dir.join("data");
+        if let Err(e) = std::fs::create_dir_all(&data_dir) {
+            eprintln!("Failed to create data directory: {}", e);
+        } else {
+            println!("Data directory created/verified: {:?}", data_dir);
+        }
+        
         let mut cmd = if cfg!(target_os = "windows") {
             let mut cmd = Command::new("cmd");
             cmd.args(["/C", "python", backend_path.to_str().unwrap()]);

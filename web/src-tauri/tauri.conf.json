@@ -1,6 +1,6 @@
 {
   "productName": "Memory-Photo-Album",
-  "version": "1.0.7",
+  "version": "1.0.9",
   "identifier": "com.memory.app",
   "build": {
     "beforeDevCommand": "npm run dev",
@@ -37,7 +37,6 @@
       "../../run.py",
       "../../app/**/*",
       "../../requirements.txt",
-      "../../data/db.sqlite3",
       "../../migrations/**/*",
       "../../uvicorn_loggin_config.json"
     ],
