@@ -1055,6 +1055,24 @@ watch(
   margin: 0 auto;
 }
 
+.lightbox-content .pic {
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  position: relative;
+}
+
+.lightbox-content .pic .img {
+  max-width: 100%;
+  max-height: 100%;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  display: block;
+}
+
 .fade-enter-active,
 .fade-leave-active {
   transition: opacity 0.4s ease;
@@ -1082,7 +1100,9 @@ watch(
 .lightbox-content {
   background: transparent;
   cursor: default;
-  display: inline-block;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   vertical-align: middle;
   position: relative;
   z-index: 1;
@@ -1135,11 +1155,13 @@ watch(
   cursor: pointer;
   height: 8em;
   margin-top: -4em;
-  opacity: 0.3;
+  opacity: 0.6;
   position: absolute;
   top: 50%;
   width: 6em;
   z-index: 2;
+  background-color: rgba(0, 0, 0, 0.3);
+  border-radius: 8px;
 }
 
 .lightbox-content .nav-previous {
@@ -1172,12 +1194,14 @@ watch(
   background-repeat: no-repeat;
   background-size: 3em;
   height: 5em;
-  opacity: 0.5;
+  opacity: 0.7;
   position: absolute;
   right: 0;
   top: 0;
   width: 5em;
   z-index: 2;
+  background-color: rgba(0, 0, 0, 0.3);
+  border-radius: 8px;
 }
 
 .lightbox-content .download-button {
@@ -1481,13 +1505,16 @@ ul.tags {
   .lightbox-content .closer,
   .lightbox-content .nav-previous,
   .lightbox-content .nav-next {
-    opacity: 0.6 !important;
+    opacity: 0.8 !important;
+    background-color: rgba(0, 0, 0, 0.5);
+    border-radius: 8px;
   }
 
   .lightbox-content .closer:active,
   .lightbox-content .nav-previous:active,
   .lightbox-content .nav-next:active {
     opacity: 1 !important;
+    background-color: rgba(0, 0, 0, 0.8);
   }
 
   .nav-item .nav-item-child {
