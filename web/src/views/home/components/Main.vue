@@ -1046,8 +1046,8 @@ watch(
 </script>
 <style>
 .img {
-  max-width: 90vw;
-  max-height: 90vh;
+  max-width: 100%;
+  max-height: 100%;
   width: auto;
   height: auto;
   object-fit: contain;
@@ -1066,8 +1066,7 @@ watch(
 }
 
 .lightbox {
-  backdrop-filter: saturate(180%) blur(10px);
-  background: var(--moment-maskbgdeep);
+  background: transparent;
   position: fixed;
   left: 0px;
   top: 0px;
@@ -1082,22 +1081,16 @@ watch(
 
 .lightbox-content {
   background: transparent;
-  box-shadow: 0 1em 3em 0.5em #00000040;
   cursor: default;
-  border-radius: 12px;
-  overflow: hidden;
   display: inline-block;
   vertical-align: middle;
   position: relative;
   z-index: 1;
   cursor: pointer;
-  min-width: 150px;
-  min-height: 150px;
   width: auto;
   height: auto;
-  max-width: 90vw;
-  max-height: 90vh;
-  overflow: hidden;
+  max-width: 95vw;
+  max-height: 85vh;
 }
 
 .lightbox-content:before {
@@ -1142,7 +1135,7 @@ watch(
   cursor: pointer;
   height: 8em;
   margin-top: -4em;
-  opacity: 0;
+  opacity: 0.3;
   position: absolute;
   top: 50%;
   width: 6em;
@@ -1179,7 +1172,7 @@ watch(
   background-repeat: no-repeat;
   background-size: 3em;
   height: 5em;
-  opacity: 0.3;
+  opacity: 0.5;
   position: absolute;
   right: 0;
   top: 0;
@@ -1485,11 +1478,17 @@ ul.tags {
     z-index: 10000;
   }
 
-  /* .lightbox-content .closer,
-    .lightbox-content .nav-previous,
-    .lightbox-content .nav-next {
-        display: none !important;
-    } */
+  .lightbox-content .closer,
+  .lightbox-content .nav-previous,
+  .lightbox-content .nav-next {
+    opacity: 0.6 !important;
+  }
+
+  .lightbox-content .closer:active,
+  .lightbox-content .nav-previous:active,
+  .lightbox-content .nav-next:active {
+    opacity: 1 !important;
+  }
 
   .nav-item .nav-item-child {
     top: 30px;
