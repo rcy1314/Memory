@@ -22,6 +22,7 @@ export default {
   createBlog: (data = {}) => request.post('/admin/blog/create', data),
   updateBlog: (data = {}) => request.post('/admin/blog/update', data),
   deleteBlog: (params = {}) => request.delete('/admin/blog/delete', { params }),
+  deleteLocalImage: (data = {}) => request.post('/admin/base/delete-local-image', data),
   // categories
   getCategories: (params = {}) => request.get('/admin/category/list', { params }),
   getCategoryById: (params = {}) => request.get('/admin/category/get/id', { params }),

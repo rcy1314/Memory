@@ -124,6 +124,17 @@ export const basicRoutes = [
           icon: 'mdi:bookmark-multiple-outline',
         },
       },
+      {
+        is_hidden: false,
+        keepalive: true,
+        path: 'batch-upload',
+        component: () => import('@/views/content/batch-upload/index.vue'),
+        name: '批量上传',
+        meta: {
+          title: '批量上传',
+          icon: 'mdi:cloud-upload-outline',
+        },
+      },
     ],
   },
   {

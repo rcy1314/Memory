@@ -20,7 +20,13 @@
     <div v-if="isPageLoading" class="page-loading">
       <div class="loading-spinner">
         <div class="spinner"></div>
-        <p class="loading-text">加载中...</p>
+        <p class="loading-text">正在加载页面...</p>
+        <div class="loading-progress">
+          <div class="loading-progress-bar">
+            <div class="loading-progress-fill"></div>
+          </div>
+          <div class="loading-tips">请稍候，正在为您准备精彩内容</div>
+        </div>
       </div>
     </div>
 
@@ -578,14 +584,14 @@ onMounted(async () => {
     // 添加滚动监听
     window.addEventListener('scroll', handleScroll, { passive: true })
   } finally {
-    // 数据加载完成，隐藏loading
+    // 数据加载完成，隐藏loading - 增加loading显示时间让用户能看到效果
     setTimeout(() => {
       isPageLoading.value = false
       // 检测首次访问（在页面加载完成后）
       setTimeout(() => {
         checkFirstVisit()
       }, 500)
-    }, 300)
+    }, 800) // 调整为0.8秒，既能看到loading效果又不会过长
   }
 })
 
@@ -776,6 +782,42 @@ body {
   .modal-title {
     font-size: 16px;
   }
+  
+  /* 移动端loading优化 */
+  .loading-spinner {
+    transform: scale(0.9);
+  }
+  
+  .spinner {
+    width: 50px;
+    height: 50px;
+    margin: 0 auto 25px;
+  }
+  
+  .loading-text {
+    font-size: 18px;
+  }
+  
+  .loading-progress {
+    width: 240px;
+    margin-top: 25px;
+  }
+  
+  .loading-tips {
+    font-size: 13px;
+  }
+  
+  .loading-spinner::before {
+    width: 75px;
+    height: 75px;
+    margin: -37.5px 0 0 -37.5px;
+  }
+  
+  .loading-spinner::after {
+    width: 90px;
+    height: 90px;
+    margin: -45px 0 0 -45px;
+  }
 }
 
 /* 页面加载样式 */
@@ -785,25 +827,55 @@ body {
   left: 0;
   width: 100%;
   height: 100%;
-  background: linear-gradient(135deg, rgba(0, 0, 0, 0.4) 0%, rgba(0, 0, 0, 0.6) 100%);
-  backdrop-filter: blur(8px);
+  background: linear-gradient(135deg, rgba(0, 0, 0, 0.85) 0%, rgba(10, 10, 15, 0.9) 50%, rgba(0, 0, 0, 0.85) 100%);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 9999;
-  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+  animation: pageLoadingFadeIn 0.5s ease-out;
 }
 
 .loading-spinner {
   text-align: center;
-  animation: fadeInUp 0.6s ease-out;
+  animation: fadeInUp 0.8s ease-out;
+  position: relative;
+}
+
+.loading-spinner::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 90px;
+  height: 90px;
+  margin: -45px 0 0 -45px;
+  border: 1px solid rgba(255, 107, 53, 0.1);
+  border-radius: 50%;
+  animation: pulseRing 2s ease-in-out infinite;
+}
+
+.loading-spinner::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 110px;
+  height: 110px;
+  margin: -55px 0 0 -55px;
+  border: 1px solid rgba(255, 165, 0, 0.08);
+  border-radius: 50%;
+  animation: pulseRing 2s ease-in-out infinite 0.5s;
 }
 
 .spinner {
-  width: 50px;
-  height: 50px;
+  width: 60px;
+  height: 60px;
   position: relative;
-  margin: 0 auto 30px;
+  margin: 0 auto 35px;
+  filter: drop-shadow(0 0 20px rgba(255, 107, 53, 0.3));
 }
 
 .spinner::before {
@@ -813,35 +885,79 @@ body {
   left: 0;
   width: 100%;
   height: 100%;
-  border: 3px solid transparent;
-  border-top: 3px solid #ff6b35;
-  border-right: 3px solid #ff6b35;
+  border: 4px solid transparent;
+  border-top: 4px solid #ff6b35;
+  border-right: 4px solid #ff6b35;
   border-radius: 50%;
   animation: spinPrimary 1.2s cubic-bezier(0.68, -0.55, 0.265, 1.55) infinite;
+  box-shadow: 0 0 15px rgba(255, 107, 53, 0.4), inset 0 0 15px rgba(255, 107, 53, 0.2);
 }
 
 .spinner::after {
   content: '';
   position: absolute;
-  top: 6px;
-  left: 6px;
-  width: calc(100% - 12px);
-  height: calc(100% - 12px);
-  border: 2px solid transparent;
-  border-bottom: 2px solid #ffa500;
-  border-left: 2px solid #ffa500;
+  top: 8px;
+  left: 8px;
+  width: calc(100% - 16px);
+  height: calc(100% - 16px);
+  border: 3px solid transparent;
+  border-bottom: 3px solid #ffa500;
+  border-left: 3px solid #ffa500;
   border-radius: 50%;
   animation: spinSecondary 1s cubic-bezier(0.68, -0.55, 0.265, 1.55) infinite reverse;
+  box-shadow: 0 0 12px rgba(255, 165, 0, 0.4), inset 0 0 12px rgba(255, 165, 0, 0.2);
 }
 
 .loading-text {
   color: #ffffff;
-  font-size: 18px;
-  font-weight: 500;
+  font-size: 20px;
+  font-weight: 600;
   margin: 0;
-  opacity: 0.9;
-  animation: textPulse 2s ease-in-out infinite;
-  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  opacity: 0.95;
+  animation: textPulse 2.5s ease-in-out infinite;
+  text-shadow: 0 3px 12px rgba(0, 0, 0, 0.5);
+  letter-spacing: 0.5px;
+  background: linear-gradient(45deg, #ffffff, #f0f0f0, #ffffff);
+  background-size: 200% 200%;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: textPulse 2.5s ease-in-out infinite, textShimmer 3s ease-in-out infinite;
+}
+
+.loading-progress {
+  margin-top: 30px;
+  width: 280px;
+  text-align: center;
+}
+
+.loading-progress-bar {
+  width: 100%;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 2px;
+  overflow: hidden;
+  margin-bottom: 15px;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+.loading-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #ff6b35, #ffa500, #ff6b35);
+  background-size: 200% 100%;
+  border-radius: 2px;
+  animation: progressFlow 2s ease-in-out infinite;
+  box-shadow: 0 0 8px rgba(255, 107, 53, 0.5);
+}
+
+.loading-tips {
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 14px;
+  font-weight: 400;
+  margin: 0;
+  opacity: 0.8;
+  animation: tipsFade 3s ease-in-out infinite;
+  letter-spacing: 0.3px;
 }
 
 @keyframes spinPrimary {
@@ -909,12 +1025,76 @@ body {
 
 @keyframes textPulse {
   0%, 100% {
-    opacity: 0.9;
+    opacity: 0.95;
     transform: scale(1);
   }
   50% {
-    opacity: 0.7;
-    transform: scale(1.02);
+    opacity: 0.8;
+    transform: scale(1.03);
+  }
+}
+
+@keyframes textShimmer {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+@keyframes pageLoadingFadeIn {
+  from {
+    opacity: 0;
+    backdrop-filter: blur(0px);
+    -webkit-backdrop-filter: blur(0px);
+  }
+  to {
+    opacity: 1;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+  }
+}
+
+@keyframes pulseRing {
+  0% {
+    transform: scale(0.8);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.1);
+    opacity: 0.3;
+  }
+  100% {
+    transform: scale(0.8);
+    opacity: 1;
+  }
+}
+
+@keyframes progressFlow {
+  0% {
+    background-position: 0% 50%;
+    width: 0%;
+  }
+  50% {
+    background-position: 100% 50%;
+    width: 70%;
+  }
+  100% {
+    background-position: 0% 50%;
+    width: 100%;
+  }
+}
+
+@keyframes tipsFade {
+  0%, 100% {
+    opacity: 0.8;
+  }
+  50% {
+    opacity: 0.5;
   }
 }
 
@@ -970,11 +1150,33 @@ body {
     object-position: center 30%; /* 优化手机端显示位置 */
     transform: scale(1.1); /* 轻微放大避免黑边 */
   }
+  
+  .hero-title {
+    font-size: 32px; /* 手机端标题字体大小 */
+    margin-bottom: 0.8rem;
+  }
+  
+  .hero-description {
+    font-size: 24px; /* 手机端副标题字体大小 */
+  }
 }
 
 @media screen and (max-width: 480px) {
   .hero-section {
     height: 50vh; /* 进一步减少小屏幕封面高度 */
+  }
+  
+  .hero-title {
+    font-size: 28px; /* 小屏幕标题字体大小 */
+    margin-bottom: 0.6rem;
+  }
+  
+  .hero-description {
+    font-size: 20px; /* 小屏幕副标题字体大小 */
+  }
+  
+  .hero-content {
+    padding: 0 20px; /* 增加小屏幕内边距 */
   }
 }
 
@@ -1003,7 +1205,7 @@ body {
 }
 
 .hero-title {
-  font-size: 8.5rem;
+  font-size: 8.5rem; /* 桌面端封面标题字体大小 */
   font-weight: 700;
   margin-bottom: 1rem;
   text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
@@ -1011,7 +1213,7 @@ body {
 }
 
 .hero-description {
-  font-size: 6.5rem;
+  font-size: 6.5rem; /* 桌面端封面副标题字体大小 */
   font-weight: 300;
   opacity: 0.9;
   text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);

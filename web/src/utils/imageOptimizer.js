@@ -8,13 +8,14 @@ import imageCompression from 'browser-image-compression'
  * 检测浏览器对WebP格式的支持
  */
 export const supportsWebP = () => {
-  return new Promise((resolve) => {
-    const webP = new Image()
-    webP.onload = webP.onerror = () => {
-      resolve(webP.height === 2)
-    }
-    webP.src = 'data:image/webp;base64,UklGRjoAAABXRUJQVlA4IC4AAACyAgCdASoCAAIALmk0mk0iIiIiIgBoSygABc6WWgAA/veff/0PP8bA//LwYAAA'
-  })
+  try {
+    const canvas = document.createElement('canvas')
+    canvas.width = 1
+    canvas.height = 1
+    return canvas.toDataURL('image/webp') !== 'data:,'
+  } catch (e) {
+    return false
+  }
 }
 
 /**
@@ -73,10 +74,10 @@ export const getCompressionConfig = () => {
       unknown: { maxSizeMB: 0.2, maxWidthOrHeight: 600, quality: 0.7 }
     },
     desktop: {
-      slow: { maxSizeMB: 0.2, maxWidthOrHeight: 600, quality: 0.7 },
-      medium: { maxSizeMB: 0.3, maxWidthOrHeight: 800, quality: 0.8 },
-      fast: { maxSizeMB: 0.5, maxWidthOrHeight: 1200, quality: 0.85 },
-      unknown: { maxSizeMB: 0.3, maxWidthOrHeight: 800, quality: 0.8 }
+      slow: { maxSizeMB: 0.15, maxWidthOrHeight: 400, quality: 0.65 },
+      medium: { maxSizeMB: 0.25, maxWidthOrHeight: 600, quality: 0.75 },
+      fast: { maxSizeMB: 0.4, maxWidthOrHeight: 800, quality: 0.8 },
+      unknown: { maxSizeMB: 0.25, maxWidthOrHeight: 600, quality: 0.75 }
     }
   }
 
@@ -100,11 +101,6 @@ export const compressImage = async (file, options = {}) => {
       ...options
     }
 
-    // 如果文件已经很小，跳过压缩
-    if (file.size < 50 * 1024) { // 小于50KB
-      return file
-    }
-
     const compressedFile = await imageCompression(file, config)
     return compressedFile
   } catch (error) {
@@ -114,7 +110,7 @@ export const compressImage = async (file, options = {}) => {
 }
 
 /**
- * 从URL获取图片并压缩
+ * 从URL压缩图片
  * @param {string} imageUrl - 图片URL
  * @param {Object} options - 压缩选项
  * @returns {Promise<string>} 压缩后的图片URL
@@ -123,9 +119,8 @@ export const compressImageFromUrl = async (imageUrl, options = {}) => {
   try {
     const response = await fetch(imageUrl)
     const blob = await response.blob()
-
-    const compressedFile = await compressImage(blob, options)
-    return URL.createObjectURL(compressedFile)
+    const compressedBlob = await compressImage(blob, options)
+    return URL.createObjectURL(compressedBlob)
   } catch (error) {
     console.warn('从URL压缩图片失败:', error)
     return imageUrl
@@ -136,8 +131,8 @@ export const compressImageFromUrl = async (imageUrl, options = {}) => {
  * 生成占位符图片
  * @param {number} width - 宽度
  * @param {number} height - 高度
- * @param {string} color - 背景色
- * @returns {string} 占位符图片的Data URL
+ * @param {string} color - 颜色
+ * @returns {string} Base64编码的占位符图片
  */
 export const generatePlaceholder = (width = 20, height = 20, color = '#f0f0f0') => {
   const canvas = document.createElement('canvas')
@@ -145,10 +140,13 @@ export const generatePlaceholder = (width = 20, height = 20, color = '#f0f0f0') 
   canvas.height = height
   const ctx = canvas.getContext('2d')
 
-  // 创建渐变背景
+  // 生成渐变背景
   const gradient = ctx.createLinearGradient(0, 0, width, height)
-  gradient.addColorStop(0, color)
-  gradient.addColorStop(1, adjustBrightness(color, -10))
+  const baseColor = color
+  const lightColor = adjustBrightness(baseColor, 20)
+
+  gradient.addColorStop(0, lightColor)
+  gradient.addColorStop(1, baseColor)
 
   ctx.fillStyle = gradient
   ctx.fillRect(0, 0, width, height)
@@ -158,28 +156,18 @@ export const generatePlaceholder = (width = 20, height = 20, color = '#f0f0f0') 
 
 /**
  * 调整颜色亮度
- * @param {string} color - 十六进制颜色值
- * @param {number} amount - 亮度调整量
- * @returns {string} 调整后的颜色值
  */
 const adjustBrightness = (color, amount) => {
-  const usePound = color[0] === '#'
-  const col = usePound ? color.slice(1) : color
+  const num = parseInt(color.replace('#', ''), 16)
+  const r = Math.min(255, Math.max(0, ((num >> 16) & 0x00ff) + amount))
+  const g = Math.min(255, Math.max(0, ((num >> 8) & 0x00ff) + amount))
+  const b = Math.min(255, Math.max(0, (num & 0x00ff) + amount))
 
-  const num = parseInt(col, 16)
-  let r = (num >> 16) + amount
-  let g = (num >> 8 & 0x00FF) + amount
-  let b = (num & 0x0000FF) + amount
-
-  r = r > 255 ? 255 : r < 0 ? 0 : r
-  g = g > 255 ? 255 : g < 0 ? 0 : g
-  b = b > 255 ? 255 : b < 0 ? 0 : b
-
-  return (usePound ? '#' : '') + (r << 16 | g << 8 | b).toString(16).padStart(6, '0')
+  return `#${((r << 16) | (g << 8) | b).toString(16).padStart(6, '0')}`
 }
 
 /**
- * 预加载图片
+ * 预加载单张图片
  * @param {string} src - 图片URL
  * @returns {Promise<HTMLImageElement>} 加载完成的图片元素
  */
@@ -203,28 +191,36 @@ export const preloadImages = async (urls, concurrency = 3) => {
   const executing = []
 
   for (const url of urls) {
-    const promise = preloadImage(url).then(img => {
-      results.push(img)
-      return img
-    }).catch(error => {
-      console.warn('预加载图片失败:', url, error)
-      return null
-    })
+    const promise = preloadImage(url)
+      .then((img) => {
+        results.push(img)
+        return img
+      })
+      .catch((error) => {
+        console.warn('图片预加载失败:', url, error)
+        return null
+      })
 
-    executing.push(promise)
+    results.push(promise)
 
-    if (executing.length >= concurrency) {
-      await Promise.race(executing)
-      executing.splice(executing.findIndex(p => p === promise), 1)
+    if (urls.length >= concurrency) {
+      executing.push(promise)
+
+      if (executing.length >= concurrency) {
+        await Promise.race(executing)
+        executing.splice(
+          executing.findIndex((p) => p === promise),
+          1
+        )
+      }
     }
   }
 
-  await Promise.all(executing)
-  return results.filter(Boolean)
+  return Promise.all(results)
 }
 
 /**
- * 图片懒加载观察器
+ * 懒加载图片观察器
  */
 export class LazyImageObserver {
   constructor(options = {}) {
@@ -235,16 +231,13 @@ export class LazyImageObserver {
     }
 
     this.observer = new IntersectionObserver(
-      this.handleIntersection.bind(this),
-      this.options
+      this.handleIntersection.bind(this), this.options
     )
-
-    this.loadingImages = new Set()
   }
 
   handleIntersection(entries) {
-    entries.forEach(entry => {
-      if (entry.isIntersecting && !this.loadingImages.has(entry.target)) {
+    entries.forEach((entry) => {
+      if (entry.isIntersecting) {
         this.loadImage(entry.target)
         this.observer.unobserve(entry.target)
       }
@@ -252,26 +245,29 @@ export class LazyImageObserver {
   }
 
   async loadImage(img) {
-    this.loadingImages.add(img)
-
     try {
       const src = img.dataset.src
       if (!src) return
 
-      // 如果需要压缩
-      if (img.dataset.compress === 'true') {
-        const compressedSrc = await compressImageFromUrl(src)
-        img.src = compressedSrc
-      } else {
-        img.src = src
+      // 显示占位符
+      if (!img.src) {
+        img.src = generatePlaceholder(img.width || 200, img.height || 200)
       }
 
-      img.classList.add('loaded')
+      // 加载实际图片
+      const actualImg = await preloadImage(src)
+
+      // 淡入效果
+      img.style.transition = 'opacity 0.3s ease'
+      img.style.opacity = '0'
+
+      setTimeout(() => {
+        img.src = actualImg.src
+        img.style.opacity = '1'
+      }, 100)
+
     } catch (error) {
       console.warn('懒加载图片失败:', error)
-      img.classList.add('error')
-    } finally {
-      this.loadingImages.delete(img)
     }
   }
 
@@ -285,7 +281,6 @@ export class LazyImageObserver {
 
   disconnect() {
     this.observer.disconnect()
-    this.loadingImages.clear()
   }
 }
 
@@ -309,7 +304,7 @@ export class ImageCache {
   get(key) {
     const value = this.cache.get(key)
     if (value) {
-      // 移动到最后（LRU策略）
+      // 重新设置以更新LRU顺序
       this.cache.delete(key)
       this.cache.set(key, value)
     }
@@ -340,30 +335,28 @@ export class SmartImageLoader {
   constructor(options = {}) {
     this.cache = options.cache || globalImageCache
     this.lazyObserver = new LazyImageObserver(options.lazyOptions)
-    this.compressionEnabled = options.compression !== false
   }
 
   async loadImage(src, options = {}) {
-    // 检查缓存
-    if (this.cache.has(src)) {
-      return this.cache.get(src)
-    }
-
     try {
-      let finalSrc = src
-
-      // 如果启用压缩
-      if (this.compressionEnabled && options.compress !== false) {
-        finalSrc = await compressImageFromUrl(src, options.compressionOptions)
+      // 检查缓存
+      if (this.cache.has(src)) {
+        return this.cache.get(src)
       }
 
-      // 预加载图片
-      const img = await preloadImage(finalSrc)
+      // 压缩选项
+      const compressOptions = {
+        ...getCompressionConfig(),
+        ...options.compression
+      }
+
+      // 加载并压缩图片
+      const compressedUrl = await compressImageFromUrl(src, compressOptions)
 
       // 缓存结果
-      this.cache.set(src, finalSrc)
+      this.cache.set(src, compressedUrl)
 
-      return finalSrc
+      return compressedUrl
     } catch (error) {
       console.warn('智能图片加载失败:', error)
       return src
@@ -372,20 +365,19 @@ export class SmartImageLoader {
 
   setupLazyLoading(img, src, options = {}) {
     img.dataset.src = src
-    if (options.compress !== false) {
-      img.dataset.compress = 'true'
-    }
-
     this.lazyObserver.observe(img)
+
+    // 可选的预加载
+    if (options.preload) {
+      this.loadImage(src, options)
+    }
   }
 
   destroy() {
     this.lazyObserver.disconnect()
-    this.cache.clear()
   }
 }
 
-// 默认导出
 export default {
   supportsWebP,
   getConnectionType,

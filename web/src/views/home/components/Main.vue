@@ -215,18 +215,8 @@ var current_location = router.currentRoute.value.params.location
 const blogs = ref([])
 const listRef = ref(null)
 const isLoading = ref(true)
-// 使用cookies和sessionStorage判断是否为首次访问
-const isFirstLoad = ref(
-  !document.cookie.includes('visited=true') && 
-  !sessionStorage.getItem('pageVisited')
-) // 标记是否为首次加载
-
-// 调试信息
-console.log('Cookie内容:', document.cookie)
-console.log('SessionStorage pageVisited:', sessionStorage.getItem('pageVisited'))
-console.log('是否首次加载:', isFirstLoad.value)
-console.log('是否正在加载:', isLoading.value)
-const loadingProgress = ref(0) // 加载进度
+// 简化加载状态管理
+const isFirstLoad = ref(false) // 移除复杂的首次加载判断
 const loadedImageCount = ref(0) // 已加载图片数量
 const totalImageCount = ref(0) // 总图片数量
 const isImagesLoading = ref(false) // 图片是否正在加载
@@ -371,15 +361,32 @@ function close() {
   nextImageUrl.value = ''
 }
 function prev() {
-  const index = blogs.value.findIndex((b) => b.id === currentBlog.value.id)
-  if (index > 0) {
-    showImage(blogs.value[index - 1])
+  // 如果当前博客是合集且不在第一张图片，则在合集内导航
+  if (currentBlog.value.images && currentBlog.value.images.length > 1 && currentBlog.value.currentIndex > 0) {
+    currentBlog.value.currentIndex--
+    updateAttr(currentBlog.value)
+    showImage(currentBlog.value)
+  } else {
+    // 否则导航到上一个博客
+    const index = blogs.value.findIndex((b) => b.id === currentBlog.value.id)
+    if (index > 0) {
+      showImage(blogs.value[index - 1])
+    }
   }
 }
+
 function next() {
-  const index = blogs.value.findIndex((b) => b.id === currentBlog.value.id)
-  if (index < blogs.value.length - 1) {
-    showImage(blogs.value[index + 1])
+  // 如果当前博客是合集且不在最后一张图片，则在合集内导航
+  if (currentBlog.value.images && currentBlog.value.images.length > 1 && currentBlog.value.currentIndex < currentBlog.value.images.length - 1) {
+    currentBlog.value.currentIndex++
+    updateAttr(currentBlog.value)
+    showImage(currentBlog.value)
+  } else {
+    // 否则导航到下一个博客
+    const index = blogs.value.findIndex((b) => b.id === currentBlog.value.id)
+    if (index < blogs.value.length - 1) {
+      showImage(blogs.value[index + 1])
+    }
   }
 }
 
@@ -484,17 +491,49 @@ function preloadCategoryImages(category) {
   })
 }
 
-// 下载图片函数
+// 生成优化图片URL的函数
+function getOptimizedImageUrl(originalUrl, type = 'lightbox') {
+  if (!originalUrl || (!originalUrl.includes('http') && !originalUrl.includes('/api/'))) {
+    return originalUrl
+  }
+  
+  const separator = originalUrl.includes('?') ? '&' : '?'
+  const isMobile = window.innerWidth <= 768
+  const isTablet = window.innerWidth <= 1024 && window.innerWidth > 768
+  const isSlowConnection = navigator.connection && navigator.connection.effectiveType && 
+                         ['slow-2g', '2g', '3g'].includes(navigator.connection.effectiveType)
+  
+  if (type === 'lightbox') {
+    // lightbox显示：只压缩质量，保持原始比例
+    if (isMobile) {
+      const quality = isSlowConnection ? 60 : 70
+      return `${originalUrl}${separator}auto=compress,format&q=${quality}`
+    } else if (isTablet) {
+      const quality = isSlowConnection ? 65 : 75
+      return `${originalUrl}${separator}auto=compress,format&q=${quality}`
+    } else {
+      const quality = isSlowConnection ? 70 : 80
+      return `${originalUrl}${separator}auto=compress,format&q=${quality}`
+    }
+  }
+  
+  return originalUrl
+}
+
+// 下载图片函数 - 始终下载原始高质量图片
 function downloadImage() {
-  if (!currentBlog.value || !imageSrc.value) return
+  if (!currentBlog.value) return
+  
+  // 使用原始图片URL进行下载，确保下载高质量图片
+  const originalImageUrl = currentBlog.value.current_detail
   
   const link = document.createElement('a')
-  link.href = imageSrc.value
+  link.href = originalImageUrl
   link.download = `${currentBlog.value.current_title || 'image'}_${Date.now()}.jpg`
   link.target = '_blank'
   
   // 对于跨域图片，使用fetch下载
-  fetch(imageSrc.value)
+  fetch(originalImageUrl)
     .then(response => response.blob())
     .then(blob => {
       const url = window.URL.createObjectURL(blob)
@@ -604,7 +643,8 @@ function preloadAdjacentImages(currentIndex) {
     if (i !== currentIndex && blogs.value[i]) {
       // 异步预加载，不阻塞当前图片显示
       setTimeout(() => {
-        preloadImage(blogs.value[i].current_detail)
+        const optimizedUrl = getOptimizedImageUrl(blogs.value[i].current_detail, 'lightbox')
+        preloadImage(optimizedUrl)
       }, i === currentIndex + 1 || i === currentIndex - 1 ? 0 : 100)
     }
   }
@@ -615,18 +655,32 @@ function showImage(blog) {
   imageVisible.value = false
   imageTransitioning.value = true
 
-  // 检查图片是否已预加载
-  const imageUrl = blog.current_detail
-  const preloadedData = preloadedImages.value.get(imageUrl)
+  // 为lightbox生成优化的缩略图URL以提高加载速度
+  const originalImageUrl = blog.current_detail
+  const optimizedImageUrl = getOptimizedImageUrl(originalImageUrl, 'lightbox')
+  
+  // 检查优化图片是否已预加载
+  const preloadedData = preloadedImages.value.get(optimizedImageUrl)
 
   if (preloadedData) {
     // 图片已预加载，立即显示
-    const maxW = Math.min(1150, window.innerWidth - 40)
-    const maxH = Math.min(890, window.innerHeight - 40)
-    const ratio = Math.min(maxW / preloadedData.width, maxH / preloadedData.height, 1)
+    const maxW = window.innerWidth - 40
+    const maxH = window.innerHeight - 40
+    
+    // 使用原始尺寸，只在超出屏幕时才缩放
+    let finalWidth = preloadedData.width
+    let finalHeight = preloadedData.height
+    
+    // 如果图片超出屏幕，进行等比例缩放
+    if (finalWidth > maxW || finalHeight > maxH) {
+      const scaleRatio = Math.min(maxW / finalWidth, maxH / finalHeight)
+      finalWidth = finalWidth * scaleRatio
+      finalHeight = finalHeight * scaleRatio
+    }
+    
     currentSize.value = {
-      width: preloadedData.width * ratio,
-      height: preloadedData.height * ratio,
+      width: finalWidth,
+      height: finalHeight,
     }
     nextImageUrl.value = preloadedData.src
 
@@ -637,14 +691,25 @@ function showImage(blog) {
     }, 100) // 进一步减少延迟时间
   } else {
     // 图片未预加载，开始加载流程
-    preloadImage(imageUrl).then((imageData) => {
+    preloadImage(optimizedImageUrl).then((imageData) => {
       if (imageData) {
-        const maxW = Math.min(1150, window.innerWidth - 40)
-        const maxH = Math.min(890, window.innerHeight - 40)
-        const ratio = Math.min(maxW / imageData.width, maxH / imageData.height, 1)
+        const maxW = window.innerWidth - 40
+        const maxH = window.innerHeight - 40
+        
+        // 使用原始尺寸，只在超出屏幕时才缩放
+        let finalWidth = imageData.width
+        let finalHeight = imageData.height
+        
+        // 如果图片超出屏幕，进行等比例缩放
+        if (finalWidth > maxW || finalHeight > maxH) {
+          const scaleRatio = Math.min(maxW / finalWidth, maxH / finalHeight)
+          finalWidth = finalWidth * scaleRatio
+          finalHeight = finalHeight * scaleRatio
+        }
+        
         currentSize.value = {
-          width: imageData.width * ratio,
-          height: imageData.height * ratio,
+          width: finalWidth,
+          height: finalHeight,
         }
         nextImageUrl.value = imageData.src
         
@@ -661,7 +726,7 @@ function showImage(blog) {
           width: Math.min(800, window.innerWidth - 40),
           height: Math.min(600, window.innerHeight - 40),
         }
-        nextImageUrl.value = imageUrl
+        nextImageUrl.value = optimizedImageUrl
         
         setTimeout(() => {
           imageSrc.value = nextImageUrl.value
@@ -675,10 +740,10 @@ function showImage(blog) {
         width: Math.min(800, window.innerWidth - 40),
         height: Math.min(600, window.innerHeight - 40),
       }
-      nextImageUrl.value = imageUrl
-      
-      setTimeout(() => {
-        imageSrc.value = nextImageUrl.value
+      nextImageUrl.value = optimizedImageUrl
+        
+        setTimeout(() => {
+          imageSrc.value = nextImageUrl.value
         imageTransitioning.value = false
       }, 100)
     })
@@ -731,8 +796,6 @@ function onImageError() {
   }
 }
 async function getBlogs(silentError = false) {
-  let progressInterval = null
-  
   try {
     isLoading.value = true
     
@@ -740,48 +803,13 @@ async function getBlogs(silentError = false) {
     if (isValueNotEmpty(current_category)) params.category = current_category
     if (isValueNotEmpty(current_location)) params.location = current_location
     
-    // 只在首次加载时显示进度条动画
-    if (isFirstLoad.value) {
-      loadingProgress.value = 0
-      progressInterval = setInterval(() => {
-        if (loadingProgress.value < 90) {
-          loadingProgress.value += Math.random() * 15 + 5
-        }
-      }, 100)
-    }
-    
     const res = await api.getBlogsVisitor(params)
 
     if (res.code == 200) {
-      if (isFirstLoad.value) {
-        // 快速完成进度条到90%
-        loadingProgress.value = 90
-        
-        // 确保加载状态至少显示400ms，让用户看到完整的加载动画
-        const minLoadingTime = new Promise((resolve) => setTimeout(resolve, 400))
-        
-        // 等待最小加载时间
-        await minLoadingTime
-        
-        // 完成进度条
-        loadingProgress.value = 100
-        if (progressInterval) clearInterval(progressInterval)
-        
-        // 等待进度条完成动画
-        await new Promise((resolve) => setTimeout(resolve, 200))
-        
-        // 标记首次加载完成并设置cookie和sessionStorage
-        isFirstLoad.value = false
-        // 设置cookie，标记用户已访问，有效期30天
-        const expires = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toUTCString()
-        document.cookie = `visited=true; expires=${expires}; path=/`
-        // 同时设置sessionStorage作为备用标记
-        sessionStorage.setItem('pageVisited', 'true')
-      } else {
-        // 非首次加载，减少最小加载时间到100ms
-        const minLoadingTime = new Promise((resolve) => setTimeout(resolve, 100))
-        await minLoadingTime
-      }
+      // 简化加载时间，移动端优化
+      const isMobile = window.innerWidth <= 768
+      const minLoadingTime = isMobile ? 50 : 100
+      await new Promise((resolve) => setTimeout(resolve, minLoadingTime))
 
       // 分页模式下，每次都替换数据
       blogs.value = [...res.data]
@@ -832,26 +860,19 @@ async function getBlogs(silentError = false) {
       })
     }
   } catch (e) {
-    // 静默处理加载错误，不显示错误提示
-    console.log('图片加载失败，静默处理:', e)
-    if (progressInterval) clearInterval(progressInterval)
-    if (isFirstLoad.value) {
-      loadingProgress.value = 0
-      isFirstLoad.value = false
-      // 即使加载失败也要设置标记，避免重复显示首次加载弹窗
-      sessionStorage.setItem('pageVisited', 'true')
-    }
+    // 简化错误处理
+    console.log('图片加载失败:', e)
     isLoading.value = false
     
-    // 如果是首次加载失败，可以尝试重新加载
+    // 移动端快速重试一次
     if (page === 1 && blogs.value.length === 0 && !silentError) {
-      // 延迟1秒后自动重试一次
+      const isMobile = window.innerWidth <= 768
+      const retryDelay = isMobile ? 500 : 1000
       setTimeout(() => {
         if (blogs.value.length === 0) {
-          console.log('自动重试加载图片...')
-          getBlogs(true) // 重试时使用静默模式
+          getBlogs(true)
         }
-      }, 1000)
+      }, retryDelay)
     }
   }
 }
@@ -876,21 +897,19 @@ function formatBlogs() {
     updateAttr(blog)
   }
 
-  // 格式化完成后开始预加载前几张图片
+  // 简化预加载逻辑
   nextTick(() => {
-    setTimeout(() => {
-      if (blogs.value.length > 0) {
-        // 根据设备性能调整预加载数量
-        const isMobile = window.innerWidth <= 768
-        const preloadCount = isMobile ? 4 : 6 // 增加预加载数量
-        
-        for (let i = 0; i < Math.min(preloadCount, blogs.value.length); i++) {
-          if (blogs.value[i] && blogs.value[i].current_detail) {
-            preloadImage(blogs.value[i].current_detail)
-          }
+    if (blogs.value.length > 0) {
+      // 减少预加载数量，提升响应速度
+      const isMobile = window.innerWidth <= 768
+      const preloadCount = isMobile ? 2 : 3
+      
+      for (let i = 0; i < Math.min(preloadCount, blogs.value.length); i++) {
+        if (blogs.value[i] && blogs.value[i].current_detail) {
+          setTimeout(() => preloadImage(blogs.value[i].current_detail), i * 100)
         }
       }
-    }, 50) // 大幅减少延迟时间，提升响应速度
+    }
   })  
 }
 
@@ -918,22 +937,9 @@ async function getCategory() {
 function goToPrevPage() {
   if (page > 1 && !isLoading.value) {
     page--
-    
-    // 立即显示加载状态
     isLoading.value = true
-    isImagesLoading.value = false
-    
-    // 重置图片加载计数
-    loadedImageCount.value = 0
-    totalImageCount.value = 0
-    
-    // 延迟清空数据，确保加载状态先显示
-    setTimeout(() => {
-      blogs.value = []
-      getBlogs()
-    }, 50)
-    
-    // 滚动到分类栏下方（相册区域开始位置）
+    blogs.value = []
+    getBlogs()
     scrollToGallery()
   }
 }
@@ -942,22 +948,9 @@ function goToPrevPage() {
 function goToNextPage() {
   if (page < Math.ceil(total / page_size) && !isLoading.value) {
     page++
-    
-    // 立即显示加载状态
     isLoading.value = true
-    isImagesLoading.value = false
-    
-    // 重置图片加载计数
-    loadedImageCount.value = 0
-    totalImageCount.value = 0
-    
-    // 延迟清空数据，确保加载状态先显示
-    setTimeout(() => {
-      blogs.value = []
-      getBlogs()
-    }, 50)
-    
-    // 滚动到分类栏下方（相册区域开始位置）
+    blogs.value = []
+    getBlogs()
     scrollToGallery()
   }
 }
@@ -1018,22 +1011,11 @@ watch(
   (newCategory) => {
     current_category = newCategory
     close()
-    
-    // 立即显示加载状态，避免空白
     isLoading.value = true
-    isImagesLoading.value = false
-    
-    // 重置状态
     page = 1
     total = 0
-    loadedImageCount.value = 0
-    totalImageCount.value = 0
-    
-    // 延迟清空数据，确保加载状态先显示
-    setTimeout(() => {
-      blogs.value = []
-      getBlogs()
-    }, 100)
+    blogs.value = []
+    getBlogs()
   },
   { immediate: true }
 )
@@ -1064,13 +1046,13 @@ watch(
 </script>
 <style>
 .img {
-  max-width: 100%;
-  max-height: 100%;
-}
-
-.img {
+  max-width: 90vw;
+  max-height: 90vh;
+  width: auto;
+  height: auto;
   object-fit: contain;
   display: block;
+  margin: 0 auto;
 }
 
 .fade-enter-active,
@@ -1113,9 +1095,9 @@ watch(
   min-height: 150px;
   width: auto;
   height: auto;
+  max-width: 90vw;
+  max-height: 90vh;
   overflow: hidden;
-  /* max-width: 1150px;
-    max-height: 890px; */
 }
 
 .lightbox-content:before {
@@ -1285,13 +1267,6 @@ watch(
   width: 100%;
 }
 
-/* 默认瀑布流布局 - 大屏幕 */
-#blog-main {
-  column-count: 4;
-  column-gap: 15px;
-  column-fill: balance;
-}
-
 /* 过渡动画 */
 .fade-slide-enter-active {
   transition: all 0.4s ease;
@@ -1318,50 +1293,28 @@ watch(
 @media screen and (max-width: 1280px) {
   #blog-main {
     column-count: 3;
-    column-gap: 12px;
+    column-gap: 16px;
   }
 }
 
 @media screen and (max-width: 768px) {
   #blog-main {
     column-count: 2;
-    column-gap: 10px;
-    padding: 6px;
+    column-gap: 16px;
   }
 }
 
 @media screen and (max-width: 480px) {
   #blog-main {
-    column-count: 2; /* 改为2列布局 */
-    column-gap: 8px;
-    padding: 4px;
+    column-count: 2;
+    column-gap: 16px;
   }
 }
 
-/* 超小屏幕优化 */
 @media screen and (max-width: 360px) {
   #blog-main {
     column-count: 2;
-    column-gap: 6px;
-    padding: 2px;
-  }
-  
-  /* 超小屏幕下的加载指示器优化 */
-  .images-loading-indicator {
-    padding: 8px 10px;
-    margin: 10px 0;
-    border-radius: 10px;
-  }
-  
-  .images-loading-content {
-    font-size: 10px;
-    gap: 4px;
-  }
-  
-  .loading-spinner-small {
-    width: 12px;
-    height: 12px;
-    border-width: 1.5px;
+    column-gap: 16px;
   }
 }
 

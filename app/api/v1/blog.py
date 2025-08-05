@@ -1,10 +1,14 @@
 import logging
+import os
+from pathlib import Path
+from urllib.parse import urlparse
 
 from fastapi import APIRouter, Query
 from tortoise.expressions import Q
 from app.controllers.blog import blog_controller
 from app.controllers.blog_image import blog_image_controller
 from app.controllers.category import category_controller
+from app.controllers.setting import setting_controller
 from app.core.dependency import DependPermisson
 from app.models.content import Category
 from app.schemas.base import Fail, Success, SuccessExtra
@@ -176,6 +180,83 @@ async def update_blog(
 async def delete_blog(
     id: int = Query(..., description="图片id"),
 ):
+    # 获取博客及其图片信息
+    blog = await blog_controller.get(id=id, prefetch_fields=["images"])
+    if not blog:
+        return Fail(msg="博客不存在")
+    
+    # 获取存储设置
+    storage_setting = (await setting_controller.get(id=1)).storage
+    storage_type = storage_setting.get("storage_type", "local")
+    
+    # 如果是本地存储，删除本地文件
+    if storage_type == "local":
+        local_path = storage_setting.get("local_path", "images")
+        local_prefix = storage_setting.get("local_prefix", "")
+        
+        for image in blog.images:
+            try:
+                # 解析图片URL获取文件路径
+                image_url = image.image_url
+                if image_url:
+                    # 从URL中提取相对路径
+                    parsed_url = urlparse(image_url)
+                    url_path = parsed_url.path
+                    
+                    # 如果URL包含本地路径前缀，提取相对路径
+                    if local_prefix and url_path.startswith(f"/{local_path}/"):
+                        relative_path = url_path[1:]  # 去掉开头的 /
+                    elif url_path.startswith(f"/{local_path}/"):
+                        relative_path = url_path[1:]  # 去掉开头的 /
+                    else:
+                        # 尝试从URL路径中提取文件路径
+                        path_parts = url_path.strip('/').split('/')
+                        if local_path in path_parts:
+                            local_path_index = path_parts.index(local_path)
+                            relative_path = '/'.join(path_parts[local_path_index:])
+                        else:
+                            continue  # 跳过无法解析的URL
+                    
+                    # 构建完整的本地文件路径
+                    file_path = Path(relative_path)
+                    
+                    # 删除文件
+                    if file_path.exists():
+                        file_path.unlink()
+                        logger.info(f"已删除本地文件: {file_path}")
+                    else:
+                        logger.warning(f"本地文件不存在: {file_path}")
+                        
+                # 同样处理缩略图
+                thumbnail_url = image.thumbnail
+                if thumbnail_url:
+                    parsed_url = urlparse(thumbnail_url)
+                    url_path = parsed_url.path
+                    
+                    if local_prefix and url_path.startswith(f"/{local_path}/"):
+                        relative_path = url_path[1:]
+                    elif url_path.startswith(f"/{local_path}/"):
+                        relative_path = url_path[1:]
+                    else:
+                        path_parts = url_path.strip('/').split('/')
+                        if local_path in path_parts:
+                            local_path_index = path_parts.index(local_path)
+                            relative_path = '/'.join(path_parts[local_path_index:])
+                        else:
+                            continue
+                    
+                    file_path = Path(relative_path)
+                    if file_path.exists():
+                        file_path.unlink()
+                        logger.info(f"已删除本地缩略图: {file_path}")
+                    else:
+                        logger.warning(f"本地缩略图不存在: {file_path}")
+                        
+            except Exception as e:
+                logger.error(f"删除本地文件时出错: {str(e)}")
+                # 继续执行，不因为文件删除失败而中断整个删除过程
+    
+    # 删除数据库记录
     await blog_image_controller.update_for_blog(blog_id=id, images=[])
     await blog_controller.remove(id=id)
     return Success(msg="Deleted Success")

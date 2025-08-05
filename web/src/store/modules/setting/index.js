@@ -107,6 +107,9 @@ export const useSettingStore = defineStore('setting', {
           return
         }
         const {
+          storage_type,
+          local_path,
+          local_prefix,
           endpoint,
           max_size,
           timeout_time,
@@ -120,6 +123,9 @@ export const useSettingStore = defineStore('setting', {
           suffix,
         } = res.data
         this._storageSetting = {
+          storage_type,
+          local_path,
+          local_prefix,
           endpoint,
           max_size,
           enable_storage,

@@ -1,7 +1,7 @@
 <template>
   <article class="thumb img-area" ref="thumbRef">
     <a class="thumb-a my-photo">
-      <div class="image-container">
+      <div class="image-container" :class="{ 'collection-stack': isCollection }">
         <!-- 简洁的加载提示 -->
         <div v-if="imageSrc && !imageLoaded" class="loading-indicator">
           <div class="loading-spinner"></div>
@@ -16,6 +16,21 @@
           @error="onImageError"
           :style="{ opacity: imageLoaded ? 1 : 0, transition: 'opacity 0.3s ease-in-out' }"
         />
+        <!-- 合集指示器 -->
+        <div v-if="isCollection" class="collection-indicator">
+          <div class="collection-icon">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M4 4h6v6H4V4zm10 0h6v6h-6V4zM4 14h6v6H4v-6zm10 0h6v6h-6v-6z" fill="currentColor"/>
+            </svg>
+          </div>
+          <span class="collection-count">{{ data.images.length }}</span>
+        </div>
+        <!-- 合集角标 - 已隐藏以避免遮挡标题 -->
+        <!-- <div v-if="isCollection" class="collection-badge">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M4 4h6v6H4V4zm10 0h6v6h-6V4zM4 14h6v6H4v-6zm10 0h6v6h-6v-6z" fill="currentColor"/>
+          </svg>
+        </div> -->
       </div>
     </a>
     <div class="thumb-overlay">
@@ -43,7 +58,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, onMounted, onUnmounted, computed } from 'vue'
 import { useSettingStore } from '@/store'
 import { isValueNotEmpty } from '@/utils'
 import { 
@@ -80,10 +95,13 @@ const props = defineProps({
 
 const emit = defineEmits(['image-loaded'])
 
-// 图片加载并发控制
-let loadingQueue = []
-let currentLoadingCount = 0
-const maxConcurrentLoads = window.innerWidth <= 768 ? 3 : 5
+// 判断是否为合集（包含多张图片）
+const isCollection = computed(() => {
+  return props.data.images && props.data.images.length > 1
+})
+
+// 简化加载控制
+const maxRetries = 2
 
 // 懒加载逻辑
 let observer = null
@@ -96,16 +114,12 @@ const connectionType = getConnectionType()
 
 const onImageLoad = () => {
   imageLoaded.value = true
-  loadingText.value = '加载完成'
-  compressionProgress.value = 100
   retryCount.value = 0 // 重置重试计数器
   emit('image-loaded')
   
-  // 延迟隐藏加载提示
-  setTimeout(() => {
-    loadingText.value = ''
-    compressionProgress.value = 0
-  }, 500)
+  // 立即清除加载提示
+  loadingText.value = ''
+  compressionProgress.value = 0
   
   // 手机端性能优化：图片加载完成后移除observer
   if (observer && thumbRef.value) {
@@ -115,18 +129,15 @@ const onImageLoad = () => {
 
 // 重试计数器
 const retryCount = ref(0)
-const maxRetries = 3
 
 const onImageError = () => {
-  console.warn('图片加载失败:', props.data.title, '重试次数:', retryCount.value)
+  console.warn('图片加载失败:', props.data.title)
   
   if (retryCount.value < maxRetries) {
     retryCount.value++
-    loadingText.value = `重试中... (${retryCount.value}/${maxRetries})`
     
-    // 延迟重试，避免立即重复请求
+    // 快速重试，使用原始URL
     setTimeout(() => {
-      // 尝试使用原始URL重新加载
       let originalUrl = null
       if (props.data.images && props.data.images.length > 0) {
         originalUrl = props.data.images[0].image_url
@@ -135,54 +146,19 @@ const onImageError = () => {
       }
       
       if (originalUrl) {
-        // 清除当前失败的URL
-        imageSrc.value = ''
-        // 使用原始URL重试
         imageSrc.value = originalUrl
       }
-    }, 1000 * retryCount.value) // 递增延迟
+    }, 300) // 减少延迟
   } else {
     imageLoaded.value = false
     imageSrc.value = ''
-    loadingText.value = '加载失败'
     retryCount.value = 0
   }
 }
 
-const processLoadingQueue = () => {
-  if (loadingQueue.length > 0 && currentLoadingCount < maxConcurrentLoads) {
-    const nextLoad = loadingQueue.shift()
-    nextLoad()
-  }
-}
+// 移除复杂的压缩逻辑
 
-// 压缩图片
-const compressImage = async (imageUrl) => {
-  try {
-    loadingText.value = '正在压缩...'
-    compressionProgress.value = 10
-    
-    const compressionOptions = getCompressionConfig()
-    
-    compressionProgress.value = 30
-    
-    const compressedUrl = await compressImageFromUrl(imageUrl, {
-      ...compressionOptions,
-      onProgress: (progress) => {
-        compressionProgress.value = 30 + (progress * 0.6) // 30-90%
-      }
-    })
-    
-    compressionProgress.value = 100
-    return compressedUrl
-  } catch (error) {
-    console.warn('图片压缩失败，使用原图:', error)
-    compressionProgress.value = 100
-    return imageUrl
-  }
-}
-
-const loadImage = async (forceLoad = false) => {
+const loadImage = (forceLoad = false) => {
   let imageUrl = null
   
   if (props.data.images && props.data.images.length > 0) {
@@ -192,91 +168,57 @@ const loadImage = async (forceLoad = false) => {
   }
   
   if (imageUrl && (!imageSrc.value || forceLoad)) {
-    // 如果当前加载数量已达上限，加入队列
-    if (currentLoadingCount >= maxConcurrentLoads) {
-      loadingQueue.push(() => loadImage(forceLoad))
-      return
-    }
+    // 简化图片URL优化
+    const isMobile = window.innerWidth <= 768
+    let optimizedUrl = imageUrl
     
-    currentLoadingCount++
-    
-    try {
-      // 生成占位符
-      placeholderSrc.value = generatePlaceholder()
+    // 优化缩略图尺寸和质量设置
+    if (imageUrl.includes('http') || imageUrl.includes('/api/')) {
+      const separator = imageUrl.includes('?') ? '&' : '?'
       
-      // 响应式图片优化：根据设备类型和网络状况添加不同尺寸参数
-      const isMobile = deviceType === 'mobile'
-      const isTablet = deviceType === 'tablet'
-      const isSlowConnection = connectionType === 'slow'
+      // 根据屏幕尺寸调整缩略图参数
+      let quality, width, height
       
-      let optimizedUrl = imageUrl
-      
-      // 优化图片URL参数
-      if (imageUrl.includes('http') || imageUrl.includes('/api/')) {
-        const separator = imageUrl.includes('?') ? '&' : '?'
-        
-        if (isMobile) {
-          const quality = isSlowConnection ? 30 : 40
-          optimizedUrl = `${imageUrl}${separator}w=180&h=250&fit=crop&auto=compress,format&q=${quality}`
-        } else if (isTablet) {
-          const quality = isSlowConnection ? 35 : 45
-          optimizedUrl = `${imageUrl}${separator}w=250&h=350&fit=crop&auto=compress,format&q=${quality}`
-        } else {
-          const quality = isSlowConnection ? 40 : 50
-          optimizedUrl = `${imageUrl}${separator}w=280&h=400&fit=crop&auto=compress,format&q=${quality}`
-        }
+      if (isMobile) {
+        // 移动端：更小尺寸，适中质量
+        quality = 45
+        width = 200
+        height = 280
+      } else if (window.innerWidth <= 1280) {
+        // 中等屏幕：3列布局
+        quality = 55
+        width = 280
+        height = 380
+      } else {
+        // 大屏幕：4列布局
+        quality = 60
+        width = 320
+        height = 420
       }
       
-      // 进一步压缩图片（仅在慢网络或移动端）
-      if (isSlowConnection || isMobile) {
-        optimizedUrl = await compressImage(optimizedUrl)
-      }
-      
-      imageSrc.value = optimizedUrl
-      currentLoadingCount--
-      processLoadingQueue()
-      
-    } catch (error) {
-      console.error('图片处理失败:', error)
-      imageSrc.value = imageUrl // 降级到原图
-      currentLoadingCount--
-      processLoadingQueue()
+      optimizedUrl = `${imageUrl}${separator}w=${width}&h=${height}&fit=cover&q=${quality}`
     }
+    
+    imageSrc.value = optimizedUrl
   }
 }
 
 onMounted(() => {
-  // 使用 Intersection Observer 实现懒加载
+  // 简化懒加载逻辑
   if ('IntersectionObserver' in window && thumbRef.value) {
-    const isMobile = deviceType === 'mobile'
-    const isTablet = deviceType === 'tablet'
-    
     observer = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
           if (entry.isIntersecting) {
             isIntersecting.value = true
-            
-            let delay = 0
-            if (isMobile) {
-              delay = 5
-            } else if (isTablet) {
-              delay = 3
-            } else {
-              delay = 1
-            }
-            
-            setTimeout(() => {
-              loadImage()
-            }, delay)
-            
+            loadImage()
             observer.unobserve(entry.target)
           }
         })
       },
       {
-        rootMargin: isMobile ? '500px' : isTablet ? '400px' : '350px',
-        threshold: 0.001
+        rootMargin: '200px',
+        threshold: 0.1
       }
     )
     observer.observe(thumbRef.value)
@@ -335,23 +277,25 @@ onUnmounted(() => {
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(255, 255, 255, 0.1);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(15px);
+  -webkit-backdrop-filter: blur(15px);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 1;
   border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .loading-indicator .loading-spinner {
   width: 32px;
   height: 32px;
-  border: 3px solid rgba(255, 255, 255, 0.3);
-  border-top: 3px solid rgba(255, 255, 255, 0.9);
+  border: 3px solid rgba(255, 255, 255, 0.2);
+  border-top: 3px solid rgba(255, 255, 255, 0.8);
   border-radius: 50%;
   animation: spin 1s linear infinite;
+  filter: drop-shadow(0 0 8px rgba(255, 255, 255, 0.3));
 }
 
 .image-loading-mask {
@@ -397,6 +341,11 @@ onUnmounted(() => {
   height: auto;
   display: block;
   transition: opacity 0.3s ease-in-out;
+  object-fit: cover;
+  border-radius: 8px;
+  /* 优化图片渲染 */
+  image-rendering: -webkit-optimize-contrast;
+  image-rendering: crisp-edges;
 }
 
 .thumb-overlay {
@@ -480,6 +429,177 @@ onUnmounted(() => {
 .thumb:hover {
   transform: translateZ(0) scale(0.97);
   box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+}
+
+/* 合集堆叠效果 */
+.collection-stack {
+  position: relative;
+}
+
+.collection-stack::before,
+.collection-stack::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: inherit;
+  border-radius: inherit;
+  z-index: -1;
+  transition: all 0.3s ease;
+}
+
+.collection-stack::before {
+  transform: translate(4px, 4px) scale(0.96);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.25);
+}
+
+.collection-stack::after {
+  transform: translate(6px, 6px) scale(0.93);
+  box-shadow: 0 5px 18px rgba(0, 0, 0, 0.3);
+}
+
+.thumb:hover .collection-stack::before {
+  transform: translate(6px, 6px) scale(0.93);
+  box-shadow: 0 5px 18px rgba(0, 0, 0, 0.3);
+}
+
+.thumb:hover .collection-stack::after {
+  transform: translate(12px, 12px) scale(0.86);
+  box-shadow: 0 3px 15px rgba(0, 0, 0, 0.2);
+}
+
+/* 移动端堆叠效果优化 */
+@media screen and (max-width: 768px) {
+  .collection-stack::before {
+    transform: translate(3px, 3px) scale(0.97);
+    box-shadow: 0 3px 12px rgba(0, 0, 0, 0.2);
+  }
+  
+  .collection-stack::after {
+    transform: translate(6px, 6px) scale(0.94);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  }
+  
+  .thumb:hover .collection-stack::before {
+    transform: translate(4px, 4px) scale(0.95);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.25);
+  }
+  
+  .thumb:hover .collection-stack::after {
+    transform: translate(8px, 8px) scale(0.92);
+    box-shadow: 0 3px 12px rgba(0, 0, 0, 0.2);
+  }
+}
+
+/* 合集指示器样式 */
+.collection-indicator {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: linear-gradient(135deg, rgba(0, 0, 0, 0.9), rgba(0, 0, 0, 0.75));
+  backdrop-filter: blur(6px);
+  border-radius: 18px;
+  padding: 8px 12px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: white;
+  font-size: 14px;
+  font-weight: 700;
+  z-index: 3;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4), 0 0 0 2px rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.collection-indicator:hover {
+  background: linear-gradient(135deg, rgba(0, 0, 0, 0.95), rgba(0, 0, 0, 0.85));
+  transform: scale(1.05);
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.5), 0 0 0 3px rgba(255, 255, 255, 0.25);
+}
+
+.collection-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+}
+
+.collection-icon svg {
+  width: 12px;
+  height: 12px;
+}
+
+.collection-count {
+  line-height: 1;
+  min-width: 16px;
+  text-align: center;
+}
+
+/* 合集角标样式 */
+.collection-badge {
+  position: absolute;
+  bottom: 8px;
+  left: 8px;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.98), rgba(255, 255, 255, 0.9));
+  backdrop-filter: blur(6px);
+  border-radius: 50%;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #333;
+  z-index: 3;
+  transition: all 0.3s ease;
+  box-shadow: 0 5px 20px rgba(0, 0, 0, 0.3), 0 0 0 3px rgba(255, 255, 255, 0.4);
+  border: 2px solid rgba(255, 255, 255, 0.6);
+}
+
+.collection-badge:hover {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 1), rgba(255, 255, 255, 0.95));
+  transform: scale(1.1);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.4), 0 0 0 4px rgba(255, 255, 255, 0.6);
+}
+
+.collection-badge svg {
+  width: 12px;
+  height: 12px;
+}
+
+/* 移动端优化 */
+@media screen and (max-width: 768px) {
+  .collection-indicator {
+    top: 6px;
+    right: 6px;
+    padding: 6px 8px;
+    border-radius: 14px;
+    font-size: 12px;
+    font-weight: 700;
+    box-shadow: 0 3px 12px rgba(0, 0, 0, 0.4), 0 0 0 2px rgba(255, 255, 255, 0.15);
+  }
+  
+  .collection-icon svg {
+    width: 12px;
+    height: 12px;
+  }
+  
+  .collection-badge {
+    bottom: 6px;
+    left: 6px;
+    width: 26px;
+    height: 26px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3), 0 0 0 2px rgba(255, 255, 255, 0.4);
+    border: 2px solid rgba(255, 255, 255, 0.6);
+  }
+  
+  .collection-badge svg {
+    width: 12px;
+    height: 12px;
+  }
 }
 
 /* 平板端悬停效果 */

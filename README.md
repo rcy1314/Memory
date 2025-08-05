@@ -39,9 +39,9 @@
 - URL参数： w=250&h=350&fit=crop&auto=compress,format&q=35-45
 桌面端优化：
 
-- 尺寸：280×400像素
-- 质量：慢网络40%，正常网络50%
-- URL参数： w=280&h=400&fit=crop&auto=compress,format&q=40-50
+- 尺寸：200×280像素
+- 质量：慢网络35%，正常网络45%
+- URL参数： w=200&h=280&fit=crop&auto=compress,format&q=35-45
 ## 智能加载策略
 - 懒加载 ：使用 IntersectionObserver 实现视口内才加载
 - 并发控制 ：限制同时加载的图片数量，避免网络拥塞
@@ -84,6 +84,37 @@ docker run -d \
 ```
 
 ## docker-compose
+
+由于桌面版和docker后端api有冲突，docker请使用/api/v1，如果你想自己构建docker：
+
+`web/.env.productuon`请修改为
+
+```
+# 资源公共路径,需要以 /开头和结尾
+VITE_PUBLIC_PATH = '/'
+
+# 是否启用代理
+VITE_USE_PROXY = true
+
+# base api
+VITE_BASE_API = '/api/v1'
+```
+
+`web/.env.development`请修改为
+
+```
+# Docker环境下的前端配置
+# 资源公共路径,需要以 /开头和结尾
+VITE_PUBLIC_PATH = '/'
+
+# 是否启用代理 - Docker环境下不需要代理
+VITE_USE_PROXY = false
+
+# base api - Docker环境下使用相对路径
+VITE_BASE_API = '/api/v1'
+```
+
+然后运行
 
 ```
 docker-compose up -d

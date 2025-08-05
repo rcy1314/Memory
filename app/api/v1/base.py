@@ -2,7 +2,11 @@ from datetime import datetime, timedelta
 import time
 import boto3
 from fastapi import APIRouter, File, UploadFile, Request
+from pydantic import BaseModel
 import urllib
+import os
+from pathlib import Path
+from urllib.parse import urlparse
 
 from app.controllers.user import UserController, user_controller
 from app.core.ctx import CTX_USER_ID
@@ -241,3 +245,52 @@ async def get_presigned_url(payload: PresignRequest):
         },
         msg="预签名URL生成成功",
     )
+
+
+class DeleteLocalImageRequest(BaseModel):
+    image_url: str
+
+
+@base_router.post("/delete-local-image", summary="删除本地图片文件", dependencies=[DependAuth])
+async def delete_local_image(payload: DeleteLocalImageRequest):
+    """删除本地存储的图片文件"""
+    try:
+        # 获取存储设置
+        storage_setting = (await setting_controller.get(id=1)).storage
+        storage_type = storage_setting.get("storage_type", "local")
+        
+        # 只有本地存储才需要删除文件
+        if storage_type != "local":
+            return Success(msg="非本地存储，无需删除文件")
+        
+        local_path = storage_setting.get("local_path", "images")
+        local_prefix = storage_setting.get("local_prefix", "")
+        
+        # 解析图片URL获取文件路径
+        parsed_url = urlparse(payload.image_url)
+        url_path = parsed_url.path
+        
+        # 提取相对路径
+        if url_path.startswith(f"/{local_path}/"):
+            relative_path = url_path[1:]  # 去掉开头的 /
+        else:
+            # 尝试从URL路径中提取文件路径
+            path_parts = url_path.strip('/').split('/')
+            if local_path in path_parts:
+                local_path_index = path_parts.index(local_path)
+                relative_path = '/'.join(path_parts[local_path_index:])
+            else:
+                return Fail(msg="无法解析图片路径")
+        
+        # 构建完整的本地文件路径
+        file_path = Path(relative_path)
+        
+        # 删除文件
+        if file_path.exists():
+            file_path.unlink()
+            return Success(msg=f"文件删除成功: {file_path}")
+        else:
+            return Fail(msg=f"文件不存在: {file_path}")
+            
+    except Exception as e:
+        return Fail(msg=f"删除文件时出错: {str(e)}")

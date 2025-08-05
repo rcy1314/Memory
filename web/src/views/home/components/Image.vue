@@ -1,7 +1,7 @@
 <template>
   <article class="thumb img-area" ref="thumbRef">
     <a class="thumb-a my-photo">
-      <div class="image-container">
+      <div class="image-container" :class="{ 'collection-stack': isCollection }">
         <!-- 加载蒙版 -->
         <div v-if="!imageLoaded" class="image-loading-mask">
           <div class="loading-mask-content">
@@ -25,6 +25,21 @@
           @error="onImageError"
           :style="{ opacity: imageLoaded ? 1 : 0, transition: 'opacity 0.3s ease-in-out' }"
         />
+        <!-- 合集指示器 -->
+        <div v-if="isCollection" class="collection-indicator">
+          <div class="collection-icon">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M4 4h6v6H4V4zm10 0h6v6h-6V4zM4 14h6v6H4v-6zm10 0h6v6h-6v-6z" fill="currentColor"/>
+            </svg>
+          </div>
+          <span class="collection-count">{{ data.images.length }}</span>
+        </div>
+        <!-- 合集角标 -->
+        <div v-if="isCollection" class="collection-badge">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M4 4h6v6H4V4zm10 0h6v6h-6V4zM4 14h6v6H4v-6zm10 0h6v6h-6v-6z" fill="currentColor"/>
+          </svg>
+        </div>
       </div>
     </a>
     <div class="thumb-overlay">
@@ -54,7 +69,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, onMounted, onUnmounted, computed } from 'vue'
 import { useSettingStore } from '@/store'
 import { isValueNotEmpty } from '@/utils'
 
@@ -64,6 +79,11 @@ const imageRef = ref(null)
 const imageLoaded = ref(false)
 const imageSrc = ref('')
 const isIntersecting = ref(false)
+
+// 判断是否为合集（包含多张图片）
+const isCollection = computed(() => {
+  return props.data.images && props.data.images.length > 1
+})
 
 var thumbnail_show_location = isValueNotEmpty(settingStore.contentSetting.thumbnail_show_location)
   ? settingStore.contentSetting.thumbnail_show_location
@@ -640,6 +660,182 @@ body.is-preload #blog-main .thumb {
 }
 #blog-main .thumb:nth-child(8) {
   transition-delay: 0.8s;
+}
+
+/* 合集堆叠效果 - 简洁版 */
+.collection-stack {
+  position: relative;
+}
+
+.collection-stack::before,
+.collection-stack::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.3), rgba(255, 255, 255, 0.15));
+  border-radius: inherit;
+  pointer-events: none;
+  z-index: -1;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
+  border: 2px solid rgba(255, 255, 255, 0.2);
+}
+
+.collection-stack::before {
+  transform: translate(5px, 5px) scale(0.95);
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.25), rgba(255, 255, 255, 0.12));
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+}
+
+.collection-stack::after {
+  transform: translate(10px, 10px) scale(0.9);
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0.08));
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.15);
+}
+
+/* 悬停时的堆叠效果 - 简洁版 */
+.thumb:hover .collection-stack::before {
+  transform: translate(6px, 6px) scale(0.93);
+  box-shadow: 0 5px 18px rgba(0, 0, 0, 0.3);
+}
+
+.thumb:hover .collection-stack::after {
+  transform: translate(12px, 12px) scale(0.86);
+  box-shadow: 0 3px 15px rgba(0, 0, 0, 0.2);
+}
+
+/* 移动端堆叠效果优化 */
+@media screen and (max-width: 768px) {
+  .collection-stack::before {
+    transform: translate(3px, 3px) scale(0.97);
+    box-shadow: 0 3px 12px rgba(0, 0, 0, 0.2);
+  }
+  
+  .collection-stack::after {
+    transform: translate(6px, 6px) scale(0.94);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  }
+  
+  .thumb:hover .collection-stack::before {
+    transform: translate(4px, 4px) scale(0.95);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.25);
+  }
+  
+  .thumb:hover .collection-stack::after {
+    transform: translate(8px, 8px) scale(0.92);
+    box-shadow: 0 3px 12px rgba(0, 0, 0, 0.2);
+  }
+}
+
+/* 合集指示器样式 - 静态版 */
+.collection-indicator {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: linear-gradient(135deg, rgba(0, 0, 0, 0.9), rgba(0, 0, 0, 0.75));
+  backdrop-filter: blur(6px);
+  border-radius: 18px;
+  padding: 8px 12px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: white;
+  font-size: 14px;
+  font-weight: 700;
+  z-index: 3;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4), 0 0 0 2px rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.collection-indicator:hover {
+  background: linear-gradient(135deg, rgba(0, 0, 0, 0.95), rgba(0, 0, 0, 0.85));
+  transform: scale(1.05);
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.5), 0 0 0 3px rgba(255, 255, 255, 0.25);
+}
+
+.collection-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+}
+
+.collection-icon svg {
+  width: 12px;
+  height: 12px;
+}
+
+.collection-count {
+  line-height: 1;
+  min-width: 16px;
+  text-align: center;
+}
+
+/* 合集角标样式 - 静态版 */
+.collection-badge {
+  position: absolute;
+  bottom: 8px;
+  left: 8px;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.98), rgba(255, 255, 255, 0.9));
+  backdrop-filter: blur(6px);
+  border-radius: 50%;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #333;
+  z-index: 3;
+  transition: all 0.3s ease;
+  box-shadow: 0 5px 20px rgba(0, 0, 0, 0.3), 0 0 0 3px rgba(255, 255, 255, 0.4);
+  border: 2px solid rgba(255, 255, 255, 0.6);
+}
+
+.collection-badge:hover {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 1), rgba(255, 255, 255, 0.95));
+  transform: scale(1.1);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.4), 0 0 0 4px rgba(255, 255, 255, 0.6);
+}
+
+.collection-badge svg {
+  width: 12px;
+  height: 12px;
+}
+
+/* 移动端优化 */
+@media screen and (max-width: 768px) {
+  .collection-indicator {
+    top: 6px;
+    right: 6px;
+    padding: 6px 8px;
+    border-radius: 14px;
+    font-size: 12px;
+    font-weight: 700;
+    box-shadow: 0 3px 12px rgba(0, 0, 0, 0.4), 0 0 0 2px rgba(255, 255, 255, 0.15);
+  }
+  
+  .collection-icon svg {
+    width: 12px;
+    height: 12px;
+  }
+  
+  .collection-badge {
+    bottom: 6px;
+    left: 6px;
+    width: 26px;
+    height: 26px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3), 0 0 0 2px rgba(255, 255, 255, 0.4);
+    border: 2px solid rgba(255, 255, 255, 0.6);
+  }
+  
+  .collection-badge svg {
+    width: 12px;
+    height: 12px;
+  }
 }
 #blog-main .thumb:nth-child(9) {
   transition-delay: 0.9s;

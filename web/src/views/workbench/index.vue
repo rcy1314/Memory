@@ -133,7 +133,12 @@ workbench_desc = workbench_desc.replaceAll('{username}', userStore.name)
 getCount()
 getBlogs().then((blogs) => {
   blogData.value = blogs.map((e) => {
-    e.image = e.images[0].image_url + thumbnail_suffix
+    // 安全检查：确保images数组存在且不为空
+    if (e.images && e.images.length > 0 && e.images[0].image_url) {
+      e.image = e.images[0].image_url + thumbnail_suffix
+    } else {
+      e.image = '/assets/error.svg' // 使用默认图片
+    }
     return e
   })
 })

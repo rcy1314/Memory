@@ -157,6 +157,8 @@ function handleStorageTypeChange(value) {
   message.success(
     value === 'local' ? '已切换到本地存储' : '已切换到云端存储'
   )
+  // 立即更新store状态
+  settingStore.setStorageSetting({ storage_type: value })
   updateSetting(false)
 }
 
@@ -164,6 +166,8 @@ function handleChange(value) {
   message.success(
     value ? t('views.setting.label_enable_storage') : t('views.setting.label_disable_storage')
   )
+  // 立即更新store状态
+  settingStore.setStorageSetting({ enable_storage: value })
   updateSetting(false)
 }
 </script>

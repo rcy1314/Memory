@@ -8,7 +8,14 @@ import { ref, onMounted, onUnmounted } from 'vue'
  * @returns {string | null}
  */
 export function formatDateTime(time = undefined, format = 'YYYY-MM-DD HH:mm:ss') {
-  return dayjs(time).format(format)
+  if (!time || time === '' || time === null || time === undefined) {
+    return ''
+  }
+  const date = dayjs(time)
+  if (!date.isValid()) {
+    return ''
+  }
+  return date.format(format)
 }
 
 export function parseDateTime(time = undefined, format = 'YYYY-MM-DD HH:mm:ss') {

@@ -57,6 +57,7 @@ const imageForm = ref({
 
 // 编辑按钮点击
 const editImage = (index) => {
+  if (!modalForm.value.images || !modalForm.value.images[index]) return
   editIndex.value = index
   Object.assign(imageForm.value, modalForm.value.images[index])
   showAddImageModal.value = true
@@ -64,6 +65,7 @@ const editImage = (index) => {
 
 // 删除按钮点击
 const removeImage = (index) => {
+  if (!modalForm.value.images) return
   modalForm.value.images.splice(index, 1)
 }
 
@@ -71,6 +73,10 @@ const onDragChange = (evt) => {
   updateOrder()
 }
 const updateOrder = () => {
+  if (!modalForm.value.images) {
+    modalForm.value.images = []
+    return
+  }
   const images = [...modalForm.value.images]
   images.forEach((image, index) => {
     image.order = index
@@ -80,6 +86,9 @@ const updateOrder = () => {
 // 添加或保存图片
 const handleSaveImage = () => {
   if (!imageForm.value.image_url) return
+  if (!modalForm.value.images) {
+    modalForm.value.images = []
+  }
   if (editIndex.value !== null) {
     modalForm.value.images[editIndex.value] = { ...imageForm.value }
   } else {
@@ -162,8 +171,8 @@ const columns = [
               width: 200,
               class: 'table-image',
               lazy: true,
-              src: row.images[0].image_url + thumbnail_suffix,
-              previewSrc: row.images[0].image_url + detail_suffix,
+              src: (row.images && row.images[0] && row.images[0].image_url) ? row.images[0].image_url + thumbnail_suffix : '/assets/error.svg',
+              previewSrc: (row.images && row.images[0] && row.images[0].image_url) ? row.images[0].image_url + detail_suffix : '/assets/error.svg',
               'show-toolbar-tooltip': true,
               style: 'border-radius:8px',
             }),
@@ -173,8 +182,8 @@ const columns = [
               height: 60,
               class: 'table-image',
               lazy: true,
-              src: row.images[0].image_url + thumbnail_suffix,
-              previewSrc: row.images[0].image_url + detail_suffix,
+              src: (row.images && row.images[0] && row.images[0].image_url) ? row.images[0].image_url + thumbnail_suffix : '/assets/error.svg',
+              previewSrc: (row.images && row.images[0] && row.images[0].image_url) ? row.images[0].image_url + detail_suffix : '/assets/error.svg',
               'show-toolbar-tooltip': true,
               style: 'border-radius:8px',
             }),
@@ -565,7 +574,7 @@ api.getOrderOptionVisitor().then((res) => {
           <div class="image-grid">
             <draggable
               class="image-draggable"
-              :list="modalForm.images"
+              :list="modalForm.images || []"
               item-key="image_url"
               animation="300"
               @end="onDragChange"

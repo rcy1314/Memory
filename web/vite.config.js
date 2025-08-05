@@ -34,6 +34,13 @@ export default defineConfig(({ command, mode }) => {
           }
         : undefined,
     },
+    css: {
+      preprocessorOptions: {
+        scss: {
+          api: 'modern-compiler', // 使用现代编译器API
+        },
+      },
+    },
     build: {
       target: 'es2015',
       outDir: OUTPUT_DIR || 'dist',

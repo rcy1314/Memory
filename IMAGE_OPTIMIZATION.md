@@ -80,9 +80,9 @@
 #### 桌面端配置
 ```javascript
 {
-  maxSizeMB: 0.2-0.5,
-  maxWidthOrHeight: 600-1200,
-  quality: 0.7-0.85,
+  maxSizeMB: 0.15-0.4,
+  maxWidthOrHeight: 400-800,
+  quality: 0.65-0.8,
   fileType: 'image/webp'
 }
 ```
