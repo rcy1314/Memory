@@ -98,7 +98,6 @@
       @before-close="close"
       @click-outside="close"
     >
-      <div style="display: inline-block; height: 100%; vertical-align: middle"></div>
       <div
         class="lightbox-content"
         :style="{
@@ -128,6 +127,7 @@
               class="img"
               @load="onImageLoad"
               @error="onImageError"
+              @click.stop
             />
           </div>
         </transition>
@@ -177,9 +177,22 @@
             ></span>
           </div>
         </div>
-        <span class="closer" style="cursor: pointer; display: block" @click="close"></span>
-        <div class="nav-previous" style="display: block" @click.stop="prev"></div>
-        <div class="nav-next" style="display: block" @click.stop="next"></div>
+        <span class="closer" style="cursor: pointer; display: block" @click="close">
+          <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </span>
+        <div class="nav-previous" style="display: block" @click.stop="prev">
+          <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="15,18 9,12 15,6"></polyline>
+          </svg>
+        </div>
+        <div class="nav-next" style="display: block" @click.stop="next">
+          <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="9,18 15,12 9,6"></polyline>
+          </svg>
+        </div>
         <div v-if="imageVisible" class="download-button" @click="downloadImage" title="下载图片">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
@@ -1056,21 +1069,12 @@ watch(
 }
 
 .lightbox-content .pic {
-  display: flex !important;
-  align-items: center;
-  justify-content: center;
-  width: 100%;
-  height: 100%;
-  position: relative;
-}
-
-.lightbox-content .pic .img {
+  display: block;
+  text-align: center;
   max-width: 100%;
   max-height: 100%;
-  width: auto;
-  height: auto;
-  object-fit: contain;
-  display: block;
+  width: 100%;
+  height: 100%;
 }
 
 .fade-enter-active,
@@ -1091,22 +1095,19 @@ watch(
   z-index: 20000;
   width: 100%;
   height: 100%;
-  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   cursor: pointer;
-  display: block;
   opacity: 1;
 }
 
 .lightbox-content {
   background: transparent;
   cursor: default;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  vertical-align: middle;
+  display: block;
   position: relative;
-  z-index: 1;
-  cursor: pointer;
+  z-index: 20001;
   width: auto;
   height: auto;
   max-width: 95vw;
@@ -1147,61 +1148,59 @@ watch(
 
 .lightbox-content .nav-previous,
 .lightbox-content .nav-next {
-  transition: opacity 0.2s ease-in-out;
-  background-image: url(/assets/arrow.svg);
-  background-position: center;
-  background-repeat: no-repeat;
-  background-size: 5em;
+  transition: all 0.2s ease-in-out;
   cursor: pointer;
-  height: 8em;
-  margin-top: -4em;
-  opacity: 0.6;
+  height: 50px;
+  margin-top: -25px;
+  opacity: 1;
   position: absolute;
   top: 50%;
-  width: 6em;
-  z-index: 2;
-  background-color: rgba(0, 0, 0, 0.3);
-  border-radius: 8px;
+  width: 50px;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
 }
 
 .lightbox-content .nav-previous {
-  transform: scaleX(-1);
-  left: 0;
+  left: 20px;
 }
 
 .lightbox-content .nav-next {
-  right: 0;
+  right: 20px;
 }
 
 .lightbox-content:hover .closer,
 .lightbox-content:hover .nav-previous,
 .lightbox-content:hover .nav-next,
 .lightbox-content:hover .download-button {
-  opacity: 0.5;
+  opacity: 1;
 }
 
 .lightbox-content:hover .closer:hover,
 .lightbox-content:hover .nav-previous:hover,
-.lightbox-content:hover .nav-next:hover,
+.lightbox-content:hover .nav-next:hover {
+  opacity: 1;
+}
+
 .lightbox-content:hover .download-button:hover {
   opacity: 1;
 }
 
 .lightbox-content .closer {
-  transition: opacity 0.2s ease-in-out;
-  background-image: url(/assets/close.svg);
-  background-position: center;
-  background-repeat: no-repeat;
-  background-size: 3em;
-  height: 5em;
-  opacity: 0.7;
+  transition: all 0.2s ease-in-out;
+  height: 50px;
+  opacity: 1;
   position: absolute;
-  right: 0;
-  top: 0;
-  width: 5em;
-  z-index: 2;
-  background-color: rgba(0, 0, 0, 0.3);
-  border-radius: 8px;
+  right: 20px;
+  top: 20px;
+  width: 50px;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
 }
 
 .lightbox-content .download-button {
@@ -1215,7 +1214,7 @@ watch(
   position: absolute;
   right: 12px;
   bottom: 12px;
-  z-index: 3;
+  z-index: 20003;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1505,16 +1504,13 @@ ul.tags {
   .lightbox-content .closer,
   .lightbox-content .nav-previous,
   .lightbox-content .nav-next {
-    opacity: 0.8 !important;
-    background-color: rgba(0, 0, 0, 0.5);
-    border-radius: 8px;
+    opacity: 1 !important;
   }
 
   .lightbox-content .closer:active,
   .lightbox-content .nav-previous:active,
   .lightbox-content .nav-next:active {
     opacity: 1 !important;
-    background-color: rgba(0, 0, 0, 0.8);
   }
 
   .nav-item .nav-item-child {
