@@ -40,7 +40,7 @@ jobs:
       run: |
         git config --local user.email "action@github.com"
         git config --local user.name "GitHub Action"
-        git add web/dist/
+        git add dist/
         if git diff --staged --quiet; then
           echo "No changes to commit"
         else
