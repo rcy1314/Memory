@@ -8,9 +8,14 @@ import importlib
 async def init_db():
     try:
         await Tortoise.init(**DB_CONNECTION)
+        
+        # 验证数据库连接
+        connection = Tortoise.get_connection("default")
+        await connection.execute_query("SELECT 1")
+        logger.info("数据库连接验证成功")
 
         # 创建migrations表
-        await Tortoise.get_connection("default").execute_script(
+        await connection.execute_script(
             """
             CREATE TABLE IF NOT EXISTS migrates (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,

@@ -99,9 +99,23 @@ async def init_setting():
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     logger.info("正在初始化应用...")
-    await init_db()
-    await init_superuser()
-    await init_setting()
+    
+    # 首先初始化数据库
+    try:
+        await init_db()
+        logger.info("数据库初始化完成")
+    except Exception as e:
+        logger.error(f"数据库初始化失败，应用无法启动: {str(e)}")
+        raise
+    
+    # 然后初始化用户和设置
+    try:
+        await init_superuser()
+        await init_setting()
+        logger.info("用户和设置初始化完成")
+    except Exception as e:
+        logger.error(f"用户和设置初始化失败: {str(e)}")
+        # 这里不抛出异常，允许应用继续启动
 
     app.mount(
         "/assets",
