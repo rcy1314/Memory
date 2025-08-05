@@ -1,6 +1,6 @@
 {
   "productName": "Memory-Photo-Album",
-  "version": "1.0.0",
+  "version": "1.0.7",
   "identifier": "com.memory.app",
   "build": {
     "beforeDevCommand": "npm run dev",
