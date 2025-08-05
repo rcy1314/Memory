@@ -66,9 +66,13 @@
 
 ```
 docker run -d \
-  --name Memory-Noise \
+  --name memory \
   --platform linux/amd64 \
-  -p 9573:9999 \
+  -p 4314:9999 \
+  --add-host host.docker.internal:host-gateway \
+  -e DB_HOST=host.docker.internal \
+  -e EXTERNAL_DB_HOST=host.docker.internal \
+  -e TZ=Asia/Shanghai \
   noise233/memory:latest
 ```
 
@@ -76,10 +80,14 @@ docker run -d \
 
 ```
 docker run -d \
-  --name Memory-Noise \
+  --name memory \
   --platform linux/amd64 \
   -p 4314:9999 \
   -v /www/wwwroot/memory.noisework.cn/data:/app/data \
+  --add-host host.docker.internal:host-gateway \
+  -e DB_HOST=host.docker.internal \
+  -e EXTERNAL_DB_HOST=host.docker.internal \
+  -e TZ=Asia/Shanghai \
   noise233/memory:latest
 ```
 

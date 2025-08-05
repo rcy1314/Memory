@@ -171,7 +171,7 @@ export const useSettingStore = defineStore('setting', {
         } = res.data || {}
         this._databaseSetting = {
           db_type: db_type || 'sqlite',
-          db_path: db_path || '/Library/Github/Memory/data/db.sqlite3',
+          db_path: db_path || '/app/data/db.sqlite3',
           host: host || '',
           port: port || 5432,
           database: database || '',

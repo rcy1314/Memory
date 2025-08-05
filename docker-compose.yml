@@ -7,22 +7,29 @@ services:
     container_name: memory
     restart: always
     volumes:
-      - ./.moment:/app/data
+      - "${DATA_PATH:-./.moment}:/app/data"
     ports:
-      - 9999:9999
+      - "${PORT:-9999}:9999"
     environment:
       # 数据库连接配置
       - DB_HOST=host.docker.internal
       # 支持域名反代时的数据库连接
       - EXTERNAL_DB_HOST=${EXTERNAL_DB_HOST:-host.docker.internal}
+      # 可选：添加时区配置
+      - TZ=${TZ:-Asia/Shanghai}
     extra_hosts:
       # 确保容器可以解析host.docker.internal
       - "host.docker.internal:host-gateway"
     networks:
       - memory-network
+    healthcheck:
+      test: ["CMD", "python", "-c", "import requests; requests.get('http://localhost:9999/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
 
 networks:
   memory-network:
     driver: bridge
-    # 启用IPv6支持（可选）
     enable_ipv6: false

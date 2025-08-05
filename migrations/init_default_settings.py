@@ -212,7 +212,7 @@ def get_default_database_settings():
     """获取默认数据库设置"""
     return {
         "db_type": "sqlite",  # 数据库类型
-        "db_path": "/Library/Github/Memory/data/db.sqlite3",  # SQLite数据库路径
+        "db_path": "/app/data/db.sqlite3",  # SQLite数据库路径
         "host": "",  # 数据库主机
         "port": 5432,  # 数据库端口
         "database": "",  # 数据库名称
