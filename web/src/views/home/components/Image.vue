@@ -507,17 +507,20 @@ onUnmounted(() => {
   border: 0;
   width: 100%;
   height: auto;
+  min-height: 200px;
   display: block;
   object-fit: cover;
   cursor: pointer;
   outline: 0px;
   border-radius: 0;
+  aspect-ratio: auto;
 }
 
 @media (max-width: 768px) {
   .thumb-image {
     background-image: url(/assets/20200212-6dafa53ecf4e3.gif);
     background-size: 100% 100%;
+    min-height: 150px;
   }
 }
 
@@ -532,6 +535,12 @@ onUnmounted(() => {
   .thumb-image {
     background-image: url(/assets/20200212-e056a5f2914d6.gif);
     background-size: 100% 100%;
+  }
+}
+
+@media (max-width: 480px) {
+  .thumb-image {
+    min-height: 120px;
   }
 }
 

@@ -44,7 +44,7 @@
     </div>
     
     <!-- 分页导航 -->
-    <div v-if="total > 0 && !isLoading" class="pagination-container">
+    <div v-if="total > 0" class="pagination-container">
       <div class="pagination-info">
         <span>第 {{ page }} 页，共 {{ Math.ceil(total / page_size) }} 页</span>
         <span class="total-count">（共 {{ total }} 张图片）</span>
@@ -213,6 +213,13 @@ import api from '@/api'
 import { isValueNotEmpty, isValueEmpty, scrollToload, parseDateTime, formatDateTime } from '@/utils'
 import { useRouter } from 'vue-router'
 import { VueFinalModal } from 'vue-final-modal'
+import { 
+  generateSmartImageUrl, 
+  generateProgressiveUrls, 
+  preloadWithProgress,
+  globalAdvancedCache,
+  getImageFileSize
+} from '@/utils/advancedImageOptimizer'
 
 // 接收父组件传递的当前分类
 const props = defineProps({
@@ -504,7 +511,7 @@ function preloadCategoryImages(category) {
   })
 }
 
-// 生成优化图片URL的函数
+// 生成优化图片URL的函数 - 增强版
 function getOptimizedImageUrl(originalUrl, type = 'lightbox') {
   if (!originalUrl || (!originalUrl.includes('http') && !originalUrl.includes('/api/'))) {
     return originalUrl
@@ -517,20 +524,81 @@ function getOptimizedImageUrl(originalUrl, type = 'lightbox') {
                          ['slow-2g', '2g', '3g'].includes(navigator.connection.effectiveType)
   
   if (type === 'lightbox') {
-    // lightbox显示：只压缩质量，保持原始比例
+    // lightbox显示：针对大文件优化，渐进式加载策略
+    let quality, maxWidth, maxHeight
+    
     if (isMobile) {
-      const quality = isSlowConnection ? 60 : 70
-      return `${originalUrl}${separator}auto=compress,format&q=${quality}`
+      quality = isSlowConnection ? 45 : 60
+      maxWidth = isSlowConnection ? 800 : 1200
+      maxHeight = isSlowConnection ? 1200 : 1600
     } else if (isTablet) {
-      const quality = isSlowConnection ? 65 : 75
-      return `${originalUrl}${separator}auto=compress,format&q=${quality}`
+      quality = isSlowConnection ? 50 : 65
+      maxWidth = isSlowConnection ? 1200 : 1600
+      maxHeight = isSlowConnection ? 1600 : 2000
     } else {
-      const quality = isSlowConnection ? 70 : 80
-      return `${originalUrl}${separator}auto=compress,format&q=${quality}`
+      quality = isSlowConnection ? 55 : 70
+      maxWidth = isSlowConnection ? 1600 : 2000
+      maxHeight = isSlowConnection ? 2000 : 2400
     }
+    
+    // 针对超大文件（>1MB）的特殊处理
+    const params = [
+      `auto=compress,format`,
+      `q=${quality}`,
+      `w=${maxWidth}`,
+      `h=${maxHeight}`,
+      `fit=inside`, // 保持比例，不裁剪
+      `dpr=1` // 固定设备像素比，避免过大图片
+    ]
+    
+    return `${originalUrl}${separator}${params.join('&')}`
   }
   
   return originalUrl
+}
+
+// 渐进式图片加载策略
+// 智能渐进式图片加载策略 - 增强版
+async function getProgressiveImageUrls(originalUrl) {
+  if (!originalUrl || (!originalUrl.includes('http') && !originalUrl.includes('/api/'))) {
+    return [originalUrl]
+  }
+  
+  const isMobile = window.innerWidth <= 768
+  const isTablet = window.innerWidth <= 1024 && window.innerWidth > 768
+  const isSlowConnection = navigator.connection && navigator.connection.effectiveType && 
+                         ['slow-2g', '2g', '3g'].includes(navigator.connection.effectiveType)
+  
+  const deviceType = isMobile ? 'mobile' : (isTablet ? 'tablet' : 'desktop')
+  const connectionType = isSlowConnection ? 'slow' : 'fast'
+  
+  try {
+    // 使用高级优化器生成渐进式URL
+    const progressiveUrls = await generateProgressiveUrls(originalUrl, {
+      deviceType,
+      connectionType,
+      levels: isSlowConnection ? 3 : 2
+    })
+    
+    return progressiveUrls
+  } catch (error) {
+    console.warn('高级渐进式URL生成失败，使用备用方案:', error)
+    
+    // 备用方案：使用原有逻辑
+    const separator = originalUrl.includes('?') ? '&' : '?'
+    const urls = []
+    
+    if (isSlowConnection || isMobile) {
+      urls.push(`${originalUrl}${separator}auto=compress,format&q=30&w=400&h=600&fit=inside&dpr=1`)
+      urls.push(`${originalUrl}${separator}auto=compress,format&q=50&w=800&h=1200&fit=inside&dpr=1`)
+      urls.push(getOptimizedImageUrl(originalUrl, 'lightbox'))
+    } else {
+      urls.push(`${originalUrl}${separator}auto=compress,format&q=40&w=600&h=900&fit=inside&dpr=1`)
+      urls.push(getOptimizedImageUrl(originalUrl, 'lightbox'))
+    }
+    
+    return urls
+  }
 }
 
 // 下载图片函数 - 始终下载原始高质量图片
@@ -563,8 +631,8 @@ function downloadImage() {
       document.body.removeChild(link)
     })
 }
-// 预加载图片函数
-function preloadImage(imageUrl) {
+// 增强的预加载图片函数 - 支持渐进式加载和大文件优化
+function preloadImage(imageUrl, useProgressive = true) {
   if (!imageUrl) return Promise.resolve(null)
   
   // 检查是否已经预加载过
@@ -577,67 +645,20 @@ function preloadImage(imageUrl) {
     return imageLoadingPromises.value.get(imageUrl)
   }
 
-  const loadingPromise = new Promise((resolve) => {
-    const img = new window.Image()
-    let resolved = false
-    
-    const resolveOnce = (data) => {
-      if (!resolved) {
-        resolved = true
-        imageLoadingPromises.value.delete(imageUrl) // 清理Promise缓存
-        resolve(data)
+  const loadingPromise = new Promise(async (resolve) => {
+    if (useProgressive) {
+      // 智能渐进式加载策略
+      try {
+        const progressiveUrls = await getProgressiveImageUrls(imageUrl)
+        loadImageProgressively(progressiveUrls, resolve)
+      } catch (error) {
+        console.warn('获取渐进式URL失败，降级到单次加载:', error)
+        loadSingleImage(imageUrl, resolve)
       }
+    } else {
+      // 传统单次加载
+      loadSingleImage(imageUrl, resolve)
     }
-    
-    // 添加crossOrigin属性以支持跨域图片
-    img.crossOrigin = 'anonymous'
-    
-    img.onload = () => {
-      const imageData = {
-        src: img.src,
-        width: img.width,
-        height: img.height,
-      }
-      preloadedImages.value.set(imageUrl, imageData)
-      resolveOnce(imageData)
-    }
-    
-    img.onerror = () => {
-      console.warn('图片预加载失败:', imageUrl)
-      // 尝试加载原图（去掉查询参数）
-      const originalUrl = imageUrl.replace(/\?.*$/, '')
-      if (originalUrl !== imageUrl) {
-        console.log('尝试加载原图:', originalUrl)
-        const originalImg = new window.Image()
-        originalImg.crossOrigin = 'anonymous'
-        originalImg.onload = () => {
-          const imageData = {
-            src: originalImg.src,
-            width: originalImg.width,
-            height: originalImg.height,
-          }
-          preloadedImages.value.set(imageUrl, imageData)
-          resolveOnce(imageData)
-        }
-        originalImg.onerror = () => {
-          console.error('原图也加载失败:', originalUrl)
-          resolveOnce(null)
-        }
-        originalImg.src = originalUrl
-      } else {
-        resolveOnce(null)
-      }
-    }
-    
-    // 添加超时处理
-    setTimeout(() => {
-      if (!resolved) {
-        console.warn('图片加载超时:', imageUrl)
-        resolveOnce(null)
-      }
-    }, 1500) // 进一步减少超时时间，提高响应速度
-    
-    img.src = imageUrl
   })
   
   // 缓存加载Promise
@@ -645,141 +666,331 @@ function preloadImage(imageUrl) {
   return loadingPromise
 }
 
-// 预加载相邻图片
-function preloadAdjacentImages(currentIndex) {
-  const preloadCount = 3 // 增加预加载数量，预加载前后各3张图片
-  for (
-    let i = Math.max(0, currentIndex - preloadCount);
-    i <= Math.min(blogs.value.length - 1, currentIndex + preloadCount);
-    i++
-  ) {
-    if (i !== currentIndex && blogs.value[i]) {
-      // 异步预加载，不阻塞当前图片显示
+// 渐进式图片加载实现
+// 智能渐进式图片加载实现 - 增强版
+function loadImageProgressively(urls, resolve) {
+  // 使用高级预加载器
+  preloadWithProgress(urls, (imageData) => {
+    // 进度回调：更新图片显示
+    if (imageData.isFinal && imageSrc.value && imageSrc.value !== imageData.src) {
+      // 最终版本加载完成，更新显示
       setTimeout(() => {
-        const optimizedUrl = getOptimizedImageUrl(blogs.value[i].current_detail, 'lightbox')
-        preloadImage(optimizedUrl)
-      }, i === currentIndex + 1 || i === currentIndex - 1 ? 0 : 100)
+        if (imageSrc.value) { // 确保还在显示状态
+          imageSrc.value = imageData.src
+          console.log('更新到最终质量版本')
+        }
+      }, 200)
+    }
+  }).then((finalImageData) => {
+    if (finalImageData) {
+      // 缓存到高级缓存
+      globalAdvancedCache.set(urls[urls.length - 1], finalImageData)
+      preloadedImages.value.set(urls[urls.length - 1], finalImageData)
+      
+      // 清理Promise缓存
+      imageLoadingPromises.value.delete(urls[urls.length - 1])
+      resolve(finalImageData)
+    } else {
+      // 加载失败，尝试原图
+      const originalUrl = urls[urls.length - 1].replace(/\?.*$/, '')
+      loadSingleImage(originalUrl, resolve)
+    }
+  }).catch((error) => {
+    console.error('高级渐进式加载失败:', error)
+    // 降级到传统加载
+    loadImageProgressivelyFallback(urls, resolve)
+  })
+}
+
+// 备用渐进式加载实现
+function loadImageProgressivelyFallback(urls, resolve) {
+  let currentIndex = 0
+  let resolved = false
+  let bestImageData = null
+  
+  const resolveOnce = (data) => {
+    if (!resolved) {
+      resolved = true
+      imageLoadingPromises.value.delete(urls[urls.length - 1])
+      resolve(data)
+    }
+  }
+  
+  const loadNextLevel = () => {
+    if (currentIndex >= urls.length) {
+      resolveOnce(bestImageData)
+      return
+    }
+    
+    const img = new window.Image()
+    img.crossOrigin = 'anonymous'
+    
+    const currentUrl = urls[currentIndex]
+    const isLastLevel = currentIndex === urls.length - 1
+    
+    img.onload = () => {
+      const imageData = {
+        src: img.src,
+        width: img.width,
+        height: img.height,
+        level: currentIndex + 1,
+        isProgressive: !isLastLevel
+      }
+      
+      bestImageData = imageData
+      preloadedImages.value.set(urls[urls.length - 1], imageData)
+      
+      if (currentIndex === 0) {
+        resolveOnce(imageData)
+      }
+      
+      if (!isLastLevel) {
+        currentIndex++
+        setTimeout(loadNextLevel, 100)
+      } else {
+        if (resolved) {
+          setTimeout(() => {
+            if (imageSrc.value === bestImageData.src) {
+              imageSrc.value = imageData.src
+            }
+          }, 200)
+        } else {
+          resolveOnce(imageData)
+        }
+      }
+    }
+    
+    img.onerror = () => {
+      console.warn(`备用渐进式加载第${currentIndex + 1}级失败:`, currentUrl)
+      if (currentIndex === 0) {
+        loadSingleImage(urls[urls.length - 1].replace(/\?.*$/, ''), resolveOnce)
+      } else {
+        resolveOnce(bestImageData)
+      }
+    }
+    
+    setTimeout(() => {
+      if (!img.complete) {
+        console.warn(`备用渐进式加载第${currentIndex + 1}级超时:`, currentUrl)
+        if (bestImageData) {
+          resolveOnce(bestImageData)
+        } else if (currentIndex === 0) {
+          loadSingleImage(urls[urls.length - 1].replace(/\?.*$/, ''), resolveOnce)
+        }
+      }
+    }, currentIndex === 0 ? 3000 : 5000)
+    
+    img.src = currentUrl
+  }
+  
+  loadNextLevel()
+}
+
+// 单次图片加载实现
+function loadSingleImage(imageUrl, resolve) {
+  const img = new window.Image()
+  let resolved = false
+  
+  const resolveOnce = (data) => {
+    if (!resolved) {
+      resolved = true
+      imageLoadingPromises.value.delete(imageUrl) // 清理Promise缓存
+      resolve(data)
+    }
+  }
+  
+  // 添加crossOrigin属性以支持跨域图片
+  img.crossOrigin = 'anonymous'
+  
+  img.onload = () => {
+    const imageData = {
+      src: img.src,
+      width: img.width,
+      height: img.height,
+    }
+    preloadedImages.value.set(imageUrl, imageData)
+    resolveOnce(imageData)
+  }
+    
+  img.onerror = () => {
+    console.warn('图片预加载失败:', imageUrl)
+    // 尝试加载原图（去掉查询参数）
+    const originalUrl = imageUrl.replace(/\?.*$/, '')
+    if (originalUrl !== imageUrl) {
+      console.log('尝试加载原图:', originalUrl)
+      const originalImg = new window.Image()
+      originalImg.crossOrigin = 'anonymous'
+      originalImg.onload = () => {
+        const imageData = {
+          src: originalImg.src,
+          width: originalImg.width,
+          height: originalImg.height,
+        }
+        preloadedImages.value.set(imageUrl, imageData)
+        resolveOnce(imageData)
+      }
+      originalImg.onerror = () => {
+        console.error('原图也加载失败:', originalUrl)
+        resolveOnce(null)
+      }
+      originalImg.src = originalUrl
+    } else {
+      resolveOnce(null)
+    }
+  }
+  
+  // 添加超时处理
+  setTimeout(() => {
+    if (!resolved) {
+      console.warn('图片加载超时:', imageUrl)
+      resolveOnce(null)
+    }
+  }, 3000) // 单次加载超时时间
+  
+  img.src = imageUrl
+}
+
+// 预加载相邻图片 - 优化版（减少并发请求）
+function preloadAdjacentImages(currentIndex) {
+  const isMobile = window.innerWidth <= 768
+  const isSlowConnection = navigator.connection && navigator.connection.effectiveType && 
+                         ['slow-2g', '2g', '3g'].includes(navigator.connection.effectiveType)
+  
+  // 大幅减少预加载数量，优先加载速度
+  const preloadCount = isSlowConnection ? 0 : (isMobile ? 1 : 2)
+  const useProgressive = false // 预加载时不使用渐进式，减少请求数量
+  
+  // 只预加载下一张图片，减少网络负担
+  const nextIndex = currentIndex + 1
+  if (nextIndex < blogs.value.length && blogs.value[nextIndex]) {
+    setTimeout(() => {
+      const optimizedUrl = getOptimizedImageUrl(blogs.value[nextIndex].current_detail, 'lightbox')
+      preloadImage(optimizedUrl, useProgressive)
+    }, isSlowConnection ? 1000 : 300) // 延迟预加载，优先当前图片
+  }
+  
+  // 可选：预加载前一张（仅在快速网络下）
+  if (!isSlowConnection && preloadCount > 1) {
+    const prevIndex = currentIndex - 1
+    if (prevIndex >= 0 && blogs.value[prevIndex]) {
+      setTimeout(() => {
+        const optimizedUrl = getOptimizedImageUrl(blogs.value[prevIndex].current_detail, 'lightbox')
+        preloadImage(optimizedUrl, useProgressive)
+      }, 600)
     }
   }
 }
 
-function showImage(blog) {
+async function showImage(blog) {
   currentBlog.value = blog
   imageVisible.value = false
   imageTransitioning.value = true
 
   // 为lightbox生成优化的缩略图URL以提高加载速度
   const originalImageUrl = blog.current_detail
-  const optimizedImageUrl = getOptimizedImageUrl(originalImageUrl, 'lightbox')
   
-  // 检查优化图片是否已预加载
+  // 首先检查高级缓存
+  const cachedData = globalAdvancedCache.get(originalImageUrl)
+  if (cachedData) {
+    console.log('从高级缓存加载图片')
+    displayImageData(cachedData)
+    show.value = true
+    return
+  }
+  
+  // 检查传统缓存
+  const optimizedImageUrl = getOptimizedImageUrl(originalImageUrl, 'lightbox')
   const preloadedData = preloadedImages.value.get(optimizedImageUrl)
 
   if (preloadedData) {
     // 图片已预加载，立即显示
-    const maxW = window.innerWidth - 40
-    const maxH = window.innerHeight - 40
-    
-    // 使用原始尺寸，只在超出屏幕时才缩放
-    let finalWidth = preloadedData.width
-    let finalHeight = preloadedData.height
-    
-    // 如果图片超出屏幕，进行等比例缩放
-    if (finalWidth > maxW || finalHeight > maxH) {
-      const scaleRatio = Math.min(maxW / finalWidth, maxH / finalHeight)
-      finalWidth = finalWidth * scaleRatio
-      finalHeight = finalHeight * scaleRatio
-    }
-    
-    currentSize.value = {
-      width: finalWidth,
-      height: finalHeight,
-    }
-    nextImageUrl.value = preloadedData.src
-
-    setTimeout(() => {
-      imageSrc.value = nextImageUrl.value
-      imageTransitioning.value = false
-      imageVisible.value = true
-    }, 100) // 进一步减少延迟时间
+    displayImageData(preloadedData)
   } else {
-    // 图片未预加载，开始加载流程
-    preloadImage(optimizedImageUrl).then((imageData) => {
+    // 简化的智能加载策略 - 避免文件大小检测延迟
+    const isSlowConnection = navigator.connection && navigator.connection.effectiveType && 
+                           ['slow-2g', '2g', '3g'].includes(navigator.connection.effectiveType)
+    const isMobile = window.innerWidth <= 768
+    
+    // 基于网络和设备类型的快速判断，不进行文件大小检测
+    const useProgressive = isSlowConnection || isMobile
+    
+    preloadImage(optimizedImageUrl, useProgressive).then((imageData) => {
       if (imageData) {
-        const maxW = window.innerWidth - 40
-        const maxH = window.innerHeight - 40
+        displayImageData(imageData)
         
-        // 使用原始尺寸，只在超出屏幕时才缩放
-        let finalWidth = imageData.width
-        let finalHeight = imageData.height
-        
-        // 如果图片超出屏幕，进行等比例缩放
-        if (finalWidth > maxW || finalHeight > maxH) {
-          const scaleRatio = Math.min(maxW / finalWidth, maxH / finalHeight)
-          finalWidth = finalWidth * scaleRatio
-          finalHeight = finalHeight * scaleRatio
+        // 如果是渐进式加载的预览版本，继续等待更高质量版本
+        if (imageData.isProgressive) {
+          console.log('显示渐进式预览，等待高质量版本...')
         }
-        
-        currentSize.value = {
-          width: finalWidth,
-          height: finalHeight,
-        }
-        nextImageUrl.value = imageData.src
-        
-        // 图片加载完成后再显示
-        setTimeout(() => {
-          imageSrc.value = nextImageUrl.value
-          imageTransitioning.value = false
-          imageVisible.value = true
-        }, 50) // 减少延迟，提高响应速度
       } else {
-        // 图片加载失败，使用默认尺寸并尝试显示
-        console.warn('图片预加载失败，使用默认尺寸')
-        currentSize.value = {
-          width: Math.min(800, window.innerWidth - 40),
-          height: Math.min(600, window.innerHeight - 40),
-        }
-        nextImageUrl.value = optimizedImageUrl
-        
-        setTimeout(() => {
-          imageSrc.value = nextImageUrl.value
-          imageTransitioning.value = false
-        }, 100)
+        // 图片加载失败，显示错误状态
+        console.warn('图片预加载失败，显示错误状态')
+        displayImageError(optimizedImageUrl)
       }
     }).catch((error) => {
       console.error('图片加载出错:', error)
-      // 加载出错时也要显示，避免无限等待
-      currentSize.value = {
-        width: Math.min(800, window.innerWidth - 40),
-        height: Math.min(600, window.innerHeight - 40),
-      }
-      nextImageUrl.value = optimizedImageUrl
-        
-        setTimeout(() => {
-          imageSrc.value = nextImageUrl.value
-        imageTransitioning.value = false
-      }, 100)
+      displayImageError(optimizedImageUrl)
     })
     
-    // 添加超时保护，如果5秒内没有加载完成，强制显示
+    // 添加超时保护，如果4秒内没有加载完成，强制显示错误状态
     setTimeout(() => {
       if (imageTransitioning.value && !imageVisible.value) {
-        console.warn('图片加载超时，强制显示')
-        if (!nextImageUrl.value) {
-          nextImageUrl.value = imageUrl
-        }
-        imageSrc.value = nextImageUrl.value
-        imageTransitioning.value = false
-        imageVisible.value = true
+        console.warn('图片加载超时，显示错误状态')
+        displayImageError(optimizedImageUrl)
       }
-    }, 3000) // 减少超时时间
+    }, 4000) // 减少超时时间，提升响应速度
   }
 
-  // 预加载相邻图片
+  // 预加载相邻图片（使用渐进式策略）
   const currentIndex = blogs.value.findIndex((b) => b.id === blog.id)
   preloadAdjacentImages(currentIndex)
 
   show.value = true
+}
+
+// 显示图片数据的统一函数
+function displayImageData(imageData) {
+  const maxW = window.innerWidth - 40
+  const maxH = window.innerHeight - 40
+  
+  // 使用原始尺寸，只在超出屏幕时才缩放
+  let finalWidth = imageData.width
+  let finalHeight = imageData.height
+  
+  // 如果图片超出屏幕，进行等比例缩放
+  if (finalWidth > maxW || finalHeight > maxH) {
+    const scaleRatio = Math.min(maxW / finalWidth, maxH / finalHeight)
+    finalWidth = finalWidth * scaleRatio
+    finalHeight = finalHeight * scaleRatio
+  }
+  
+  currentSize.value = {
+    width: finalWidth,
+    height: finalHeight,
+  }
+  nextImageUrl.value = imageData.src
+  
+  // 图片加载完成后再显示
+  setTimeout(() => {
+    imageSrc.value = nextImageUrl.value
+    imageTransitioning.value = false
+    imageVisible.value = true
+  }, imageData.isProgressive ? 30 : 50) // 渐进式加载更快显示
+}
+
+// 显示图片错误状态的函数
+function displayImageError(fallbackUrl) {
+  currentSize.value = {
+    width: Math.min(800, window.innerWidth - 40),
+    height: Math.min(600, window.innerHeight - 40),
+  }
+  nextImageUrl.value = fallbackUrl
+  
+  setTimeout(() => {
+    imageSrc.value = nextImageUrl.value
+    imageTransitioning.value = false
+    imageVisible.value = true
+  }, 100)
 }
 function onTransitionEnd(e) {
   // console.log("Transition ended for property:", e.propertyName);
@@ -836,10 +1047,7 @@ async function getBlogs(silentError = false) {
       loadedImageCount.value = 0
       isImagesLoading.value = totalImageCount.value > 0
       
-      // 数据处理完成后关闭加载状态
-      isLoading.value = false
-      
-      // 强制触发图片加载，特别是在移动端
+      // 强制触发图片加载，特别是在分页时
       nextTick(() => {
         setTimeout(() => {
           // 强制重新触发所有图片的懒加载检测
@@ -847,31 +1055,24 @@ async function getBlogs(silentError = false) {
           imageElements.forEach((element, index) => {
             // 添加延迟确保DOM完全渲染
             setTimeout(() => {
-              // 触发重新检测
+              // 强制触发图片加载事件
+              element.dispatchEvent(new Event('forceLoad'))
+              
+              // 同时触发滚动事件以重新激活IntersectionObserver
               const event = new Event('scroll')
               window.dispatchEvent(event)
-              
-              // 对于移动端，强制触发图片加载
-              const isMobile = window.innerWidth <= 768
-              if (isMobile) {
-                const imgContainer = element.querySelector('.image-container')
-                if (imgContainer) {
-                  // 强制触发intersection observer
-                  const rect = imgContainer.getBoundingClientRect()
-                  if (rect.top < window.innerHeight + 200) {
-                    const img = imgContainer.querySelector('img')
-                    if (!img || !img.src) {
-                      // 强制加载图片
-                      element.dispatchEvent(new Event('forceLoad'))
-                    }
-                  }
-                }
-              }
-            }, index * 5) // 减少延迟，提高加载速度
+            }, index * 10) // 适当增加延迟确保DOM完全渲染
           })
-        }, 100)
+        }, 200) // 增加延迟确保组件完全挂载
       })
+    } else {
+      // API返回错误状态码时也要清除加载状态
+      console.log('API返回错误状态码:', res.code, res.message)
     }
+    
+    // 确保在所有情况下都清除加载状态
+    isLoading.value = false
+    
   } catch (e) {
     // 简化错误处理
     console.log('图片加载失败:', e)
@@ -1018,21 +1219,6 @@ watch(
   { immediate: true }
 )
 
-// 监听分类变化
-watch(
-  () => props.currentCategory,
-  (newCategory) => {
-    current_category = newCategory
-    close()
-    isLoading.value = true
-    page = 1
-    total = 0
-    blogs.value = []
-    getBlogs()
-  },
-  { immediate: true }
-)
-
 // 监听路由变化（仅处理location参数）
 watch(
   () => router.currentRoute.value.params.location,
@@ -1066,6 +1252,10 @@ watch(
   object-fit: contain;
   display: block;
   margin: 0 auto;
+  border-radius: 16px;
+  transition: transform 0.3s ease;
+  position: relative;
+  z-index: 1;
 }
 
 .lightbox-content .pic {
@@ -1075,43 +1265,67 @@ watch(
   max-height: 100%;
   width: 100%;
   height: 100%;
+  border-radius: 16px;
+  overflow: hidden;
+  position: relative;
+  z-index: 1;
 }
 
 .fade-enter-active,
 .fade-leave-active {
-  transition: opacity 0.4s ease;
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .fade-enter-from,
 .fade-leave-to {
   opacity: 0;
+  transform: scale(0.9);
+}
+
+.fade-enter-to,
+.fade-leave-from {
+  opacity: 1;
+  transform: scale(1);
 }
 
 .lightbox {
   background: transparent;
   position: fixed;
-  left: 0px;
-  top: 0px;
+  left: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
   z-index: 20000;
-  width: 100%;
-  height: 100%;
+  width: 100vw;
+  height: 100vh;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
   opacity: 1;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .lightbox-content {
-  background: transparent;
+  background: rgba(0, 0, 0, 0.85);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+  box-shadow: 
+    0 25px 50px -12px rgba(0, 0, 0, 0.5),
+    0 0 0 1px rgba(255, 255, 255, 0.05),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
   cursor: default;
   display: block;
   position: relative;
   z-index: 20001;
   width: auto;
   height: auto;
-  max-width: 95vw;
+  max-width: 90vw;
   max-height: 85vh;
+  overflow: hidden;
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  padding: 20px;
 }
 
 .lightbox-content:before {
@@ -1148,11 +1362,11 @@ watch(
 
 .lightbox-content .nav-previous,
 .lightbox-content .nav-next {
-  transition: all 0.2s ease-in-out;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   cursor: pointer;
   height: 50px;
   margin-top: -25px;
-  opacity: 1;
+  opacity: 0.7;
   position: absolute;
   top: 50%;
   width: 50px;
@@ -1161,6 +1375,21 @@ watch(
   align-items: center;
   justify-content: center;
   color: white;
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(10px);
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+}
+
+.lightbox-content .nav-previous svg,
+.lightbox-content .nav-next svg {
+  display: block;
+  margin: 0;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
 }
 
 .lightbox-content .nav-previous {
@@ -1178,20 +1407,25 @@ watch(
   opacity: 1;
 }
 
-.lightbox-content:hover .closer:hover,
-.lightbox-content:hover .nav-previous:hover,
-.lightbox-content:hover .nav-next:hover {
+.lightbox-content .closer:hover,
+.lightbox-content .nav-previous:hover,
+.lightbox-content .nav-next:hover {
   opacity: 1;
+  background: rgba(255, 255, 255, 0.1);
+  transform: scale(1.1);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4);
 }
 
-.lightbox-content:hover .download-button:hover {
+.lightbox-content .download-button:hover {
   opacity: 1;
+  background: rgba(0, 0, 0, 0.8);
+  transform: scale(1.05);
 }
 
 .lightbox-content .closer {
-  transition: all 0.2s ease-in-out;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   height: 50px;
-  opacity: 1;
+  opacity: 0.7;
   position: absolute;
   right: 20px;
   top: 20px;
@@ -1201,25 +1435,50 @@ watch(
   align-items: center;
   justify-content: center;
   color: white;
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(10px);
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+}
+
+.lightbox-content .closer svg {
+  display: block;
+  margin: 0;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
 }
 
 .lightbox-content .download-button {
-  transition: all 0.2s ease-in-out;
-  background: rgba(0, 0, 0, 0.6);
-  border-radius: 8px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  background: rgba(0, 0, 0, 0.4);
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.1);
   cursor: pointer;
-  height: 40px;
-  width: 40px;
-  opacity: 0;
+  height: 44px;
+  width: 44px;
+  opacity: 0.7;
   position: absolute;
-  right: 12px;
-  bottom: 12px;
+  right: 20px;
+  bottom: 20px;
   z-index: 20003;
   display: flex;
   align-items: center;
   justify-content: center;
   color: white;
-  backdrop-filter: blur(4px);
+  backdrop-filter: blur(10px);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+}
+
+.lightbox-content .download-button svg {
+  display: block;
+  margin: 0;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
 }
 
 .lightbox-content .download-button:hover {
@@ -1227,14 +1486,62 @@ watch(
   transform: scale(1.05);
 }
 
-/* 移动端下载按钮优化 */
+/* 移动端优化 */
 @media screen and (max-width: 768px) {
+  .lightbox {
+    background: transparent;
+  }
+  
+  .lightbox-content {
+    background: rgba(0, 0, 0, 0.95);
+    max-width: 95vw;
+    max-height: 90vh;
+    border-radius: 12px;
+    margin: 20px;
+    padding: 16px;
+  }
+  
+  .lightbox-content .pic {
+    border-radius: 12px;
+  }
+  
+  .img {
+    border-radius: 12px;
+  }
+  
+  .lightbox-content .nav-previous,
+  .lightbox-content .nav-next {
+    opacity: 0.8;
+    background: rgba(0, 0, 0, 0.6);
+    width: 44px;
+    height: 44px;
+    margin-top: -22px;
+  }
+  
+  .lightbox-content .nav-previous {
+    left: 16px;
+  }
+  
+  .lightbox-content .nav-next {
+    right: 16px;
+  }
+  
+  .lightbox-content .closer {
+    opacity: 0.8;
+    background: rgba(0, 0, 0, 0.6);
+    width: 44px;
+    height: 44px;
+    right: 16px;
+    top: 16px;
+  }
+  
   .lightbox-content .download-button {
     height: 44px;
     width: 44px;
     right: 16px;
     bottom: 16px;
-    opacity: 0.6;
+    opacity: 0.8;
+    background: rgba(0, 0, 0, 0.6);
   }
   
   .lightbox-content .download-button:active {
@@ -1242,11 +1549,23 @@ watch(
     background: rgba(0, 0, 0, 0.9);
     transform: scale(0.95);
   }
+  
+  .lightbox-content .caption {
+    border-bottom-left-radius: 12px;
+    border-bottom-right-radius: 12px;
+    padding: 1.5em 1.5em 0.1em;
+    padding-bottom: 1.5rem;
+  }
 }
 
 .lightbox-content .caption {
   padding: 2em 2em 0.1em;
-  background-image: linear-gradient(to top, rgba(16, 16, 16, 0.45) 25%, rgba(16, 16, 16, 0) 100%);
+  background: linear-gradient(to top, 
+    rgba(0, 0, 0, 0.8) 0%, 
+    rgba(0, 0, 0, 0.6) 40%, 
+    rgba(0, 0, 0, 0.2) 70%, 
+    transparent 100%);
+  backdrop-filter: blur(10px);
   bottom: 0rem;
   cursor: default;
   left: 0;
@@ -1257,6 +1576,8 @@ watch(
   padding-bottom: 2rem;
   display: flex;
   flex-direction: column;
+  border-bottom-left-radius: 16px;
+  border-bottom-right-radius: 16px;
 }
 
 #blog-main {

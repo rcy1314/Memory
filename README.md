@@ -91,6 +91,18 @@ docker run -d \
   noise233/memory:latest
 ```
 
+连接 Neon 数据库的 Docker 运行命令
+
+```
+docker run -d \
+  --name memory \
+  --platform linux/amd64 \
+  -p 4314:9999 \
+  -e DATABASE_URL="postgresql://username:password@ep-xxx-xxx.us-east-2.aws.neon.tech/dbname?sslmode=require" \
+  -e TZ=Asia/Shanghai \
+  noise233/memory:latest
+```
+
 ## docker-compose
 
 由于桌面版和docker后端api有冲突，docker请使用/api/v1，如果你想自己构建docker：

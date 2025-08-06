@@ -121,10 +121,8 @@ const onImageLoad = () => {
   loadingText.value = ''
   compressionProgress.value = 0
   
-  // 手机端性能优化：图片加载完成后移除observer
-  if (observer && thumbRef.value) {
-    observer.unobserve(thumbRef.value)
-  }
+  // 不要立即移除observer，保持观察状态以便后续页面切换时能正常工作
+  // 只有在组件卸载时才移除observer
 }
 
 // 重试计数器
@@ -209,15 +207,16 @@ onMounted(() => {
     observer = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
-          if (entry.isIntersecting) {
+          if (entry.isIntersecting && !imageLoaded.value) {
             isIntersecting.value = true
             loadImage()
+            // 图片开始加载后暂时停止观察，避免重复触发
             observer.unobserve(entry.target)
           }
         })
       },
       {
-        rootMargin: '200px',
+        rootMargin: '300px', // 增加预加载距离
         threshold: 0.1
       }
     )
@@ -226,6 +225,31 @@ onMounted(() => {
     isIntersecting.value = true
     loadImage()
   }
+  
+  // 监听强制加载事件（用于分页时强制触发加载）
+  if (thumbRef.value) {
+    thumbRef.value.addEventListener('forceLoad', () => {
+      if (!imageLoaded.value && !imageSrc.value) {
+        loadImage(true)
+      } else if (!imageLoaded.value && imageSrc.value) {
+        // 如果图片已经有src但还没加载完成，重新观察
+        if (observer && thumbRef.value) {
+          observer.observe(thumbRef.value)
+        }
+      }
+    })
+  }
+  
+  // 延迟检查是否需要立即加载（用于分页后的可见图片）
+  setTimeout(() => {
+    if (thumbRef.value && !imageLoaded.value) {
+      const rect = thumbRef.value.getBoundingClientRect()
+      // 如果图片在视口内或接近视口，立即加载
+      if (rect.top < window.innerHeight + 100) {
+        loadImage()
+      }
+    }
+  }, 100)
 })
 
 onUnmounted(() => {
@@ -339,10 +363,12 @@ onUnmounted(() => {
 .thumb-image {
   width: 100%;
   height: auto;
+  min-height: 200px;
   display: block;
   transition: opacity 0.3s ease-in-out;
   object-fit: cover;
   border-radius: 8px;
+  aspect-ratio: auto;
   /* 优化图片渲染 */
   image-rendering: -webkit-optimize-contrast;
   image-rendering: crisp-edges;
@@ -391,6 +417,16 @@ onUnmounted(() => {
   .tag-categories a {
     font-size: 10px;
     padding: 3px 6px;
+  }
+  
+  .thumb-image {
+    min-height: 150px;
+  }
+}
+
+@media (max-width: 480px) {
+  .thumb-image {
+    min-height: 120px;
   }
 }
 

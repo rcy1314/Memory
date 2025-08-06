@@ -138,7 +138,7 @@ export const basicRoutes = [
     ],
   },
   {
-    redirect: '/admin/system/user',
+    redirect: '/admin/system/general',
     is_hidden: false,
     keepalive: true,
     path: '/admin/system',
