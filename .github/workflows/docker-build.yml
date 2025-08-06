@@ -55,3 +55,71 @@ jobs:
         git tag $VERSION
         git push origin $VERSION
         echo "Created and pushed tag: $VERSION"
+        echo "RELEASE_TAG=$VERSION" >> $GITHUB_ENV
+
+    - name: Upload frontend build artifacts
+      if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
+      uses: actions/upload-artifact@v4
+      with:
+        name: frontend-dist
+        path: dist/
+        retention-days: 30
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    if: (github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && github.ref == 'refs/heads/main')) || startsWith(github.ref, 'refs/tags/v')
+    permissions:
+      contents: write
+      packages: write
+      actions: read
+      checks: write
+      deployments: write
+      issues: write
+      discussions: write
+      pages: write
+      pull-requests: write
+      repository-projects: write
+      security-events: write
+      statuses: write
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        
+      - name: Download frontend artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: frontend-dist
+          path: frontend-dist
+          
+      - name: Create frontend distribution archive
+        run: |
+          cd frontend-dist
+          tar -czf ../frontend-dist.tar.gz .
+          cd ..
+          
+      - name: Get release tag
+        id: get_tag
+        run: |
+          if [[ "${{ github.ref }}" == refs/tags/* ]]; then
+            echo "tag=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+          else
+            echo "tag=$(date +"v%Y.%m.%d-%H%M%S")" >> $GITHUB_OUTPUT
+          fi
+          
+      - name: Create Release with GitHub CLI
+        run: |
+          # Create release
+          gh release create ${{ steps.get_tag.outputs.tag }} \
+            --repo ${{ github.repository }} \
+            --title "Frontend Release ${{ steps.get_tag.outputs.tag }}" \
+            --notes "Automated frontend build release" \
+            --latest
+          
+          # Upload frontend distribution
+          gh release upload ${{ steps.get_tag.outputs.tag }} \
+            --repo ${{ github.repository }} \
+            frontend-dist.tar.gz
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
