@@ -76,6 +76,10 @@
       "@zclzone",
       "@unocss",
       ".eslint-global-variables.json"
-    ]
+    ],
+    "rules": {
+      "vue/no-v-model-argument": "off",
+      "vue/valid-v-model": "off"
+    }
   }
 }

@@ -10,4 +10,9 @@ RUN pip install -r requirements.txt
 
 EXPOSE 9999
 
+# 复制并设置入口脚本权限
+COPY docker-entrypoint.sh /docker-entrypoint.sh
+RUN chmod +x /docker-entrypoint.sh
+
+ENTRYPOINT ["/docker-entrypoint.sh"]
 CMD ["python", "run.py"]

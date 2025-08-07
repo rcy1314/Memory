@@ -2,13 +2,17 @@ import logging
 import os
 from pathlib import Path
 from urllib.parse import urlparse
+import requests
 
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, Query, HTTPException
+from fastapi.responses import Response
 from tortoise.expressions import Q
 from app.controllers.blog import blog_controller
 from app.controllers.blog_image import blog_image_controller
+from app.controllers.blog_video import blog_video_controller
 from app.controllers.category import category_controller
 from app.controllers.setting import setting_controller
+from app.utils.video_parser import video_parser
 from app.core.dependency import DependPermisson
 from app.models.content import Category
 from app.schemas.base import Fail, Success, SuccessExtra
@@ -17,6 +21,7 @@ from app.schemas.blog import *
 from app.utils.logger import logger
 
 blog_router = APIRouter()
+blog_public_router = APIRouter()  # 不需要权限的公共路由
 
 order_options = [
     {"label": "图片时间-降序", "value": "meta_time_desc", "order": "-time"},
@@ -39,6 +44,10 @@ async def list_blog(query: BlogQuery):
         q &= Q(location__contains=query.location)
     if len(query.categories) > 0:
         q &= Q(categories__in=query.categories)
+    
+    # 只查询有图片的博客记录
+    q &= Q(images__isnull=False)
+    
     order = []
     for t in order_options:
         if t["value"] == query.order_option:
@@ -127,15 +136,24 @@ async def create_blog(
         categories = await Category.filter(id__in=blog_in.category_ids).all()
         await new_blog.categories.add(*categories)
 
-    if blog_in.images is None:
-        return Fail(msg="图片列表不能为空")
-    if not isinstance(blog_in.images, list):
-        return Fail(msg="图片列表必须是一个列表")
-    if len(blog_in.images) == 0:
-        return Fail(msg="图片列表不能为空")
-    await blog_image_controller.create_for_blog(
-        blog_id=new_blog.id, images=blog_in.images
-    )
+    # 验证至少有图片或视频
+    has_images = blog_in.images and len(blog_in.images) > 0
+    has_videos = blog_in.videos and len(blog_in.videos) > 0
+    
+    if not has_images and not has_videos:
+        return Fail(msg="至少需要添加一张图片或一个视频")
+    
+    # 创建图片
+    if has_images:
+        await blog_image_controller.create_for_blog(
+            blog_id=new_blog.id, images=blog_in.images
+        )
+    
+    # 创建视频
+    if has_videos:
+        await blog_video_controller.create_for_blog(
+            blog_id=new_blog.id, videos=blog_in.videos
+        )
     return Success(msg="Created Success")
 
 
@@ -165,14 +183,29 @@ async def update_blog(
             categories = await Category.filter(id__in=blog_in.category_ids).all()
             await blog.categories.add(*categories)
 
+    # 验证至少有图片或视频
+    has_images = blog_in.images is not None and len(blog_in.images) > 0
+    has_videos = blog_in.videos is not None and len(blog_in.videos) > 0
+    
+    if not has_images and not has_videos:
+        return Fail(msg="至少需要保留一张图片或一个视频")
+    
+    # 更新图片
     if blog_in.images is not None:
         if not isinstance(blog_in.images, list):
             return Fail(msg="图片列表必须是一个列表")
-        if len(blog_in.images) == 0:
-            return Fail(msg="图片列表不能为空")
         await blog_image_controller.update_for_blog(
             blog_id=blog.id, images=blog_in.images
         )
+    
+    # 更新视频
+    if blog_in.videos is not None:
+        if not isinstance(blog_in.videos, list):
+            return Fail(msg="视频列表必须是一个列表")
+        await blog_video_controller.update_for_blog(
+            blog_id=blog.id, videos=blog_in.videos
+        )
+    
     return Success(msg="Updated Success")
 
 
@@ -258,5 +291,58 @@ async def delete_blog(
     
     # 删除数据库记录
     await blog_image_controller.update_for_blog(blog_id=id, images=[])
+    await blog_video_controller.update_for_blog(blog_id=id, videos=[])
     await blog_controller.remove(id=id)
     return Success(msg="Deleted Success")
+
+
+@blog_public_router.post("/parse-video", summary="解析视频链接")
+async def parse_video_url(
+    video_url: str = Query(..., description="视频链接")
+):
+    """解析视频链接，获取视频信息"""
+    try:
+        video_info = video_parser.parse_video_url(video_url)
+        return Success(data=video_info)
+    except Exception as e:
+        logger.error(f"解析视频链接失败: {str(e)}")
+        return Fail(msg=f"解析视频链接失败: {str(e)}")
+
+
+@blog_public_router.get("/proxy-image", summary="代理获取图片")
+async def proxy_image(
+    url: str = Query(..., description="图片链接")
+):
+    """代理获取图片，解决跨域问题"""
+    try:
+        # 验证URL是否为允许的域名
+        allowed_domains = ['i0.hdslb.com', 'i1.hdslb.com', 'i2.hdslb.com', 'img.youtube.com']
+        parsed_url = urlparse(url)
+        if parsed_url.netloc not in allowed_domains:
+            raise HTTPException(status_code=400, detail="不允许的图片域名")
+        
+        # 设置请求头，模拟浏览器访问
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+            'Referer': 'https://www.bilibili.com/'
+        }
+        
+        # 获取图片
+        response = requests.get(url, headers=headers, timeout=10)
+        response.raise_for_status()
+        
+        # 返回图片内容
+        return Response(
+            content=response.content,
+            media_type=response.headers.get('content-type', 'image/jpeg'),
+            headers={
+                'Cache-Control': 'public, max-age=86400',  # 缓存1天
+                'Access-Control-Allow-Origin': '*'
+            }
+        )
+    except requests.RequestException as e:
+        logger.error(f"获取图片失败: {str(e)}")
+        raise HTTPException(status_code=404, detail="图片获取失败")
+    except Exception as e:
+        logger.error(f"代理图片失败: {str(e)}")
+        raise HTTPException(status_code=500, detail="服务器错误")

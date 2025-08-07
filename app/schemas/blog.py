@@ -33,6 +33,45 @@ class BlogImageOut(BlogImageBase):
     id: int
 
 
+class BlogVideoBase(BaseModel):
+    video_url: str
+    video_type: str = "direct"
+    cover_url: Optional[str] = None
+    title: Optional[str] = None
+    desc: Optional[str] = None
+    location: Optional[str] = None
+    is_hidden: bool = False
+    metadata: Optional[dict] = None
+    order: int = 0
+    time: Optional[datetime] = None
+    video_id: Optional[str] = None
+    duration: Optional[int] = None
+
+
+class BlogVideoCreate(BaseModel):
+    video_url: str
+    video_type: str = "direct"
+    cover_url: Optional[str] = None
+    title: Optional[str] = None
+    desc: Optional[str] = None
+    location: Optional[str] = None
+    is_hidden: bool = False
+    metadata: Optional[dict] = None
+    order: int = 0
+    time: Optional[datetime] = None
+    video_id: Optional[str] = None
+    duration: Optional[int] = None
+    category_ids: Optional[List[int]] = []
+
+
+class BlogVideoUpdate(BlogVideoBase):
+    id: int
+
+
+class BlogVideoOut(BlogVideoBase):
+    id: int
+
+
 class BaseBlog(BaseModel):
     id: int
     title: str
@@ -57,6 +96,7 @@ class BlogQuery(BaseModel):
 class BlogOut(BaseBlog):
     categories: Optional[list] = []
     images: Optional[List[BlogImageOut]] = []
+    videos: Optional[List[BlogVideoOut]] = []
 
 
 class BlogCreate(BaseModel):
@@ -67,11 +107,12 @@ class BlogCreate(BaseModel):
     remark: Optional[str] = {}
     is_hidden: Optional[bool] = False
     images: List[BlogImageCreate] = []
+    videos: List[BlogVideoCreate] = []
     category_ids: Optional[List[int]] = []
 
     def create_dict(self):
         return self.model_dump(
-            exclude_unset=True, exclude={"category_ids", "images", "id"}
+            exclude_unset=True, exclude={"category_ids", "images", "videos", "id"}
         )
 
 
@@ -84,9 +125,10 @@ class BlogUpdate(BaseModel):
     is_hidden: Optional[bool] = False
     remark: Optional[Dict[str, Any]] = {}
     images: List[BlogImageUpdate | BlogImageCreate] = []
+    videos: List[BlogVideoUpdate | BlogVideoCreate] = []
     category_ids: Optional[List[int]] = []
 
     def update_dict(self):
         return self.model_dump(
-            exclude_unset=True, exclude={"category_ids", "id", "images"}
+            exclude_unset=True, exclude={"category_ids", "id", "images", "videos"}
         )

@@ -57,6 +57,13 @@ export default {
   // backup
   backupPhotos: () => request.get('/admin/setting/backup/photos', { responseType: 'blob' }),
   backupDatabase: () => request.get('/admin/setting/backup/database', { responseType: 'blob' }),
+  // videos
+  getVideos: (params = {}) => request.get('/admin/video/list', { params }),
+  getVideoById: (params = {}) => request.get('/admin/video/get', { params }),
+  createVideo: (data = {}) => request.post('/admin/video/create', data),
+  updateVideo: (data = {}) => request.post('/admin/video/update', data),
+  deleteVideo: (params = {}) => request.delete('/admin/video/delete', { params }),
+  parseVideoUrl: (params = {}) => request.post('/admin/video/parse-video', {}, { params }),
   // visitor
   getOrderOptionVisitor: () => request.get('/visitor/order/list'),
   getBlogsVisitor: (params = {}) =>

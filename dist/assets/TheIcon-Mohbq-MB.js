@@ -1,1 +1,0 @@
-import{P as r,Q as o,Y as n,W as t}from"./index-ON-SflwH.js";import{a as c}from"./icon-oAdvG0qp.js";const m={__name:"TheIcon",props:{icon:{type:String,required:!0},size:{type:Number,default:14},color:{type:String,default:void 0}},setup(e){return(a,i)=>(o(),r(n(t(c)(e.icon,{size:e.size,color:e.color}))))}};export{m as _};

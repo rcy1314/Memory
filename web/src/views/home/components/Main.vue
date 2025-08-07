@@ -4,7 +4,7 @@
     <div v-if="isLoading && !isFirstLoad" class="gallery-loading-message">
       <div class="loading-content">
         <div class="loading-spinner-main"></div>
-        <div class="loading-text">图片请稍后</div>
+        <div class="loading-text">内容请稍后</div>
       </div>
     </div>
     
@@ -26,9 +26,14 @@
     
     <!-- 图片显示区域 -->
     <div class="gallery-container" :class="{ 'loading-state': isLoading || isImagesLoading }">
-      <!-- 图片网格 -->
+      <!-- 内容网格（图片和视频） -->
       <transition-group v-if="blogs.length > 0" name="fade-slide" tag="div" class="images-container" :class="{ 'images-loading': isLoading || isImagesLoading }">
-        <ImageOptimized v-for="blog in blogs" :key="blog.id" :data="blog" @click="showImage(blog)" @image-loaded="onImageLoaded" />
+        <template v-for="blog in blogs">
+          <!-- 图片内容 -->
+          <ImageOptimized v-if="blog.content_type === 'image'" :key="blog.id" :data="blog" @click="showImage(blog)" @image-loaded="onImageLoaded" />
+          <!-- 视频内容 -->
+          <VideoOptimized v-else-if="blog.content_type === 'video'" :key="blog.id" :data="blog" @click="showVideo(blog)" @video-loaded="onVideoLoaded" />
+        </template>
       </transition-group>
       
       <!-- 图片展示区域加载遮罩 -->
@@ -36,8 +41,8 @@
         <div class="gallery-loading-content">
           <div class="gallery-loading-spinner"></div>
           <div class="gallery-loading-text">
-            <span v-if="isLoading">{{ page === 1 ? '正在加载图片...' : `正在加载第 ${page} 页...` }}</span>
-            <span v-else-if="isImagesLoading">图片加载中 {{ loadedImageCount }}/{{ totalImageCount }}</span>
+            <span v-if="isLoading">{{ page === 1 ? '正在加载内容...' : `正在加载第 ${page} 页...` }}</span>
+            <span v-else-if="isImagesLoading">内容加载中 {{ loadedImageCount }}/{{ totalImageCount }}</span>
           </div>
         </div>
       </div>
@@ -47,7 +52,7 @@
     <div v-if="total > 0" class="pagination-container">
       <div class="pagination-info">
         <span>第 {{ page }} 页，共 {{ Math.ceil(total / page_size) }} 页</span>
-        <span class="total-count">（共 {{ total }} 张图片）</span>
+        <span class="total-count">（共 {{ total }} 项内容）</span>
       </div>
       <div class="pagination-buttons">
         <button 
@@ -88,7 +93,7 @@
     
     <!-- 加载完成指示器 -->
     <div v-if="page * page_size >= total && total > 0 && !isLoading" class="load-complete-indicator">
-      <span>已加载所有图片</span>
+      <span>已加载所有内容</span>
     </div>
     <VueFinalModal
       v-model="show"
@@ -119,7 +124,9 @@
         </div>
         <transition name="fade" mode="out-in">
           <div class="pic" style="display: block; text-indent: 0px">
+            <!-- 图片显示 -->
             <img
+              v-if="currentBlog && currentBlog.content_type === 'image'"
               :key="imageSrc"
               :src="imageSrc"
               alt=""
@@ -129,9 +136,57 @@
               @error="onImageError"
               @click.stop
             />
+            <!-- 视频显示 -->
+            <iframe
+              v-if="currentBlog && currentBlog.content_type === 'video' && (currentBlog.video_type === 'bilibili' || currentBlog.video_url.includes('bilibili.com'))"
+              :key="imageSrc"
+              :src="imageSrc"
+              :style="['vertical-align: bottom; border: none;', imageVisible ? '' : 'display: none;']"
+              class="video-player"
+              allowfullscreen
+              @load="onImageLoad"
+              @error="onImageError"
+              @click.stop
+            >
+            </iframe>
+            <iframe
+              v-else-if="currentBlog && currentBlog.content_type === 'video' && (currentBlog.video_type === 'youtube' || currentBlog.video_url.includes('youtube.com') || currentBlog.video_url.includes('youtu.be'))"
+              :key="imageSrc"
+              :src="imageSrc"
+              :style="['vertical-align: bottom; border: none;', imageVisible ? '' : 'display: none;']"
+              class="video-player"
+              allowfullscreen
+              @load="onImageLoad"
+              @error="onImageError"
+              @click.stop
+            >
+            </iframe>
+            <video
+              v-else-if="currentBlog && currentBlog.content_type === 'video'"
+              :key="imageSrc"
+              :src="imageSrc"
+              :style="['vertical-align: bottom;', imageVisible ? '' : 'display: none;']"
+              class="video-player"
+              controls
+              autoplay
+              @loadeddata="onImageLoad"
+              @error="onImageError"
+              @click.stop
+            >
+              您的浏览器不支持视频播放。
+            </video>
           </div>
         </transition>
-        <div v-if="imageVisible" class="caption" style="display: flex">
+        <!-- caption切换按钮（视频和图片通用） -->
+        <div v-if="imageVisible" class="caption-toggle-button" @click="showCaption = !showCaption" title="切换信息显示">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path v-if="showCaption" d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+            <circle v-if="showCaption" cx="12" cy="12" r="3"/>
+            <path v-else d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/>
+            <line v-if="!showCaption" x1="1" y1="1" x2="23" y2="23"/>
+          </svg>
+        </div>
+        <div v-if="imageVisible && showCaption" class="caption" style="display: flex">
           <h2 class="thumb-title">{{ currentBlog.current_title }}</h2>
           <p class="thumb-desc">{{ currentBlog.current_desc }}</p>
           <ul class="tag-meta">
@@ -148,12 +203,6 @@
               class="tag-time detail-tag"
             >
               {{ currentBlog.current_metadata }}
-            </a>
-            <a
-              v-if="detail_show_time && isValueNotEmpty(currentBlog.current_detail_time)"
-              class="tag-time detail-tag"
-            >
-              {{ currentBlog.current_detail_time }}
             </a>
           </ul>
           <ul class="tags">
@@ -208,6 +257,7 @@
 <script setup>
 import { throttle } from 'lodash'
 import ImageOptimized from './ImageOptimized.vue'
+import VideoOptimized from './VideoOptimized.vue'
 import { useSettingStore } from '@/store'
 import api from '@/api'
 import { isValueNotEmpty, isValueEmpty, scrollToload, parseDateTime, formatDateTime } from '@/utils'
@@ -240,6 +290,7 @@ const isFirstLoad = ref(false) // 移除复杂的首次加载判断
 const loadedImageCount = ref(0) // 已加载图片数量
 const totalImageCount = ref(0) // 总图片数量
 const isImagesLoading = ref(false) // 图片是否正在加载
+const loadingProgress = ref(0) // 加载进度
 const currentBlog = ref(null)
 const currentSize = ref({
   width: Math.min(400, window.innerWidth - 40),
@@ -253,6 +304,7 @@ const imageTransitioning = ref(false)
 const nextImageUrl = ref('')
 const preloadedImages = ref(new Map()) // 预加载的图片缓存
 const imageLoadingPromises = ref(new Map()) // 正在加载的图片Promise缓存
+const showCaption = ref(true) // 控制caption显示/隐藏
 
 // 触摸滑动相关变量
 const touchStartX = ref(0)
@@ -297,6 +349,11 @@ var detail_time_format =
     : 'YYYY-MM-DD HH:mm'
 
 function updateAttr(blog) {
+  // 如果是视频类型，不需要处理images数组
+  if (blog.content_type === 'video') {
+    return
+  }
+  
   // 安全检查：确保images数组存在且不为空
   if (!blog.images || blog.images.length === 0) {
     console.warn('Blog images array is empty or undefined:', blog)
@@ -1093,22 +1150,44 @@ async function getBlogs(silentError = false) {
 function formatBlogs() {
   for (let i = 0; i < blogs.value.length; i++) {
     var blog = blogs.value[i]
-    blog.currentIndex = 0
-    blog.detail_image_urls = []
-    for (var index in blog.images) {
-      var image = blog.images[index]
-      // 优化缩略图URL生成，如果没有缩略图后缀则使用原图
-      image.thumbnail = thumbnail_suffix ? image.image_url + thumbnail_suffix : image.image_url
-      image.detail = image.image_url + detail_suffix
-      if (image.time) {
-        image.detail_time = formatDateTime(parseDateTime(image.time), detail_time_format)
+    
+    if (blog.content_type === 'image') {
+      // 处理图片博客
+      blog.currentIndex = 0
+      blog.detail_image_urls = []
+      for (var index in blog.images) {
+        var image = blog.images[index]
+        // 优化缩略图URL生成，如果没有缩略图后缀则使用原图
+        image.thumbnail = thumbnail_suffix ? image.image_url + thumbnail_suffix : image.image_url
+        image.detail = image.image_url + detail_suffix
+        if (image.time) {
+          image.detail_time = formatDateTime(parseDateTime(image.time), detail_time_format)
+        }
+        blog.detail_image_urls.push(image.detail)
       }
-      blog.detail_image_urls.push(image.detail)
+      var time = parseDateTime(blog.time)
+      blog.thumbnail_time = formatDateTime(time, thumbnail_time_format)
+      blog.detail_time = formatDateTime(time, detail_time_format)
+      updateAttr(blog)
+    } else if (blog.content_type === 'video') {
+      // 处理视频博客
+      blog.currentIndex = 0
+      blog.detail_image_urls = []
+      
+      // 为视频设置当前属性
+      blog.current_thumbnail = blog.cover_url || blog.video_url
+      blog.current_detail = blog.video_url
+      blog.current_desc = blog.desc
+      blog.current_title = blog.title
+      blog.current_location = blog.location
+      blog.current_full_location = blog.location
+      
+      var time = parseDateTime(blog.time)
+      blog.thumbnail_time = formatDateTime(time, thumbnail_time_format)
+      blog.detail_time = formatDateTime(time, detail_time_format)
+      blog.current_detail_time = blog.detail_time
+      blog.current_metadata = blog.detail_time
     }
-    var time = parseDateTime(blog.time)
-    blog.thumbnail_time = formatDateTime(time, thumbnail_time_format)
-    blog.detail_time = formatDateTime(time, detail_time_format)
-    updateAttr(blog)
   }
 
   // 简化预加载逻辑
@@ -1133,6 +1212,74 @@ function onImageLoadComplete() {
   if (loadedImageCount.value >= totalImageCount.value) {
     isImagesLoading.value = false
   }
+}
+
+// 处理视频加载完成事件
+function onVideoLoaded() {
+  loadedImageCount.value++
+  if (loadedImageCount.value >= totalImageCount.value) {
+    isImagesLoading.value = false
+  }
+}
+
+// 显示视频播放器
+function showVideo(blog) {
+  currentBlog.value = blog
+  imageVisible.value = false
+  imageTransitioning.value = true
+
+  // 设置视频播放器的尺寸
+  const maxWidth = Math.min(window.innerWidth - 40, 1200)
+  const maxHeight = Math.min(window.innerHeight - 40, 800)
+  
+  // 计算16:9的比例
+  let width = maxWidth
+  let height = width * 9 / 16
+  
+  if (height > maxHeight) {
+    height = maxHeight
+    width = height * 16 / 9
+  }
+  
+  currentSize.value = { width, height }
+  
+  // 设置视频源
+  if (blog.video_type === 'bilibili' || blog.video_url.includes('bilibili.com')) {
+    // 转换B站URL为嵌入格式
+    const bvMatch = blog.video_url.match(/\/video\/(BV[a-zA-Z0-9]+)/)
+    if (bvMatch) {
+      imageSrc.value = `https://player.bilibili.com/player.html?bvid=${bvMatch[1]}&autoplay=1`
+    } else {
+      imageSrc.value = blog.video_url
+    }
+  } else if (blog.video_type === 'youtube' || blog.video_url.includes('youtube.com') || blog.video_url.includes('youtu.be')) {
+    // 转换YouTube URL为嵌入格式
+    let videoId = ''
+    if (blog.video_id) {
+      videoId = blog.video_id
+    } else {
+      // 从URL中提取video ID
+      const youtubeMatch = blog.video_url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]+)/)
+      if (youtubeMatch) {
+        videoId = youtubeMatch[1]
+      }
+    }
+    if (videoId) {
+      imageSrc.value = `https://www.youtube.com/embed/${videoId}`
+    } else {
+      imageSrc.value = blog.video_url
+    }
+  } else {
+    imageSrc.value = blog.video_url
+  }
+  nextImageUrl.value = imageSrc.value
+  
+  show.value = true
+  
+  setTimeout(() => {
+    imageTransitioning.value = false
+    imageVisible.value = true
+  }, 100)
 }
 
 async function getCategory() {
@@ -1256,6 +1403,21 @@ watch(
   transition: transform 0.3s ease;
   position: relative;
   z-index: 1;
+}
+
+.video-player {
+  width: 100%;
+  height: 100%;
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  display: block;
+  margin: 0 auto;
+  border-radius: 16px;
+  transition: transform 0.3s ease;
+  position: relative;
+  z-index: 1;
+  background: #000;
 }
 
 .lightbox-content .pic {
@@ -1475,10 +1637,46 @@ watch(
 .lightbox-content .download-button svg {
   display: block;
   margin: 0;
+}
+
+.lightbox-content .caption-toggle-button {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  background: rgba(0, 0, 0, 0.4);
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  cursor: pointer;
+  height: 44px;
+  width: 44px;
+  opacity: 0.7;
+  position: absolute;
+  right: 80px;
+  bottom: 20px;
+  z-index: 20003;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  backdrop-filter: blur(10px);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+}
+
+.lightbox-content .caption-toggle-button:hover {
+  opacity: 1;
+  background: rgba(0, 0, 0, 0.8);
+  transform: scale(1.05);
+}
+
+.lightbox-content .caption-toggle-button svg {
+  display: block;
+  margin: 0;
   position: absolute;
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
+}
+
+.lightbox-content:hover .caption-toggle-button {
+  opacity: 1;
 }
 
 .lightbox-content .download-button:hover {
@@ -1559,13 +1757,7 @@ watch(
 }
 
 .lightbox-content .caption {
-  padding: 2em 2em 0.1em;
-  background: linear-gradient(to top, 
-    rgba(0, 0, 0, 0.8) 0%, 
-    rgba(0, 0, 0, 0.6) 40%, 
-    rgba(0, 0, 0, 0.2) 70%, 
-    transparent 100%);
-  backdrop-filter: blur(10px);
+  padding: 1em 2em;
   bottom: 0rem;
   cursor: default;
   left: 0;
@@ -1573,7 +1765,6 @@ watch(
   text-align: left;
   width: 100%;
   z-index: 2;
-  padding-bottom: 2rem;
   display: flex;
   flex-direction: column;
   border-bottom-left-radius: 16px;

@@ -421,7 +421,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="min-h-screen max-h-screen overflow-y-auto overflow-x-hidden">
+  <div class="batch-upload-container">
     <NCard title="批量上传" class="mt-4">
     <!-- 已上传图片卡片展示 -->
     <div v-if="uploadedImages.length > 0" class="mb-6">
@@ -535,8 +535,8 @@ onMounted(() => {
         <div style="margin-bottom: 12px">
           <TheIcon icon="material-symbols:cloud-upload" :size="48" color="#409eff" />
         </div>
-        <div class="text-2xl font-medium mb-2">点击或拖拽文件到此区域上传</div>
-        <div class="text-lg text-gray-500">
+        <div class="text-4xl font-medium mb-2">点击或拖拽文件到此区域上传</div>
+        <div class="text-2xl text-gray-500">
           支持单个或批量上传，支持 JPG、PNG、GIF、WebP 等格式
           <br>
           当前存储方式：{{ isLocalStorage ? '本地存储' : '云端存储' }}
@@ -546,7 +546,7 @@ onMounted(() => {
     
     <div v-else class="text-center p-4 bg-gray-800 text-gray-200 rounded mb-4">
       <TheIcon icon="material-symbols:warning" :size="24" color="#f56c6c" class="mb-2" />
-      <div class="text-lg">图片上传功能未启用，请先在 <strong>系统管理 → 存储设置</strong> 中开启图片上传功能</div>
+      <div class="text-2xl">图片上传功能未启用，请先在 <strong>系统管理 → 存储设置</strong> 中开启图片上传功能</div>
     </div>
 
 
@@ -724,6 +724,33 @@ onMounted(() => {
 </template>
 
 <style scoped>
+.batch-upload-container {
+  min-height: 100vh;
+  max-height: 100vh;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+/* 自定义滚动条样式 */
+.batch-upload-container::-webkit-scrollbar {
+  width: 8px;
+}
+
+.batch-upload-container::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 4px;
+}
+
+.batch-upload-container::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 4px;
+  transition: background 0.3s ease;
+}
+
+.batch-upload-container::-webkit-scrollbar-thumb:hover {
+  background: #a8a8a8;
+}
+
 .image-item {
   transition: all 0.3s ease;
 }

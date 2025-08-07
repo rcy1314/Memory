@@ -30,6 +30,18 @@ class Blog(BaseModel, TimestampMixin):
         blog_dict["images"] = images
         return blog_dict
 
+    async def to_dict_with_media(self, m2m=False):
+        blog_dict = await self.to_dict(m2m)
+        blog_dict["images"] = [await image.to_dict() for image in self.images]
+        blog_dict["videos"] = [await video.to_dict() for video in self.videos]
+        images = blog_dict.get("images", [])
+        videos = blog_dict.get("videos", [])
+        images.sort(key=lambda x: x["order"])
+        videos.sort(key=lambda x: x["order"])
+        blog_dict["images"] = images
+        blog_dict["videos"] = videos
+        return blog_dict
+
 
 class BlogImage(BaseModel, TimestampMixin):
     blog = fields.ForeignKeyField(
@@ -51,6 +63,34 @@ class BlogImage(BaseModel, TimestampMixin):
 
     class Meta:
         table = "blog_image"
+
+
+class BlogVideo(BaseModel, TimestampMixin):
+    blog = fields.ForeignKeyField(
+        "models.Blog", related_name="videos", description="所属博客"
+    )
+    video_url = fields.TextField(null=False, description="视频地址")
+    video_type = fields.CharField(
+        max_length=20, default="direct", description="视频类型：direct(直链)、bilibili、youtube"
+    )
+    cover_url = fields.TextField(null=True, description="视频封面地址")
+    title = fields.CharField(
+        max_length=100, null=True, description="视频标题，留空则使用博客标题"
+    )
+    desc = fields.TextField(null=True, description="视频描述，留空则使用博客描述")
+    location = fields.TextField(
+        null=True,
+        description="视频的具体位置，如果和博客位置相同则留空",
+    )
+    time = fields.DatetimeField(null=True, description="视频时间，留空则使用博客时间")
+    is_hidden = fields.BooleanField(default=False, description="是否隐藏此视频")
+    metadata = fields.JSONField(null=True, description="视频元数据，如时长、分辨率等")
+    order = fields.IntField(default=0, description="排序")
+    video_id = fields.CharField(max_length=50, null=True, description="第三方平台视频ID")
+    duration = fields.IntField(null=True, description="视频时长（秒）")
+
+    class Meta:
+        table = "blog_video"
 
 
 class Category(BaseModel, TimestampMixin):

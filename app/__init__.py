@@ -178,9 +178,20 @@ register_exceptions(app)
 register_routers(app, prefix="/api")
 
 
-@app.exception_handler(404)
 @app.get("/")
-async def index(request=None, exc=None):
+async def index():
+    return HTMLResponse(
+        content=open(f"./dist/index.html", "r", encoding="utf-8").read(),
+        media_type="text/html",
+        headers={"Cache-Control": "public, max-age=300"},
+    )
+
+@app.exception_handler(404)
+async def not_found_handler(request, exc):
+    # 只对非API路径返回前端页面
+    if request.url.path.startswith("/api/"):
+        from fastapi import HTTPException
+        raise HTTPException(status_code=404, detail="API endpoint not found")
     return HTMLResponse(
         content=open(f"./dist/index.html", "r", encoding="utf-8").read(),
         media_type="text/html",

@@ -13,6 +13,10 @@ import {
   NModal,
   NTag,
   NTreeSelect,
+  NTabs,
+  NTabPane,
+  NSelect,
+  NInputNumber,
   c,
 } from 'naive-ui'
 import * as exifr from 'exifr'
@@ -25,6 +29,7 @@ import { useI18n } from 'vue-i18n'
 import { formatDate, renderIcon, isValueNotEmpty } from '@/utils'
 import { useCRUD } from '@/composables'
 import api from '@/api'
+import { request } from '@/utils'
 import { useSettingStore } from '@/store'
 import { formatDateTime } from '@/utils'
 const options = ref([])
@@ -54,6 +59,8 @@ const imageForm = ref({
   is_hidden: false,
   metadata: null,
 })
+
+const activeTab = ref('images')
 
 // 编辑按钮点击
 const editImage = (index) => {
@@ -105,6 +112,8 @@ const handleSaveImage = () => {
   }
   showAddImageModal.value = false
 }
+
+
 
 const initForm = {
   order: 1,
@@ -557,20 +566,23 @@ api.getOrderOptionVisitor().then((res) => {
             show-count
           />
         </NFormItem>
-        <NFormItem
-          label="图片列表"
-          path="images"
-          :rule="{
-            required: true,
-            trigger: ['change', 'blur'],
-            validator: (rule, value) => {
-              if (!Array.isArray(value) || value.length === 0) {
-                return new Error('请至少上传一张图片')
-              }
-              return true
-            },
-          }"
-        >
+        <NTabs v-model:value="activeTab" type="line">
+          <NTabPane name="images" tab="图片管理">
+            <NFormItem
+              label="图片列表"
+              path="media"
+              :rule="{
+                required: true,
+                trigger: ['change', 'blur'],
+                validator: (rule, value) => {
+                  const hasImages = modalForm.images && modalForm.images.length > 0
+                  if (!hasImages) {
+                    return new Error('请至少添加一张图片')
+                  }
+                  return true
+                },
+              }"
+            >
           <div class="image-grid">
             <draggable
               class="image-draggable"
@@ -648,11 +660,11 @@ api.getOrderOptionVisitor().then((res) => {
                   >
                     <template #trigger>
                       <NInput
-                        v-model:value="imageForm.image_url"
-                        type="text"
-                        placeholder="请输入图片地址"
-                        clearable
-                      />
+                    v-model:value="imageForm.image_url"
+                    type="text"
+                    placeholder="请输入图片地址"
+                    clearable
+                  />
                     </template>
                     <NImage
                       v-if="imageForm.image_url != undefined && imageForm.image_url != ''"
@@ -752,10 +764,14 @@ api.getOrderOptionVisitor().then((res) => {
               </NFormItem>
             </n-form>
             <template #action>
-              <n-button @click="handleSaveImage">保存</n-button>
-            </template>
-          </NModal>
-        </NFormItem>
+                <n-button @click="handleSaveImage">保存</n-button>
+              </template>
+            </NModal>
+            </NFormItem>
+          </NTabPane>
+          
+
+        </NTabs>
         <NFormItem label="描述" path="desc">
           <NInput
             v-model:value="modalForm.desc"
@@ -805,6 +821,9 @@ api.getOrderOptionVisitor().then((res) => {
         </NFormItem>
       </NForm>
     </CrudModal>
+    
+    <!-- 视频预览模态框 -->
+
   </CommonPage>
 </template>
 <style>
@@ -879,4 +898,6 @@ api.getOrderOptionVisitor().then((res) => {
 .add-card:hover {
   background-color: #f1f1f1;
 }
+
+
 </style>

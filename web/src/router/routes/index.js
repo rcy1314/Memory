@@ -116,6 +116,17 @@ export const basicRoutes = [
       {
         is_hidden: false,
         keepalive: true,
+        path: 'video',
+        component: () => import('@/views/content/video/index.vue'),
+        name: '视频列表',
+        meta: {
+          title: '视频列表',
+          icon: 'mdi:video-outline',
+        },
+      },
+      {
+        is_hidden: false,
+        keepalive: true,
         path: 'category',
         component: () => import('@/views/content/category/index.vue'),
         name: '分类列表',

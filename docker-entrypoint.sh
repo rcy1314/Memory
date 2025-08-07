@@ -32,6 +32,12 @@ echo "数据目录状态:"
 ls -la /app/data/
 
 echo "数据目录初始化完成"
+
+# 运行数据库迁移
+echo "运行数据库迁移..."
+python -m migrations.migrations_001
+echo "数据库迁移完成"
+
 echo "启动应用..."
 
 # 启动应用

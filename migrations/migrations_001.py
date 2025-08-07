@@ -32,10 +32,13 @@ async def migrate():
         # 3. 创建API Token表（如果不存在）
         await _create_api_token_table(conn)
 
-        # 4. 初始化默认设置
+        # 4. 确保blog_video表存在
+        await _create_blog_video_table(conn)
+
+        # 5. 初始化默认设置
         await _init_default_settings()
 
-        # 5. 为现有用户创建默认API Token
+        # 6. 为现有用户创建默认API Token
         await _create_default_tokens()
 
         print("数据库迁移和初始化完成")
@@ -95,6 +98,59 @@ async def _create_api_token_table(conn):
         
     except Exception as e:
         print(f"创建 api_token 表失败: {str(e)}")
+        raise
+
+
+async def _create_blog_video_table(conn):
+    """创建blog_video表"""
+    try:
+        # 检查表是否已存在
+        result = await conn.execute_query(
+            "SELECT name FROM sqlite_master WHERE type='table' AND name='blog_video'"
+        )
+        
+        if len(result[1]) > 0:
+            print("blog_video 表已存在，跳过创建")
+            return
+
+        print("创建 blog_video 表...")
+        
+        # 创建表
+        await conn.execute_query("""
+            CREATE TABLE IF NOT EXISTS "blog_video" (
+                "id" INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                "created_at" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                "updated_at" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                "video_url" TEXT NOT NULL,
+                "video_type" VARCHAR(20) NOT NULL DEFAULT 'direct',
+                "cover_url" TEXT,
+                "title" VARCHAR(100),
+                "desc" TEXT,
+                "location" TEXT,
+                "time" TIMESTAMP,
+                "is_hidden" INT NOT NULL DEFAULT 0,
+                "metadata" JSON,
+                "order" INT NOT NULL DEFAULT 0,
+                "video_id" VARCHAR(50),
+                "duration" INT,
+                "blog_id" INT NOT NULL REFERENCES "blog" ("id") ON DELETE CASCADE
+            )
+        """)
+        
+        # 创建索引
+        index_sqls = [
+            "CREATE INDEX IF NOT EXISTS idx_blog_video_blog_id ON blog_video (blog_id)",
+            "CREATE INDEX IF NOT EXISTS idx_blog_video_is_hidden ON blog_video (is_hidden)",
+            "CREATE INDEX IF NOT EXISTS idx_blog_video_order ON blog_video (\"order\")"
+        ]
+        
+        for sql in index_sqls:
+            await conn.execute_query(sql)
+        
+        print("blog_video 表创建成功")
+        
+    except Exception as e:
+        print(f"创建 blog_video 表失败: {str(e)}")
         raise
 
 

@@ -91,7 +91,7 @@ docker run -d \
   noise233/memory:latest
 ```
 
-连接 Neon 数据库的 Docker 运行命令
+连接 Neon 免费数据库的 Docker 运行命令
 
 ```
 docker run -d \
