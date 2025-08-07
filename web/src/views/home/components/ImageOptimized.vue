@@ -15,6 +15,7 @@
           @load="onImageLoad"
           @error="onImageError"
           :style="{ opacity: imageLoaded ? 1 : 0, transition: 'opacity 0.3s ease-in-out' }"
+          loading="lazy"
         />
         <!-- 合集指示器 -->
         <div v-if="isCollection" class="collection-indicator">
@@ -363,15 +364,14 @@ onUnmounted(() => {
 .thumb-image {
   width: 100%;
   height: auto;
-  min-height: 200px;
   display: block;
   transition: opacity 0.3s ease-in-out;
-  object-fit: cover;
   border-radius: 8px;
-  aspect-ratio: auto;
   /* 优化图片渲染 */
   image-rendering: -webkit-optimize-contrast;
   image-rendering: crisp-edges;
+  /* 让图片保持原始宽高比，不强制裁剪 */
+  object-fit: contain;
 }
 
 .thumb-overlay {
@@ -420,13 +420,17 @@ onUnmounted(() => {
   }
   
   .thumb-image {
-    min-height: 150px;
+    /* 移除min-height，让图片保持原始比例 */
+    object-fit: contain;
+    max-height: 400px;
   }
 }
 
 @media (max-width: 480px) {
   .thumb-image {
-    min-height: 120px;
+    /* 移除min-height，让图片保持原始比例 */
+    object-fit: contain;
+    max-height: 300px;
   }
 }
 

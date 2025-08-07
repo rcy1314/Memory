@@ -123,7 +123,7 @@ onMounted(async () => {
         label-width="100"
         :model="infoForm"
         :rules="infoFormRules"
-        class="w-500"
+        class="form-container"
       >
         <NFormItem :label="$t('views.setting.label_site_url')" path="site_url">
           <NInput
@@ -231,25 +231,25 @@ onMounted(async () => {
             clearable
           />
         </NFormItem>
-        <NFormItem :label="$t('views.setting.label_entries')" path="entries" class="w-800">
+        <NFormItem :label="$t('views.setting.label_entries')" path="entries" class="dynamic-input-container">
           <n-dynamic-input v-model:value="infoForm.entries" :on-create="onCreateEntry">
             <template #create-button-default>
               {{ t('views.setting.label_create_entries') }}
             </template>
             <template #default="{ value }">
-              <div style="display: flex; align-items: center; width: 100%">
+              <div class="entry-input-row">
                 <n-input
                   v-model:value="value.name"
                   :placeholder="$t('views.setting.placeholder_entry_name')"
                   type="text"
-                  style="margin-left: 5px"
+                  class="entry-input"
                 />
-                <IconPicker v-model:value="value.icon" style="margin-left: 5px" />
+                <IconPicker v-model:value="value.icon" class="entry-icon-picker" />
                 <n-input
                   v-model:value="value.url"
                   :placeholder="$t('views.setting.placeholder_entry_url')"
                   type="text"
-                  style="margin-left: 5px"
+                  class="entry-input"
                 />
               </div>
             </template>
@@ -278,11 +278,11 @@ onMounted(async () => {
           <NSwitch v-model:value="infoForm.hero_show_controls" />
         </NFormItem>
 
-        <NFormItem label="封面图片" path="hero_images" class="w-800">
+        <NFormItem label="封面图片" path="hero_images" class="dynamic-input-container">
           <n-dynamic-input v-model:value="infoForm.hero_images" :on-create="onCreateHeroImage">
             <template #create-button-default> 添加封面图片 </template>
             <template #default="{ value }">
-              <div style="display: flex; flex-direction: column; width: 100%; gap: 10px">
+              <div class="hero-image-inputs">
                 <n-input v-model:value="value.url" placeholder="图片地址" type="text" />
                 <n-input v-model:value="value.title" placeholder="图片标题" type="text" />
                 <n-input v-model:value="value.description" placeholder="图片描述" type="text" />
@@ -302,5 +302,81 @@ onMounted(async () => {
 .icon {
   border-radius: 8px;
   margin-bottom: 25px;
+}
+
+/* 响应式表单容器 */
+.form-container {
+  width: 100%;
+  max-width: 500px;
+}
+
+/* 动态输入容器 */
+.dynamic-input-container {
+  width: 100%;
+  max-width: 800px;
+}
+
+/* 条目输入行 */
+.entry-input-row {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.entry-input {
+  flex: 1;
+  min-width: 120px;
+}
+
+.entry-icon-picker {
+  flex-shrink: 0;
+}
+
+/* 封面图片输入 */
+.hero-image-inputs {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  gap: 10px;
+}
+
+/* 小屏幕适配 */
+@media (max-width: 768px) {
+  .form-container {
+    max-width: 100%;
+    width: 100%;
+  }
+  
+  .dynamic-input-container {
+    max-width: 100%;
+    width: 100%;
+  }
+  
+  .entry-input-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .entry-input {
+    width: 100%;
+    min-width: unset;
+  }
+  
+  .entry-icon-picker {
+    width: 100%;
+  }
+}
+
+/* 超小屏幕适配 */
+@media (max-width: 480px) {
+  .m-30 {
+    margin: 15px;
+  }
+  
+  .form-container {
+    padding: 0;
+  }
 }
 </style>
