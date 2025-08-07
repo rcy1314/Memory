@@ -1,21 +1,22 @@
 <template>
-  <div class="video-management">
-    <n-card title="视频管理" :bordered="false" size="huge" role="dialog">
+  <div class="video-management mobile-video-management">
+    <n-card title="视频管理" :bordered="false" size="huge" role="dialog" class="mobile-card">
       <template #header-extra>
-        <n-button type="primary" @click="showAddModal = true">
+        <n-button type="primary" @click="showAddModal = true" class="mobile-add-btn">
           <template #icon>
             <n-icon><AddIcon /></n-icon>
           </template>
-          添加视频
+          <span class="mobile-hidden">添加视频</span>
+          <span class="mobile-only">添加</span>
         </n-button>
       </template>
 
       <!-- 视频列表 -->
-      <div class="video-grid">
+      <div class="video-grid mobile-video-grid">
         <div
           v-for="(video, index) in videoList"
           :key="video.id || index"
-          class="video-item"
+          class="video-item mobile-video-item"
         >
           <div class="video-preview" @click="previewVideo(video)">
             <img
@@ -49,11 +50,11 @@
             </div>
           </div>
           
-          <div class="video-actions">
-            <n-button size="small" @click="editVideo(video, index)">
+          <div class="video-actions mobile-video-actions">
+            <n-button size="small" @click="editVideo(video, index)" class="mobile-action-btn">
               编辑
             </n-button>
-            <n-button size="small" type="error" @click="deleteVideo(index)">
+            <n-button size="small" type="error" @click="deleteVideo(index)" class="mobile-action-btn">
               删除
             </n-button>
           </div>
@@ -807,5 +808,95 @@ onMounted(() => {
   gap: 20px;
   color: #999;
   font-size: 14px;
+}
+
+/* 移动端视频管理优化 */
+@media (max-width: 768px) {
+  .mobile-video-management {
+    padding: 8px;
+  }
+  
+  .mobile-card {
+    margin: 0;
+  }
+  
+  .mobile-card .n-card__header {
+    padding: 12px 16px;
+  }
+  
+  .mobile-card .n-card__content {
+    padding: 12px 16px;
+  }
+  
+  .mobile-add-btn {
+    padding: 6px 12px !important;
+    font-size: 12px !important;
+  }
+  
+  .mobile-video-grid {
+    grid-template-columns: 1fr !important;
+    gap: 12px !important;
+  }
+  
+  .mobile-video-item {
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  }
+  
+  .mobile-video-item .video-preview {
+    height: 200px !important;
+  }
+  
+  .mobile-video-item .video-info {
+    padding: 8px !important;
+  }
+  
+  .mobile-video-item .video-title {
+    font-size: 14px !important;
+    margin-bottom: 4px;
+  }
+  
+  .mobile-video-item .video-desc {
+    font-size: 11px !important;
+    margin-bottom: 6px;
+  }
+  
+  .mobile-video-actions {
+    padding: 6px 8px !important;
+    gap: 6px !important;
+  }
+  
+  .mobile-action-btn {
+    padding: 4px 8px !important;
+    font-size: 11px !important;
+    flex: 1;
+  }
+}
+
+@media (max-width: 480px) {
+  .mobile-video-management {
+    padding: 4px;
+  }
+  
+  .mobile-card .n-card__header {
+    padding: 8px 12px;
+  }
+  
+  .mobile-card .n-card__content {
+    padding: 8px 12px;
+  }
+  
+  .mobile-video-item .video-preview {
+    height: 160px !important;
+  }
+  
+  .mobile-video-item .video-title {
+    font-size: 13px !important;
+  }
+  
+  .mobile-video-item .video-desc {
+    font-size: 10px !important;
+  }
 }
 </style>

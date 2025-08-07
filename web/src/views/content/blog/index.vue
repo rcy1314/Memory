@@ -473,63 +473,74 @@ api.getOrderOptionVisitor().then((res) => {
       :columns="columns"
       :get-data="api.getBlogs"
       @update:query-items="resetQuery"
+      class="mobile-table"
     >
       <template #queryBar>
-        <QueryBarItem label="标题" :label-width="40">
-          <NInput
-            v-model:value="queryItems.title"
-            clearable
-            type="text"
-            placeholder="请输入图片标题"
-            @keypress.enter="$table?.handleSearch()"
-          />
-        </QueryBarItem>
-        <QueryBarItem label="描述" :label-width="40">
-          <NInput
-            v-model:value="queryItems.desc"
-            clearable
-            type="text"
-            placeholder="请输入图片描述"
-            @keypress.enter="$table?.handleSearch()"
-          />
-        </QueryBarItem>
-        <QueryBarItem label="地点" :label-width="40">
-          <n-auto-complete
-            v-model:value="queryItems.location"
-            :input-props="{
-              autocomplete: 'enabled',
-            }"
-            :options="locations"
-            placeholder="请输入图片地点"
-            clearable
-            filterable
-            @search="getLocations"
-            @keypress.enter="$table?.handleSearch()"
-          />
-        </QueryBarItem>
-        <QueryBarItem label="排序" :label-width="40" style="width: 264px">
-          <n-select
-            v-model:value="queryItems.order_option"
-            :options="options"
-            style="width: 224px"
-            @keypress.enter="$table?.handleSearch()"
-            @update:value="$table?.handleSearch()"
-          />
-        </QueryBarItem>
-        <QueryBarItem label="分类" :label-width="40" style="width: 264px">
-          <NTreeSelect
-            v-model:value="queryItems.categories"
-            key-field="id"
-            label-field="name"
-            :options="categoryTreeOptions"
-            checkable
-            multiple
-            default-expand-all
-            style="width: 224px"
-            @click="getTreeSelect"
-            @update:value="$table?.handleSearch()"
-          />
-        </QueryBarItem>
+        <div class="query-bar mobile-query-bar">
+          <QueryBarItem label="标题" :label-width="40" class="query-bar-item">
+            <NInput
+              v-model:value="queryItems.title"
+              clearable
+              type="text"
+              placeholder="请输入图片标题"
+              @keypress.enter="$table?.handleSearch()"
+            />
+          </QueryBarItem>
+          <QueryBarItem label="描述" :label-width="40" class="query-bar-item">
+            <NInput
+              v-model:value="queryItems.desc"
+              clearable
+              type="text"
+              placeholder="请输入图片描述"
+              @keypress.enter="$table?.handleSearch()"
+            />
+          </QueryBarItem>
+          <QueryBarItem label="地点" :label-width="40" class="query-bar-item">
+            <n-auto-complete
+              v-model:value="queryItems.location"
+              :input-props="{
+                autocomplete: 'enabled',
+              }"
+              :options="locations"
+              placeholder="请输入图片地点"
+              clearable
+              filterable
+              @search="getLocations"
+              @keypress.enter="$table?.handleSearch()"
+            />
+          </QueryBarItem>
+          <QueryBarItem label="排序" :label-width="40" class="query-bar-item mobile-full-width">
+            <n-select
+              v-model:value="queryItems.order_option"
+              :options="options"
+              class="mobile-full-width"
+              @keypress.enter="$table?.handleSearch()"
+              @update:value="$table?.handleSearch()"
+            />
+          </QueryBarItem>
+          <QueryBarItem label="分类" :label-width="40" class="query-bar-item mobile-full-width">
+            <NTreeSelect
+              v-model:value="queryItems.categories"
+              key-field="id"
+              label-field="name"
+              :options="categoryTreeOptions"
+              checkable
+              multiple
+              default-expand-all
+              class="mobile-full-width"
+              @click="getTreeSelect"
+              @update:value="$table?.handleSearch()"
+            />
+          </QueryBarItem>
+          <div class="query-actions mobile-full-width">
+            <NButton type="primary" @click="$table?.handleSearch()" class="mobile-full-width">
+              搜索
+            </NButton>
+            <NButton @click="$table?.handleReset()" class="mobile-full-width">
+              重置
+            </NButton>
+          </div>
+        </div>
       </template>
     </CrudTable>
 
@@ -837,20 +848,14 @@ api.getOrderOptionVisitor().then((res) => {
 }
 
 .image-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  display: flex;
+  flex-wrap: wrap;
   gap: 10px;
 }
 
 .image-draggable {
   display: contents;
   /* 让 draggable 元素不破坏 grid 布局 */
-}
-
-.image-grid {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
 }
 
 .image-card {
@@ -897,6 +902,75 @@ api.getOrderOptionVisitor().then((res) => {
 
 .add-card:hover {
   background-color: #f1f1f1;
+}
+
+/* 移动端查询栏优化 */
+@media (max-width: 768px) {
+  .mobile-query-bar {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  
+  .query-bar-item {
+    width: 100% !important;
+    margin-bottom: 0 !important;
+  }
+  
+  .query-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 8px;
+  }
+  
+  .query-actions .n-button {
+    flex: 1;
+  }
+}
+
+/* 移动端表格优化 */
+@media (max-width: 768px) {
+  .mobile-table {
+    overflow-x: auto;
+  }
+  
+  .mobile-table .n-data-table-wrapper {
+    min-width: 600px;
+  }
+}
+
+/* 移动端图片网格优化 */
+@media (max-width: 768px) {
+  .image-grid {
+    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)) !important;
+    gap: 8px !important;
+  }
+  
+  .image-card {
+    width: 100px !important;
+    height: 100px !important;
+  }
+  
+  .image-card .image-actions {
+    top: 2px !important;
+    right: 2px !important;
+  }
+  
+  .image-card .image-action {
+    width: 24px !important;
+    height: 24px !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .image-grid {
+    grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)) !important;
+  }
+  
+  .image-card {
+    width: 80px !important;
+    height: 80px !important;
+  }
 }
 
 

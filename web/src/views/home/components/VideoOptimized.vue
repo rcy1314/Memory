@@ -4,7 +4,7 @@
       <!-- 视频封面 -->
       <div class="video-cover">
         <img 
-          :src="data.cover_url || data.video_url" 
+          :src="getProxiedImageUrl(data.current_thumbnail || data.cover_url || data.video_url)" 
           :alt="data.title || '视频封面'"
           @load="onCoverLoad"
           @error="onCoverError"
@@ -59,13 +59,23 @@ const emit = defineEmits(['click', 'video-loaded'])
 
 const videoLoaded = ref(false)
 
+// 处理封面图片URL，使用代理解决跨域问题
+function getProxiedImageUrl(url) {
+  if (!url) return ''
+  // 检查是否是B站或YouTube图片
+  if (url.includes('hdslb.com') || url.includes('img.youtube.com')) {
+    return `/api/v1/blog/proxy-image?url=${encodeURIComponent(url)}`
+  }
+  return url
+}
+
 function onCoverLoad() {
   videoLoaded.value = true
   emit('video-loaded')
 }
 
 function onCoverError() {
-  console.warn('视频封面加载失败:', props.data.cover_url)
+  console.warn('视频封面加载失败:', props.data.current_thumbnail || props.data.cover_url)
   videoLoaded.value = true
   emit('video-loaded')
 }

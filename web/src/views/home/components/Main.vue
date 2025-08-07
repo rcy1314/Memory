@@ -199,10 +199,10 @@
               {{ currentBlog.current_full_location }}
             </router-link>
             <a
-              v-if="detail_show_time && isValueNotEmpty(currentBlog.current_metadata)"
+              v-if="detail_show_time && isValueNotEmpty(currentBlog.current_detail_time)"
               class="tag-time detail-tag"
             >
-              {{ currentBlog.current_metadata }}
+              {{ currentBlog.current_detail_time }}
             </a>
           </ul>
           <ul class="tags">
@@ -346,7 +346,7 @@ var detail_time_format =
   settingStore.contentSetting.detail_time_format &&
   settingStore.contentSetting.detail_time_format != ''
     ? settingStore.contentSetting.detail_time_format
-    : 'YYYY-MM-DD HH:mm'
+    : 'YYYY-MM-DD'
 
 function updateAttr(blog) {
   // 如果是视频类型，不需要处理images数组
@@ -942,6 +942,7 @@ async function showImage(blog) {
   currentBlog.value = blog
   imageVisible.value = false
   imageTransitioning.value = true
+  showCaption.value = true // 图片查看时默认显示文本描述信息
 
   // 为lightbox生成优化的缩略图URL以提高加载速度
   const originalImageUrl = blog.current_detail
@@ -1227,6 +1228,7 @@ function showVideo(blog) {
   currentBlog.value = blog
   imageVisible.value = false
   imageTransitioning.value = true
+  showCaption.value = false // 视频播放时默认隐藏文本描述信息
 
   // 设置视频播放器的尺寸
   const maxWidth = Math.min(window.innerWidth - 40, 1200)
@@ -1998,6 +2000,21 @@ ul.tags {
   }
 }
 
+@media screen and (max-width: 768px) {
+  .lightbox-content .caption h2,
+  .lightbox-content .caption .thumb-title {
+    font-size: 18px !important;
+  }
+  
+  .lightbox-content .caption .thumb-desc {
+    font-size: 13px !important;
+  }
+  
+  .lightbox-content .caption {
+    padding: 1.5em 1.5em 0.1em 1.5em;
+  }
+}
+
 @media screen and (max-width: 736px) {
   .lightbox-content:before {
     display: none;
@@ -2005,12 +2022,20 @@ ul.tags {
 
   .lightbox-content .caption .thumb-desc {
     margin: 10px 0px 0px 0px;
+    font-size: 12px !important;
+  }
+  
+  .lightbox-content .caption h2,
+  .lightbox-content .caption .thumb-title {
+    font-size: 16px !important;
+    margin-bottom: 8px;
   }
 
   .lightbox-content .caption {
     bottom: 10px;
     position: fixed;
     z-index: 10000;
+    padding: 1.2em 1.2em 0.1em 1.2em;
   }
 
   .lightbox-content .closer,
@@ -2027,6 +2052,22 @@ ul.tags {
 
   .nav-item .nav-item-child {
     top: 30px;
+  }
+}
+
+@media screen and (max-width: 480px) {
+  .lightbox-content .caption h2,
+  .lightbox-content .caption .thumb-title {
+    font-size: 14px !important;
+    margin-bottom: 6px;
+  }
+  
+  .lightbox-content .caption .thumb-desc {
+    font-size: 11px !important;
+  }
+  
+  .lightbox-content .caption {
+    padding: 1em 1em 0.1em 1em;
   }
 }
 

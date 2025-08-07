@@ -1,0 +1,416 @@
+/* 移动端优化样式 */
+
+/* 基础响应式断点 */
+$mobile-breakpoint: 768px;
+$small-mobile-breakpoint: 480px;
+$tablet-breakpoint: 1024px;
+
+/* 移动端基础样式 */
+@media (max-width: $mobile-breakpoint) {
+  /* 确保页面在移动端可以正常滚动 */
+  html, body {
+    overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  /* 防止页面缩放 */
+  body {
+    -webkit-text-size-adjust: 100%;
+    -ms-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+  }
+  
+  /* 移动端字体大小调整 */
+  html {
+    font-size: 3.5px; /* 减小基础字体大小 */
+  }
+  
+  /* 触摸优化 */
+  * {
+    -webkit-tap-highlight-color: transparent;
+    -webkit-touch-callout: none;
+  }
+  
+  /* 按钮和链接的最小触摸区域 */
+  button, a, .clickable {
+    min-height: 44px;
+    min-width: 44px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+}
+
+/* 后台布局移动端优化 */
+@media (max-width: $mobile-breakpoint) {
+  /* 侧边栏优化 */
+  .n-layout-sider {
+    position: fixed !important;
+    top: 0;
+    left: 0;
+    height: 100vh;
+    z-index: 1000;
+    transform: translateX(-100%);
+    transition: transform 0.3s ease;
+    
+    &:not(.n-layout-sider--collapsed) {
+      transform: translateX(0);
+    }
+  }
+  
+  /* 主内容区域适配 */
+  .n-layout:has(.n-layout-sider) {
+    margin-left: 0 !important;
+  }
+  
+  /* 头部导航优化 */
+  .header-container {
+    padding: 0 12px !important;
+    height: 56px !important;
+    
+    /* 隐藏不必要的元素 */
+    .breadcrumb {
+      display: none !important;
+    }
+  }
+  
+  /* 菜单折叠按钮优化 */
+  .menu-collapse {
+    padding: 8px !important;
+    margin-right: 8px !important;
+  }
+  
+  /* 用户头像和操作按钮优化 */
+  .user-avatar, .theme-mode, .preview-btn {
+    padding: 6px !important;
+    margin: 0 4px !important;
+  }
+}
+
+/* 表格移动端优化 */
+@media (max-width: $mobile-breakpoint) {
+  .n-data-table {
+    /* 表格横向滚动 */
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    
+    .n-data-table-wrapper {
+      min-width: 600px; /* 确保表格有最小宽度 */
+    }
+    
+    /* 表格单元格优化 */
+    .n-data-table-td {
+      padding: 8px 6px !important;
+      font-size: 12px !important;
+      white-space: nowrap;
+    }
+    
+    .n-data-table-th {
+      padding: 8px 6px !important;
+      font-size: 12px !important;
+    }
+  }
+  
+  /* 表格操作按钮优化 */
+  .table-actions {
+    .n-button {
+      padding: 4px 8px !important;
+      font-size: 11px !important;
+      margin: 2px !important;
+    }
+  }
+}
+
+/* 表单移动端优化 */
+@media (max-width: $mobile-breakpoint) {
+  .n-form {
+    .n-form-item {
+      margin-bottom: 16px !important;
+      
+      .n-form-item-label {
+        font-size: 13px !important;
+        margin-bottom: 6px !important;
+      }
+    }
+    
+    /* 输入框优化 */
+    .n-input, .n-select, .n-date-picker {
+      font-size: 14px !important;
+      
+      .n-input__input {
+        padding: 10px 12px !important;
+      }
+    }
+    
+    /* 按钮优化 */
+    .n-button {
+      padding: 10px 16px !important;
+      font-size: 14px !important;
+      margin: 4px !important;
+    }
+  }
+}
+
+/* 模态框移动端优化 */
+@media (max-width: $mobile-breakpoint) {
+  .n-modal {
+    .n-card {
+      margin: 16px !important;
+      max-height: calc(100vh - 32px) !important;
+      
+      .n-card__header {
+        padding: 16px !important;
+        font-size: 16px !important;
+      }
+      
+      .n-card__content {
+        padding: 16px !important;
+        max-height: calc(100vh - 120px) !important;
+        overflow-y: auto;
+      }
+      
+      .n-card__footer {
+        padding: 12px 16px !important;
+        
+        .n-button {
+          flex: 1;
+          margin: 0 4px !important;
+        }
+      }
+    }
+  }
+}
+
+/* 图片网格移动端优化 */
+@media (max-width: $mobile-breakpoint) {
+  .image-grid {
+    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)) !important;
+    gap: 8px !important;
+    
+    .image-card {
+      width: 100px !important;
+      height: 100px !important;
+      
+      .image-actions {
+        top: 2px !important;
+        right: 2px !important;
+        
+        .image-action {
+          width: 24px !important;
+          height: 24px !important;
+        }
+      }
+    }
+  }
+}
+
+/* 视频网格移动端优化 */
+@media (max-width: $mobile-breakpoint) {
+  .video-grid {
+    grid-template-columns: 1fr !important;
+    gap: 12px !important;
+    
+    .video-item {
+      .video-preview {
+        height: 200px !important;
+      }
+      
+      .video-info {
+        padding: 8px !important;
+        
+        .video-title {
+          font-size: 14px !important;
+        }
+        
+        .video-desc {
+          font-size: 11px !important;
+        }
+      }
+      
+      .video-actions {
+        padding: 6px 8px !important;
+        
+        .n-button {
+          padding: 4px 8px !important;
+          font-size: 11px !important;
+        }
+      }
+    }
+  }
+}
+
+/* 分页组件移动端优化 */
+@media (max-width: $mobile-breakpoint) {
+  .n-pagination {
+    .n-pagination-item {
+      min-width: 32px !important;
+      height: 32px !important;
+      font-size: 12px !important;
+    }
+    
+    .n-pagination-quick-jumper {
+      display: none !important;
+    }
+    
+    .n-pagination-size-picker {
+      display: none !important;
+    }
+  }
+}
+
+/* 查询栏移动端优化 */
+@media (max-width: $mobile-breakpoint) {
+  .query-bar {
+    flex-direction: column !important;
+    gap: 8px !important;
+    
+    .query-bar-item {
+      width: 100% !important;
+      margin-bottom: 8px !important;
+    }
+    
+    .query-actions {
+      width: 100% !important;
+      justify-content: stretch !important;
+      
+      .n-button {
+        flex: 1 !important;
+        margin: 0 4px !important;
+      }
+    }
+  }
+}
+
+/* 小屏幕设备进一步优化 */
+@media (max-width: $small-mobile-breakpoint) {
+  html {
+    font-size: 3px; /* 进一步减小字体 */
+  }
+  
+  .header-container {
+    height: 48px !important;
+    padding: 0 8px !important;
+  }
+  
+  .n-data-table {
+    .n-data-table-td, .n-data-table-th {
+      padding: 6px 4px !important;
+      font-size: 11px !important;
+    }
+  }
+  
+  .n-form {
+    .n-form-item {
+      margin-bottom: 12px !important;
+    }
+    
+    .n-input, .n-select {
+      .n-input__input {
+        padding: 8px 10px !important;
+      }
+    }
+  }
+  
+  .image-grid {
+    grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)) !important;
+    
+    .image-card {
+      width: 80px !important;
+      height: 80px !important;
+    }
+  }
+}
+
+/* 横屏模式优化 */
+@media (max-width: $mobile-breakpoint) and (orientation: landscape) {
+  .header-container {
+    height: 44px !important;
+  }
+  
+  .n-modal .n-card {
+    max-height: calc(100vh - 16px) !important;
+    margin: 8px !important;
+  }
+}
+
+/* 触摸设备优化 */
+@media (pointer: coarse) {
+  /* 增大可点击区域 */
+  .n-button, .n-input, .n-select {
+    min-height: 40px !important;
+  }
+  
+  /* 优化滚动条 */
+  ::-webkit-scrollbar {
+    width: 8px !important;
+    height: 8px !important;
+  }
+  
+  ::-webkit-scrollbar-thumb {
+    background: rgba(0, 0, 0, 0.3) !important;
+    border-radius: 4px !important;
+  }
+}
+
+/* 暗色模式移动端优化 */
+@media (max-width: $mobile-breakpoint) {
+  [data-theme="dark"] {
+    .n-layout-sider {
+      background: #1a1a1a !important;
+      border-right: 1px solid #333 !important;
+    }
+    
+    .header-container {
+      background: #1a1a1a !important;
+      border-bottom: 1px solid #333 !important;
+    }
+  }
+}
+
+/* 辅助类 */
+.mobile-hidden {
+  @media (max-width: $mobile-breakpoint) {
+    display: none !important;
+  }
+}
+
+.mobile-only {
+  display: none !important;
+  
+  @media (max-width: $mobile-breakpoint) {
+    display: block !important;
+  }
+}
+
+.mobile-flex {
+  @media (max-width: $mobile-breakpoint) {
+    display: flex !important;
+  }
+}
+
+/* 移动端专用工具类 */
+@media (max-width: $mobile-breakpoint) {
+  .mobile-full-width {
+    width: 100% !important;
+  }
+  
+  .mobile-text-center {
+    text-align: center !important;
+  }
+  
+  .mobile-p-2 {
+    padding: 8px !important;
+  }
+  
+  .mobile-m-2 {
+    margin: 8px !important;
+  }
+  
+  .mobile-text-sm {
+    font-size: 12px !important;
+  }
+  
+  .mobile-text-xs {
+    font-size: 11px !important;
+  }
+}

@@ -13,6 +13,7 @@
     :scroll-x="scrollX"
     :row-key="(row) => row[rowKey]"
     :pagination="isPagination ? pagination : false"
+    class="mobile-responsive-table"
     @update:checked-row-keys="onChecked"
     @update:page="onPageChange"
   />
