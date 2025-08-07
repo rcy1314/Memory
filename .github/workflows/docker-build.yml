@@ -74,18 +74,13 @@ jobs:
         run: |
           echo "tag=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
           
-      - name: Create Release with GitHub CLI
-        run: |
-          # Create release
-          gh release create ${{ steps.get_tag.outputs.tag }} \
-            --repo ${{ github.repository }} \
-            --title "Frontend Release ${{ steps.get_tag.outputs.tag }}" \
-            --notes "Automated frontend build release" \
-            --latest
-          
-          # Upload frontend distribution
-          gh release upload ${{ steps.get_tag.outputs.tag }} \
-            --repo ${{ github.repository }} \
-            frontend-dist.tar.gz
+      - name: Create release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: frontend-dist.tar.gz
+          name: "Frontend Release ${{ steps.get_tag.outputs.tag }}"
+          body: "Automated frontend build release"
+          draft: false
+          prerelease: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
