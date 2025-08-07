@@ -15,6 +15,7 @@ import {
   NSpace,
   NDivider,
   NAlert,
+  NProgress,
   useMessage,
 } from 'naive-ui'
 import { useI18n } from 'vue-i18n'
@@ -29,6 +30,21 @@ const settingStore = useSettingStore()
 const isLoading = ref(false)
 const isBackupLoading = ref(false)
 const isDbBackupLoading = ref(false)
+
+// 备份进度条状态
+const backupProgress = ref({
+  show: false,
+  percentage: 0,
+  status: 'default',
+  text: ''
+})
+
+const dbBackupProgress = ref({
+  show: false,
+  percentage: 0,
+  status: 'default',
+  text: ''
+})
 
 // 用户信息的表单
 const infoFormRef = ref(null)
@@ -78,8 +94,35 @@ const isLocalStorage = computed(() => infoForm.value.storage_type === 'local')
 // 备份相册功能
 async function backupPhotos() {
   isBackupLoading.value = true
+  backupProgress.value = {
+    show: true,
+    percentage: 0,
+    status: 'default',
+    text: '正在准备备份...'
+  }
+  
   try {
+    // 模拟进度更新
+    const progressInterval = setInterval(() => {
+      if (backupProgress.value.percentage < 90) {
+        backupProgress.value.percentage += 10
+        if (backupProgress.value.percentage <= 30) {
+          backupProgress.value.text = '正在扫描图片文件...'
+        } else if (backupProgress.value.percentage <= 60) {
+          backupProgress.value.text = '正在压缩文件...'
+        } else {
+          backupProgress.value.text = '正在生成下载包...'
+        }
+      }
+    }, 200)
+    
     const response = await api.backupPhotos()
+    
+    clearInterval(progressInterval)
+    backupProgress.value.percentage = 100
+    backupProgress.value.text = '备份完成，正在下载...'
+    backupProgress.value.status = 'success'
+    
     // 创建blob URL并下载
     const blob = new Blob([response.data], { type: 'application/zip' })
     const url = window.URL.createObjectURL(blob)
@@ -91,8 +134,18 @@ async function backupPhotos() {
     document.body.removeChild(link)
     window.URL.revokeObjectURL(url)
     message.success('相册备份下载成功')
+    
+    // 延迟隐藏进度条
+    setTimeout(() => {
+      backupProgress.value.show = false
+    }, 2000)
   } catch (error) {
+    backupProgress.value.status = 'error'
+    backupProgress.value.text = '备份失败'
     message.error('备份失败：' + (error.response?.data?.detail || error.message || '未知错误'))
+    setTimeout(() => {
+      backupProgress.value.show = false
+    }, 3000)
   } finally {
     isBackupLoading.value = false
   }
@@ -101,8 +154,35 @@ async function backupPhotos() {
 // 备份数据库功能
 async function backupDatabase() {
   isDbBackupLoading.value = true
+  dbBackupProgress.value = {
+    show: true,
+    percentage: 0,
+    status: 'default',
+    text: '正在准备数据库备份...'
+  }
+  
   try {
+    // 模拟进度更新
+    const progressInterval = setInterval(() => {
+      if (dbBackupProgress.value.percentage < 90) {
+        dbBackupProgress.value.percentage += 15
+        if (dbBackupProgress.value.percentage <= 30) {
+          dbBackupProgress.value.text = '正在读取数据库...'
+        } else if (dbBackupProgress.value.percentage <= 60) {
+          dbBackupProgress.value.text = '正在创建备份文件...'
+        } else {
+          dbBackupProgress.value.text = '正在准备下载...'
+        }
+      }
+    }, 150)
+    
     const response = await api.backupDatabase()
+    
+    clearInterval(progressInterval)
+    dbBackupProgress.value.percentage = 100
+    dbBackupProgress.value.text = '备份完成，正在下载...'
+    dbBackupProgress.value.status = 'success'
+    
     // 创建blob URL并下载
     const blob = new Blob([response.data], { type: 'application/octet-stream' })
     const url = window.URL.createObjectURL(blob)
@@ -114,8 +194,18 @@ async function backupDatabase() {
     document.body.removeChild(link)
     window.URL.revokeObjectURL(url)
     message.success('数据库备份下载成功')
+    
+    // 延迟隐藏进度条
+    setTimeout(() => {
+      dbBackupProgress.value.show = false
+    }, 2000)
   } catch (error) {
+    dbBackupProgress.value.status = 'error'
+    dbBackupProgress.value.text = '备份失败'
     message.error('数据库备份失败：' + (error.response?.data?.detail || error.message || '未知错误'))
+    setTimeout(() => {
+      dbBackupProgress.value.show = false
+    }, 3000)
   } finally {
     isDbBackupLoading.value = false
   }
@@ -230,28 +320,54 @@ function handleChange(value) {
           
           <NSpace vertical>
             <NFormItem label="备份相册">
-              <NSpace>
-                <NButton 
-                  type="primary" 
-                  :loading="isBackupLoading" 
-                  @click="backupPhotos"
+              <NSpace vertical style="width: 100%;">
+                <NSpace>
+                  <NButton 
+                    type="primary" 
+                    :loading="isBackupLoading" 
+                    @click="backupPhotos"
+                  >
+                    备份相册
+                  </NButton>
+                  <span class="text-gray-500">检测并打包下载本地上传的所有图片</span>
+                </NSpace>
+                <NProgress 
+                  v-if="backupProgress.show"
+                  type="line"
+                  :percentage="backupProgress.percentage"
+                  :status="backupProgress.status"
+                  :show-indicator="true"
                 >
-                  备份相册
-                </NButton>
-                <span class="text-gray-500">检测并打包下载本地上传的所有图片</span>
+                  <template #default="{ percentage }">
+                    {{ backupProgress.text || `${percentage}%` }}
+                  </template>
+                </NProgress>
               </NSpace>
             </NFormItem>
             
             <NFormItem label="备份数据库">
-              <NSpace>
-                <NButton 
-                  type="primary" 
-                  :loading="isDbBackupLoading" 
-                  @click="backupDatabase"
+              <NSpace vertical style="width: 100%;">
+                <NSpace>
+                  <NButton 
+                    type="primary" 
+                    :loading="isDbBackupLoading" 
+                    @click="backupDatabase"
+                  >
+                    备份数据库
+                  </NButton>
+                  <span class="text-gray-500">下载本地数据库文件（仅限本地存储模式）</span>
+                </NSpace>
+                <NProgress 
+                  v-if="dbBackupProgress.show"
+                  type="line"
+                  :percentage="dbBackupProgress.percentage"
+                  :status="dbBackupProgress.status"
+                  :show-indicator="true"
                 >
-                  备份数据库
-                </NButton>
-                <span class="text-gray-500">下载本地数据库文件（仅限本地存储模式）</span>
+                  <template #default="{ percentage }">
+                    {{ dbBackupProgress.text || `${percentage}%` }}
+                  </template>
+                </NProgress>
               </NSpace>
             </NFormItem>
           </NSpace>

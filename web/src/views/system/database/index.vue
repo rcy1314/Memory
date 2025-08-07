@@ -175,11 +175,23 @@
             <li>• 迁移完成后系统将自动重启并切换到新数据库</li>
           </ul>
         </NAlert>
-        <div class="flex justify-center">
+        <div class="flex flex-col items-center gap-4">
           <NButton type="warning" :loading="migrating" @click="migrateData" size="large">
             <TheIcon icon="mdi:database-arrow-right" :size="18" class="mr-1" />
             开始迁移数据
           </NButton>
+          <div v-if="migrationProgress.show" class="w-full max-w-md">
+            <NProgress 
+              type="line"
+              :percentage="migrationProgress.percentage"
+              :status="migrationProgress.status"
+              :show-indicator="true"
+            >
+              <template #default="{ percentage }">
+                {{ migrationProgress.text || `${percentage}%` }}
+              </template>
+            </NProgress>
+          </div>
         </div>
       </div>
     </div>
@@ -198,6 +210,7 @@ import {
   NSwitch,
   NDivider,
   NAlert,
+  NProgress,
   useMessage,
 } from 'naive-ui'
 import CommonPage from '@/components/page/CommonPage.vue'
@@ -209,6 +222,14 @@ const formRef = ref(null)
 const saving = ref(false)
 const testingConnection = ref(false)
 const migrating = ref(false)
+
+// 迁移进度条状态
+const migrationProgress = ref({
+  show: false,
+  percentage: 0,
+  status: 'default',
+  text: ''
+})
 
 // 数据库类型选项
 const databaseTypeOptions = [
@@ -477,6 +498,32 @@ const migrateData = async () => {
   try {
     await formRef.value?.validate()
     migrating.value = true
+    
+    // 初始化进度条
+    migrationProgress.value = {
+      show: true,
+      percentage: 0,
+      status: 'default',
+      text: '正在准备数据迁移...'
+    }
+    
+    // 模拟进度更新
+    const progressInterval = setInterval(() => {
+      if (migrationProgress.value.percentage < 85) {
+        migrationProgress.value.percentage += 5
+        if (migrationProgress.value.percentage <= 20) {
+          migrationProgress.value.text = '正在连接目标数据库...'
+        } else if (migrationProgress.value.percentage <= 40) {
+          migrationProgress.value.text = '正在创建数据表结构...'
+        } else if (migrationProgress.value.percentage <= 60) {
+          migrationProgress.value.text = '正在迁移用户数据...'
+        } else if (migrationProgress.value.percentage <= 80) {
+          migrationProgress.value.text = '正在迁移博客数据...'
+        } else {
+          migrationProgress.value.text = '正在完成最后步骤...'
+        }
+      }
+    }, 300)
 
     // 将前端字段映射到后端期望的字段
     const migrationData = {
@@ -532,13 +579,26 @@ const migrateData = async () => {
     }
 
     await api.migrateDatabaseData(migrationData)
+    
+    clearInterval(progressInterval)
+    migrationProgress.value.percentage = 100
+    migrationProgress.value.text = '数据迁移完成！'
+    migrationProgress.value.status = 'success'
+    
     message.success('数据迁移成功，数据库配置已自动更新')
     
     // 重新加载数据库设置以显示最新配置
     await getDatabaseSettings()
     migrating.value = false
+    
+    // 延迟隐藏进度条
+    setTimeout(() => {
+      migrationProgress.value.show = false
+    }, 3000)
   } catch (error) {
     console.error('数据迁移失败:', error)
+    
+    clearInterval(progressInterval)
     
     // 检查是否为超时错误
     const isTimeoutError = error.code === 'ECONNABORTED' || 
@@ -547,17 +607,27 @@ const migrateData = async () => {
     
     if (isTimeoutError) {
       // 超时错误显示友好提示，但不重置迁移状态
+      migrationProgress.value.text = '数据较多，正在继续迁移...'
+      migrationProgress.value.status = 'warning'
       message.warning('数据过多，请继续等待迁移完成', {
         duration: 5000
       })
     } else {
       // 其他错误正常处理并重置迁移状态
+      migrationProgress.value.status = 'error'
+      migrationProgress.value.text = '迁移失败'
       migrating.value = false
+      
       if (error.message) {
         message.error(error.message)
       } else {
         message.error('数据迁移失败')
       }
+      
+      // 延迟隐藏进度条
+      setTimeout(() => {
+        migrationProgress.value.show = false
+      }, 3000)
     }
   }
 }
@@ -599,6 +669,26 @@ onMounted(async () => {
 
 .justify-center {
   justify-content: center;
+}
+
+.flex-col {
+  flex-direction: column;
+}
+
+.items-center {
+  align-items: center;
+}
+
+.gap-4 {
+  gap: 1rem;
+}
+
+.w-full {
+  width: 100%;
+}
+
+.max-w-md {
+  max-width: 28rem;
 }
 
 .migration-section {
