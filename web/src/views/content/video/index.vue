@@ -10,11 +10,45 @@
           <span class="mobile-only">添加</span>
         </n-button>
       </template>
+      
+      <!-- 筛选栏 -->
+      <div class="filter-bar">
+        <n-space vertical>
+          <n-tree-select
+            v-model="selectedCategoryIds"
+            :options="categoryOptions"
+            placeholder="选择分类筛选"
+            multiple
+            clearable
+            style="min-width: 200px"
+            @update:value="onCategoryFilter"
+          />
+          <n-select
+            v-model="selectedVideoType"
+            :options="videoTypeFilterOptions"
+            placeholder="选择视频类型"
+            clearable
+            style="min-width: 150px"
+            @update:value="onVideoTypeFilter"
+          />
+          <n-input
+            v-model="searchKeyword"
+            placeholder="搜索视频标题"
+            clearable
+            style="min-width: 200px"
+            @input="onSearchFilter"
+          >
+            <template #prefix>
+              <n-icon><SearchIcon /></n-icon>
+            </template>
+          </n-input>
+        </n-space>
+      </div>
 
       <!-- 视频列表 -->
       <div class="video-grid mobile-video-grid">
         <div
-          v-for="(video, index) in videoList"
+          v-for="(video, index) in filteredVideoList"
           :key="video.id || index"
           class="video-item mobile-video-item"
         >
@@ -62,10 +96,13 @@
       </div>
 
       <!-- 空状态 -->
-      <n-empty v-if="videoList.length === 0" description="暂无视频">
+      <n-empty v-if="filteredVideoList.length === 0" :description="videoList.length === 0 ? '暂无视频' : '没有符合条件的视频'">
         <template #extra>
-          <n-button size="small" @click="showAddModal = true">
+          <n-button v-if="videoList.length === 0" size="small" @click="showAddModal = true">
             添加第一个视频
+          </n-button>
+          <n-button v-else size="small" @click="clearFilters">
+            清除筛选条件
           </n-button>
         </template>
       </n-empty>
@@ -256,7 +293,7 @@
 <script setup>
 import { ref, reactive, onMounted } from 'vue'
 import { useMessage } from 'naive-ui'
-import { Add as AddIcon, Videocam as VideoIcon, Play as PlayIcon } from '@vicons/ionicons5'
+import { Add as AddIcon, Videocam as VideoIcon, Play as PlayIcon, Search as SearchIcon } from '@vicons/ionicons5'
 import api from '@/api'
 import { request } from '@/utils'
 import { formatDateTime } from '@/utils'
@@ -265,6 +302,7 @@ const message = useMessage()
 
 // 响应式数据
 const videoList = ref([])
+const filteredVideoList = ref([])
 const showAddModal = ref(false)
 const showPreviewModal = ref(false)
 const editingIndex = ref(-1)
@@ -272,6 +310,11 @@ const previewVideoData = ref(null)
 const videoFormRef = ref(null)
 const categoryOptions = ref([])
 const locations = ref([])
+
+// 筛选相关
+const selectedCategoryIds = ref([])
+const selectedVideoType = ref(null)
+const searchKeyword = ref('')
 
 // 视频表单
 const videoForm = reactive({
@@ -294,6 +337,12 @@ const videoTypeOptions = [
   { label: '直链视频', value: 'direct' },
   { label: 'Bilibili', value: 'bilibili' },
   { label: 'YouTube', value: 'youtube' }
+]
+
+// 视频类型筛选选项
+const videoTypeFilterOptions = [
+  { label: '全部类型', value: null },
+  ...videoTypeOptions
 ]
 
 // 表单验证规则
@@ -414,6 +463,7 @@ const saveVideo = async () => {
       const response = await api.updateVideo(videoData)
       if (response.code === 200) {
         videoList.value[editingIndex.value] = { ...videoData, id: video.id }
+        filterVideoList() // 重新筛选
         message.success('视频更新成功')
       } else {
         message.error('更新视频失败: ' + (response.message || '未知错误'))
@@ -424,6 +474,7 @@ const saveVideo = async () => {
       const response = await api.createVideo(videoData)
       if (response.code === 200) {
         videoList.value.push({ ...videoData, id: response.data.id })
+        filterVideoList() // 重新筛选
         message.success('视频添加成功')
       } else {
         message.error('添加视频失败: ' + (response.message || '未知错误'))
@@ -479,6 +530,16 @@ const editVideo = (video, index) => {
 }
 
 // 删除视频
+const confirmDelete = (index) => {
+  dialog.warning({
+    title: '确认删除',
+    content: '确定要删除这个视频吗？此操作不可撤销',
+    positiveText: '确定',
+    negativeText: '取消',
+    onPositiveClick: () => deleteVideo(index)
+  })
+}
+
 const deleteVideo = async (index) => {
   const video = videoList.value[index]
   if (!video.id) {
@@ -493,6 +554,7 @@ const deleteVideo = async (index) => {
     })
     if (response.code === 200) {
       videoList.value.splice(index, 1)
+      filterVideoList() // 重新筛选
       message.success('视频删除成功')
     } else {
       message.error('删除视频失败: ' + (response.message || '未知错误'))
@@ -606,6 +668,57 @@ const getYouTubeEmbedUrl = (videoId) => {
   return `https://www.youtube.com/embed/${videoId}`
 }
 
+// 筛选视频列表
+const filterVideoList = () => {
+  let filtered = [...videoList.value]
+  
+  // 分类筛选
+  if (selectedCategoryIds.value && selectedCategoryIds.value.length > 0) {
+    filtered = filtered.filter(video => {
+      if (!video.category_ids || video.category_ids.length === 0) return false
+      return selectedCategoryIds.value.some(catId => video.category_ids.includes(catId))
+    })
+  }
+  
+  // 视频类型筛选
+  if (selectedVideoType.value) {
+    filtered = filtered.filter(video => video.video_type === selectedVideoType.value)
+  }
+  
+  // 关键词搜索
+  if (searchKeyword.value && searchKeyword.value.trim()) {
+    const keyword = searchKeyword.value.trim().toLowerCase()
+    filtered = filtered.filter(video => {
+      const title = (video.title || '').toLowerCase()
+      const desc = (video.desc || '').toLowerCase()
+      return title.includes(keyword) || desc.includes(keyword)
+    })
+  }
+  
+  filteredVideoList.value = filtered
+}
+
+// 筛选事件处理
+const onCategoryFilter = () => {
+  filterVideoList()
+}
+
+const onVideoTypeFilter = () => {
+  filterVideoList()
+}
+
+const onSearchFilter = () => {
+  filterVideoList()
+}
+
+// 清除筛选条件
+const clearFilters = () => {
+  selectedCategoryIds.value = []
+  selectedVideoType.value = null
+  searchKeyword.value = ''
+  filterVideoList()
+}
+
 // 获取视频列表
 const getVideoList = async () => {
   try {
@@ -618,6 +731,7 @@ const getVideoList = async () => {
       const videoData = response.data?.list || []
       console.log('视频数据:', videoData)
       videoList.value = videoData
+      filterVideoList() // 应用筛选
     } else {
       message.error('获取视频列表失败: ' + (response.message || '未知错误'))
     }
@@ -665,9 +779,9 @@ onMounted(() => {
 
 .video-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-  gap: 20px;
-  margin-top: 20px;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 16px;
+  margin-top: 16px;
 }
 
 .video-item {
@@ -685,7 +799,7 @@ onMounted(() => {
 .video-preview {
   position: relative;
   width: 100%;
-  height: 180px;
+  height: 100px;
   cursor: pointer;
   overflow: hidden;
 }
@@ -737,7 +851,7 @@ onMounted(() => {
 }
 
 .video-info {
-  padding: 12px;
+  padding: 8px;
 }
 
 .video-title {
@@ -779,10 +893,10 @@ onMounted(() => {
 }
 
 .video-actions {
-  padding: 8px 12px;
+  padding: 6px 8px;
   border-top: 1px solid #f0f0f0;
   display: flex;
-  gap: 8px;
+  gap: 6px;
 }
 
 .video-preview-container {
@@ -803,6 +917,64 @@ onMounted(() => {
   color: #666;
 }
 
+.filter-bar {
+  margin-bottom: 16px;
+  padding: 12px;
+  background-color: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  backdrop-filter: blur(10px);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+
+  @media (max-width: 768px) {
+    padding: 6px;
+    gap: 6px;
+    .mobile-filter-item {
+      width: 100%;
+      margin-bottom: 0;
+    }
+    .n-space {
+      flex-direction: column;
+      gap: 6px;
+    }
+  }
+}
+
+@media (max-width: 768px) {
+    .video-management {
+      padding: 6px;
+    }
+    
+    .filter-bar {
+      flex-direction: column;
+      gap: 12px;
+    padding: 8px;
+    margin-bottom: 12px;
+    border-radius: 8px;
+  }
+  
+  .filter-bar .n-space {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px !important;
+  }
+  
+  .filter-bar .n-tree-select,
+  .filter-bar .n-select,
+  .filter-bar .n-input {
+    min-width: auto !important;
+    width: 100% !important;
+  }
+  
+  .video-grid {
+    grid-template-columns: 1fr !important;
+    gap: 12px !important;
+    margin-top: 12px;
+  }
+}
+
 .video-meta {
   display: flex;
   gap: 20px;
@@ -813,52 +985,135 @@ onMounted(() => {
 /* 移动端视频管理优化 */
 @media (max-width: 768px) {
   .mobile-video-management {
-    padding: 8px;
+    padding: 4px;
   }
   
   .mobile-card {
     margin: 0;
+    border-radius: 12px;
+    overflow: hidden;
   }
   
   .mobile-card .n-card__header {
     padding: 12px 16px;
+    background: rgba(255, 255, 255, 0.02);
   }
   
   .mobile-card .n-card__content {
-    padding: 12px 16px;
+    padding: 8px 12px;
   }
   
   .mobile-add-btn {
     padding: 6px 12px !important;
     font-size: 12px !important;
-  }
-  
-  .mobile-video-grid {
-    grid-template-columns: 1fr !important;
-    gap: 12px !important;
+    border-radius: 8px;
   }
   
   .mobile-video-item {
-    border-radius: 8px;
+    border-radius: 12px;
     overflow: hidden;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.15);
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    transition: all 0.3s ease;
+  }
+  
+  .mobile-video-item:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
   }
   
   .mobile-video-item .video-preview {
-    height: 200px !important;
+    height: 120px !important;
+    border-radius: 12px 12px 0 0;
   }
   
   .mobile-video-item .video-info {
-    padding: 8px !important;
+    padding: 8px 12px !important;
   }
   
   .mobile-video-item .video-title {
     font-size: 14px !important;
-    margin-bottom: 4px;
+    margin-bottom: 6px;
+    font-weight: 600;
+    line-height: 1.3;
   }
   
   .mobile-video-item .video-desc {
     font-size: 11px !important;
+    margin-bottom: 8px;
+    opacity: 0.8;
+    line-height: 1.4;
+  }
+  
+  .mobile-video-item .video-meta {
+    flex-direction: column;
+    gap: 4px;
+    align-items: flex-start;
+  }
+  
+  .mobile-video-actions {
+    padding: 8px 12px !important;
+    gap: 8px !important;
+    background: rgba(255, 255, 255, 0.02);
+    border-top: 1px solid rgba(255, 255, 255, 0.05);
+  }
+  
+  .mobile-action-btn {
+    padding: 6px 12px !important;
+    font-size: 11px !important;
+    flex: 1;
+    border-radius: 6px;
+    font-weight: 500;
+  }
+}
+
+@media (max-width: 480px) {
+  .mobile-video-management {
+    padding: 2px;
+  }
+  
+  .mobile-card {
+    border-radius: 8px;
+  }
+  
+  .mobile-card .n-card__header {
+    padding: 8px 12px;
+    font-size: 16px;
+  }
+  
+  .mobile-card .n-card__content {
+    padding: 6px 8px;
+  }
+  
+  .filter-bar {
+    padding: 6px;
+    margin-bottom: 8px;
+  }
+  
+  .video-grid {
+    gap: 8px !important;
+  }
+  
+  .mobile-video-item {
+    border-radius: 8px;
+  }
+  
+  .mobile-video-item .video-preview {
+    height: 100px !important;
+  }
+  
+  .mobile-video-item .video-info {
+    padding: 6px 8px !important;
+  }
+  
+  .mobile-video-item .video-title {
+    font-size: 13px !important;
+    margin-bottom: 4px;
+  }
+  
+  .mobile-video-item .video-desc {
+    font-size: 10px !important;
     margin-bottom: 6px;
   }
   
@@ -869,33 +1124,6 @@ onMounted(() => {
   
   .mobile-action-btn {
     padding: 4px 8px !important;
-    font-size: 11px !important;
-    flex: 1;
-  }
-}
-
-@media (max-width: 480px) {
-  .mobile-video-management {
-    padding: 4px;
-  }
-  
-  .mobile-card .n-card__header {
-    padding: 8px 12px;
-  }
-  
-  .mobile-card .n-card__content {
-    padding: 8px 12px;
-  }
-  
-  .mobile-video-item .video-preview {
-    height: 160px !important;
-  }
-  
-  .mobile-video-item .video-title {
-    font-size: 13px !important;
-  }
-  
-  .mobile-video-item .video-desc {
     font-size: 10px !important;
   }
 }
