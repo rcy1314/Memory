@@ -1,7 +1,5 @@
 <template>
-  <QueryBar v-if="$slots.queryBar" mb-30 @search="handleSearch" @reset="handleReset">
-    <slot name="queryBar" />
-  </QueryBar>
+  <slot name="queryBar" />
 
   <n-data-table
     :remote="remote"

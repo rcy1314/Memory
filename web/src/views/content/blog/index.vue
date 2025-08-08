@@ -596,7 +596,7 @@ api.getOrderOptionVisitor().then((res) => {
       class="mobile-table"
     >
       <template #queryBar>
-        <div class="query-bar mobile-query-bar">
+        <QueryBar mb-30 @search="$table?.handleSearch()" @reset="$table?.handleReset()">
           <QueryBarItem label="标题" :label-width="40" class="query-bar-item">
             <NInput
               v-model:value="queryItems.title"
@@ -652,15 +652,7 @@ api.getOrderOptionVisitor().then((res) => {
               @update:value="$table?.handleSearch()"
             />
           </QueryBarItem>
-          <div class="query-actions mobile-full-width">
-            <NButton type="primary" @click="$table?.handleSearch()" class="mobile-full-width">
-              搜索
-            </NButton>
-            <NButton @click="$table?.handleReset()" class="mobile-full-width">
-              重置
-            </NButton>
-          </div>
-        </div>
+        </QueryBar>
       </template>
     </CrudTable>
 
@@ -1110,54 +1102,41 @@ api.getOrderOptionVisitor().then((res) => {
   background-color: #f1f1f1;
 }
 
-/* 桌面端查询栏优化 */
-.query-bar {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-  align-items: flex-end;
-}
-
+/* 响应式查询栏样式 - 电脑端自适应页面宽度 */
 .query-bar-item {
-  flex: 1;
+  flex: 1 1 auto;
   min-width: 200px;
   margin-bottom: 0;
 }
 
 .query-bar-item.mobile-full-width {
-  flex: 1;
-  min-width: 250px;
+  flex: 1 1 auto;
+  min-width: 220px;
 }
 
-.query-actions {
-  display: flex;
-  gap: 8px;
-  align-items: flex-end;
+/* 平板优化 (769px-1024px) */
+@media (max-width: 1024px) and (min-width: 769px) {
+  .query-bar-item {
+    min-width: 180px;
+  }
+  
+  .query-bar-item.mobile-full-width {
+    min-width: 200px;
+  }
 }
 
 /* 移动端查询栏优化 */
 @media (max-width: 768px) {
-  .mobile-query-bar {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-  }
-  
   .query-bar-item {
     width: 100% !important;
-    margin-bottom: 0 !important;
-    flex: none;
-    min-width: auto;
+    min-width: auto !important;
+    flex: none !important;
   }
   
-  .query-actions {
-    display: flex;
-    gap: 8px;
-    margin-top: 8px;
-  }
-  
-  .query-actions .n-button {
-    flex: 1;
+  .query-bar-item.mobile-full-width {
+    width: 100% !important;
+    min-width: auto !important;
+    flex: none !important;
   }
 }
 
@@ -1201,6 +1180,28 @@ api.getOrderOptionVisitor().then((res) => {
   min-width: 300px !important;
   max-width: 90vw !important;
   width: auto !important;
+  z-index: 9999 !important;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12) !important;
+  border-radius: 8px !important;
+}
+
+/* 确保下拉菜单不被遮挡 */
+:deep(.n-tree-select) {
+  position: relative !important;
+  z-index: 1 !important;
+}
+
+/* 桌面端优化 */
+@media (min-width: 769px) {
+  :deep(.n-tree-select-menu) {
+    max-height: 400px !important;
+    overflow-y: auto !important;
+  }
+  
+  :deep(.n-tree-select-menu .n-tree) {
+    max-height: 380px !important;
+    overflow-y: auto !important;
+  }
 }
 
 @media (max-width: 768px) {
@@ -1213,11 +1214,15 @@ api.getOrderOptionVisitor().then((res) => {
     right: 2.5vw !important;
     transform: none !important;
     position: fixed !important;
+    top: 50% !important;
+    transform: translateY(-50%) !important;
+    max-height: 70vh !important;
+    overflow: hidden !important;
   }
   
   :deep(.n-tree-select-menu .n-tree) {
     max-height: 60vh !important;
-    overflow-y: auto;
+    overflow-y: auto !important;
     width: 100% !important;
   }
   
@@ -1238,6 +1243,72 @@ api.getOrderOptionVisitor().then((res) => {
     overflow: hidden !important;
     text-overflow: ellipsis !important;
   }
+}
+
+/* 查询条件区域的分类选择器特殊优化 */
+.query-bar-item :deep(.n-tree-select-menu) {
+  position: absolute !important;
+  z-index: 10000 !important;
+  left: 0 !important;
+  right: auto !important;
+  min-width: 320px !important;
+  max-width: none !important;
+  width: max-content !important;
+}
+
+/* 确保查询条件容器不会裁剪下拉菜单 */
+.query-bar {
+  overflow: visible !important;
+  position: relative !important;
+}
+
+.query-bar-item {
+  overflow: visible !important;
+  position: relative !important;
+}
+
+/* 查询栏容器整体优化 */
+.query-bar-item-container {
+  overflow: visible !important;
+  position: relative !important;
+}
+
+/* 分类选择器在查询栏中的特殊处理 */
+.query-bar-item .n-tree-select {
+  position: relative !important;
+  z-index: 1 !important;
+}
+
+/* 确保下拉菜单在右侧有足够空间时向右展开 */
+@media (min-width: 769px) {
+  .query-bar-item:last-child :deep(.n-tree-select-menu),
+  .query-bar-item.mobile-full-width :deep(.n-tree-select-menu) {
+    right: 0 !important;
+    left: auto !important;
+  }
+}
+
+/* 防止下拉菜单被页面边界裁剪 */
+:deep(.n-tree-select-menu) {
+  transform: none !important;
+  margin-top: 4px !important;
+}
+
+/* 查询栏父容器确保不裁剪 */
+.n-card .n-card__content {
+  overflow: visible !important;
+}
+
+.crud-table {
+  overflow: visible !important;
+}
+
+.crud-table .n-card {
+  overflow: visible !important;
+}
+
+.crud-table .n-card .n-card__content {
+  overflow: visible !important;
 }
 
 
