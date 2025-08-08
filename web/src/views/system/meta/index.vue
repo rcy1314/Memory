@@ -369,14 +369,5 @@ onMounted(async () => {
   }
 }
 
-/* 超小屏幕适配 */
-@media (max-width: 480px) {
-  .m-30 {
-    margin: 15px;
-  }
-  
-  .form-container {
-    padding: 0;
-  }
-}
+
 </style>

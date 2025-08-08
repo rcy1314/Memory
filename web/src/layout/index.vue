@@ -53,8 +53,7 @@ const breakpointsEnum = {
   xl: 1600,
   lg: 1199,
   md: 991,
-  sm: 768, // 调整移动端断点
-  xs: 480,
+  sm: 768, // 移动端断点
 }
 const breakpoints = reactive(useBreakpoints(breakpointsEnum))
 const isMobile = breakpoints.smaller('sm')

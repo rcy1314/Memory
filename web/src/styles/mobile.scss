@@ -2,7 +2,6 @@
 
 /* 基础响应式断点 */
 $mobile-breakpoint: 768px;
-$small-mobile-breakpoint: 480px;
 $tablet-breakpoint: 1024px;
 
 /* 移动端基础样式 */
@@ -281,45 +280,7 @@ $tablet-breakpoint: 1024px;
   }
 }
 
-/* 小屏幕设备进一步优化 */
-@media (max-width: $small-mobile-breakpoint) {
-  html {
-    font-size: 3px; /* 进一步减小字体 */
-  }
-  
-  .header-container {
-    height: 48px !important;
-    padding: 0 8px !important;
-  }
-  
-  .n-data-table {
-    .n-data-table-td, .n-data-table-th {
-      padding: 6px 4px !important;
-      font-size: 11px !important;
-    }
-  }
-  
-  .n-form {
-    .n-form-item {
-      margin-bottom: 12px !important;
-    }
-    
-    .n-input, .n-select {
-      .n-input__input {
-        padding: 8px 10px !important;
-      }
-    }
-  }
-  
-  .image-grid {
-    grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)) !important;
-    
-    .image-card {
-      width: 80px !important;
-      height: 80px !important;
-    }
-  }
-}
+
 
 /* 横屏模式优化 */
 @media (max-width: $mobile-breakpoint) and (orientation: landscape) {

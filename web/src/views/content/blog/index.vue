@@ -962,16 +962,7 @@ api.getOrderOptionVisitor().then((res) => {
   }
 }
 
-@media (max-width: 480px) {
-  .image-grid {
-    grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)) !important;
-  }
-  
-  .image-card {
-    width: 80px !important;
-    height: 80px !important;
-  }
-}
+
 
 
 </style>

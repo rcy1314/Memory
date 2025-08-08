@@ -270,6 +270,7 @@ import {
   globalAdvancedCache,
   getImageFileSize
 } from '@/utils/advancedImageOptimizer'
+import { smartPreload, preloadImages } from '@/utils/imagePreloader'
 
 // 接收父组件传递的当前分类
 const props = defineProps({
@@ -513,7 +514,7 @@ function onImageLoaded() {
   }
 }
 
-// 预加载下一页图片
+// 预加载下一页图片 - 智能优化版
 function preloadNextPage() {
   if (page < Math.ceil(total / page_size)) {
     const nextPage = page + 1
@@ -527,14 +528,15 @@ function preloadNextPage() {
     // 静默预加载下一页的前几张图片
     api.getBlogsVisitor(params).then(res => {
       if (res.code === 200 && res.data.length > 0) {
-        // 预加载前3张图片的缩略图
-        res.data.slice(0, 3).forEach(blog => {
-          if (blog.images && blog.images.length > 0) {
-            const img = new Image()
-            img.src = blog.images[0].thumbnail || blog.images[0].image_url
-          }
+        // 使用智能预加载策略
+        smartPreload(res.data, {
+          maxImages: 6,
+          priority: 'visible'
+        }).then(() => {
+          console.log(`智能预加载第${nextPage}页前${Math.min(6, res.data.length)}张图片完成`)
+        }).catch(e => {
+          console.log('智能预加载失败:', e)
         })
-        console.log(`预加载第${nextPage}页前3张图片`)
       }
     }).catch(e => {
       console.log('预加载下一页失败:', e)
@@ -542,11 +544,11 @@ function preloadNextPage() {
   }
 }
 
-// 预加载分类图片
+// 预加载分类图片 - 智能增强版
 function preloadCategoryImages(category) {
   const params = {
     page: 1,
-    page_size: 6, // 预加载前6张
+    page_size: 10, // 增加预加载数量
     category: category,
     location: current_location
   }
@@ -554,14 +556,15 @@ function preloadCategoryImages(category) {
   // 静默预加载分类的前几张图片
   api.getBlogsVisitor(params).then(res => {
     if (res.code === 200 && res.data.length > 0) {
-      // 预加载前6张图片的缩略图
-      res.data.forEach(blog => {
-        if (blog.images && blog.images.length > 0) {
-          const img = new Image()
-          img.src = blog.images[0].thumbnail || blog.images[0].image_url
-        }
+      // 使用智能预加载策略
+      smartPreload(res.data, {
+        maxImages: 8,
+        priority: 'all'
+      }).then(() => {
+        console.log(`智能预加载分类 ${category} 的前${Math.min(8, res.data.length)}张图片完成`)
+      }).catch(e => {
+        console.log('智能预加载失败:', e)
       })
-      console.log(`预加载分类 ${category} 的前${res.data.length}张图片`)
     }
   }).catch(e => {
     console.log('预加载分类图片失败:', e)
@@ -1105,23 +1108,35 @@ async function getBlogs(silentError = false) {
       loadedImageCount.value = 0
       isImagesLoading.value = totalImageCount.value > 0
       
-      // 强制触发图片加载，特别是在分页时
+      // 强制触发图片加载，特别是在分页时 - 优化版
       nextTick(() => {
         setTimeout(() => {
           // 强制重新触发所有图片的懒加载检测
           const imageElements = document.querySelectorAll('.thumb')
           imageElements.forEach((element, index) => {
-            // 添加延迟确保DOM完全渲染
-            setTimeout(() => {
-              // 强制触发图片加载事件
-              element.dispatchEvent(new Event('forceLoad'))
-              
-              // 同时触发滚动事件以重新激活IntersectionObserver
-              const event = new Event('scroll')
-              window.dispatchEvent(event)
-            }, index * 10) // 适当增加延迟确保DOM完全渲染
+            // 立即检查可见性并优先加载可见图片
+            const rect = element.getBoundingClientRect()
+            const isVisible = rect.top < window.innerHeight + 300
+            
+            if (isVisible) {
+              // 对于可见或接近可见的图片，立即触发加载
+              setTimeout(() => {
+                element.dispatchEvent(new CustomEvent('forceLoad'))
+              }, index * 20) // 减少延迟，更快加载可见图片
+            } else {
+              // 对于不可见的图片，延后触发
+              setTimeout(() => {
+                element.dispatchEvent(new CustomEvent('forceLoad'))
+              }, 400 + index * 30) // 延后加载不可见图片
+            }
           })
-        }, 200) // 增加延迟确保组件完全挂载
+          
+          // 触发一次滚动事件以重新激活IntersectionObserver
+          setTimeout(() => {
+            const event = new Event('scroll')
+            window.dispatchEvent(event)
+          }, 100)
+        }, 100) // 减少延迟，更快响应
       })
     } else {
       // API返回错误状态码时也要清除加载状态
@@ -1744,7 +1759,22 @@ watch(
     background: rgba(0, 0, 0, 0.6);
   }
   
+  .lightbox-content .caption-toggle-button {
+    height: 44px;
+    width: 44px;
+    right: 76px;
+    bottom: 16px;
+    opacity: 0.8;
+    background: rgba(0, 0, 0, 0.6);
+  }
+  
   .lightbox-content .download-button:active {
+    opacity: 1;
+    background: rgba(0, 0, 0, 0.9);
+    transform: scale(0.95);
+  }
+  
+  .lightbox-content .caption-toggle-button:active {
     opacity: 1;
     background: rgba(0, 0, 0, 0.9);
     transform: scale(0.95);
@@ -1758,20 +1788,7 @@ watch(
   }
 }
 
-.lightbox-content .caption {
-  padding: 1em 2em;
-  bottom: 0rem;
-  cursor: default;
-  left: 0;
-  position: absolute;
-  text-align: left;
-  width: 100%;
-  z-index: 2;
-  display: flex;
-  flex-direction: column;
-  border-bottom-left-radius: 16px;
-  border-bottom-right-radius: 16px;
-}
+
 
 #blog-main {
   transition: filter 0.2s ease, opacity 0.2s ease;
@@ -1834,12 +1851,7 @@ watch(
   }
 }
 
-@media screen and (max-width: 480px) {
-  #blog-main {
-    column-count: 2;
-    column-gap: 16px;
-  }
-}
+
 
 @media screen and (max-width: 360px) {
   #blog-main {
@@ -1883,7 +1895,7 @@ body.content-active #blog-main:after {
 }
 
 .lightbox-content .caption {
-  padding: 2em 2em 0.1em 2em;
+  padding: 2em 2em 2rem 2em;
   background-image: linear-gradient(to top, rgba(16, 16, 16, 0.45) 25%, rgba(16, 16, 16, 0) 100%);
   bottom: 0rem;
   cursor: default;
@@ -1892,10 +1904,13 @@ body.content-active #blog-main:after {
   text-align: left;
   width: 100%;
   z-index: 2;
-  padding-bottom: 2rem;
   display: flex;
   flex-direction: column;
+  border-bottom-left-radius: 16px;
+  border-bottom-right-radius: 16px;
 }
+
+
 
 .lightbox-content .caption h2,
 .lightbox-content .caption h3,
@@ -1962,8 +1977,7 @@ ul.tags {
   display: none;
 }
 
-.tag-categories a,
-.tag-meta a {
+.tag-categories a {
   padding: 4px 6px;
   border-radius: 8px;
   background: var(--moment-black-op);
@@ -1973,6 +1987,18 @@ ul.tags {
   z-index: 1;
   margin: 12px 12px 0 0px;
   backdrop-filter: saturate(180%) blur(20px);
+}
+
+.tag-meta a {
+  padding: 4px 6px;
+  border-radius: 8px;
+  background: transparent;
+  font-size: 12px;
+  color: var(--moment-fontcolor);
+  transition: 0.3s;
+  z-index: 1;
+  margin: 12px 12px 0 0px;
+  backdrop-filter: none;
 }
 
 .tag-categories a:hover,
@@ -2055,21 +2081,7 @@ ul.tags {
   }
 }
 
-@media screen and (max-width: 480px) {
-  .lightbox-content .caption h2,
-  .lightbox-content .caption .thumb-title {
-    font-size: 14px !important;
-    margin-bottom: 6px;
-  }
-  
-  .lightbox-content .caption .thumb-desc {
-    font-size: 11px !important;
-  }
-  
-  .lightbox-content .caption {
-    padding: 1em 1em 0.1em 1em;
-  }
-}
+
 
 /* Wrapper */
 #wrapper {
@@ -2691,37 +2703,7 @@ body.modal-active #wrapper:after {
   }
 }
 
-@media (max-width: 480px) {
-  .pagination-container {
-    padding: 20px 15px;
-    gap: 20px;
-  }
-  
-  .pagination-buttons {
-    gap: 12px;
-    flex-direction: row;
-    width: 100%;
-  }
-  
-  .pagination-button {
-    padding: 8px 16px;
-    font-size: 13px;
-    min-width: 80px;
-    min-height: 36px;
-    border-radius: 20px;
-    flex: 1;
-    max-width: 120px;
-  }
-  
-  .pagination-info {
-    font-size: 13px;
-    text-align: center;
-  }
-  
-  .total-count {
-    font-size: 11px;
-  }
-}
+
 
 /* 底部加载指示器样式 */
 .bottom-loading-indicator {
@@ -3076,45 +3058,8 @@ body.modal-active #wrapper:after {
   }
 }
 
-@media (max-width: 480px) {
-  .gallery-loading-message {
-    min-height: 160px;
-    height: 30vh;
-    padding: 20px 15px;
-  }
-  
-  .loading-modal {
-    padding: 25px;
-    max-width: 300px;
-  }
-  
-  .images-loading-indicator {
-    padding: 10px 12px;
-    margin: 12px 0;
-  }
-  
-  .images-loading-content {
-    font-size: 11px;
-    gap: 5px;
-  }
-  
-  .loading-content {
-    gap: 15px;
-  }
-  
-  .loading-spinner-main {
-    width: 28px !important;
-    height: 28px !important;
-    border-width: 2px !important;
-  }
-  
-  .loading-text {
-    font-size: 13px !important;
-  }
-  
-  .loading-progress-bar {
-    height: 4px;
-  }
+.loading-progress-bar {
+  height: 4px;
 }
 
 /* 加载完成提示样式 */
@@ -3162,5 +3107,33 @@ body.is-preload #blog-main {
 .fade-slide-enter-to {
   opacity: 1;
   transform: translateY(0) translateZ(0);
+}
+
+/* 移动端首页大图文字大小调整 - 恢复正常大小 */
+@media screen and (max-width: 768px) {
+  .thumb-title {
+    font-size: 0.85em !important; /* 恢复正常大小 */
+  }
+
+  .thumb-desc {
+    font-size: 0.75em !important; /* 恢复正常大小 */
+  }
+  
+  /* 去除分类标签背景 */
+  .tag-categories a {
+    background: transparent !important;
+    backdrop-filter: none !important;
+  }
+  
+  /* 确保视频播放按钮正常显示 */
+  .play-overlay {
+    opacity: 1 !important;
+    pointer-events: auto !important;
+  }
+  
+  .play-button {
+    background: rgba(255, 255, 255, 0.9) !important;
+    opacity: 1 !important;
+  }
 }
 </style>

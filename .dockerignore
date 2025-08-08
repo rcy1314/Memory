@@ -1,5 +1,16 @@
 .git
 data
 web/node_modules
+web/src-tauri/target
 img
 sqls
+*.log
+*.tmp
+.cache
+.DS_Store
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache
+.moment

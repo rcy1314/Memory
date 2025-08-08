@@ -119,6 +119,7 @@
               class="category-item"
               :class="{ active: currentCategory === category.alias }"
               @click="handleCategoryClick(category.alias)"
+              @mouseenter="handleCategoryHover(category.alias)"
             >
               {{ category.name }}
             </div>
@@ -250,10 +251,22 @@ const preloadCategoryImages = (category) => {
   })
 }
 
+// 分类预加载缓存
+const categoryPreloadCache = new Set()
+
+// 分类悬停预加载
+const handleCategoryHover = (categoryAlias = null) => {
+  // 如果不是当前分类且未预加载过，则开始预加载
+  if (categoryAlias !== currentCategory.value && !categoryPreloadCache.has(categoryAlias)) {
+    categoryPreloadCache.add(categoryAlias)
+    preloadCategoryImages(categoryAlias)
+  }
+}
+
 // 分类切换处理函数
 const handleCategoryClick = (categoryAlias = null) => {
-  // 如果不是当前分类，预加载该分类的图片
-  if (categoryAlias !== currentCategory.value) {
+  // 如果不是当前分类，预加载该分类的图片（如果还没预加载）
+  if (categoryAlias !== currentCategory.value && !categoryPreloadCache.has(categoryAlias)) {
     preloadCategoryImages(categoryAlias)
   }
   
@@ -773,51 +786,14 @@ body {
   }
 }
 
-@media screen and (max-width: 480px) {
-  .modal-content {
-    padding: 32px 24px;
-    margin: 20px;
-  }
-  
-  .modal-title {
-    font-size: 16px;
-  }
-  
-  /* 移动端loading优化 */
-  .loading-spinner {
-    transform: scale(0.9);
-  }
-  
-  .spinner {
-    width: 50px;
-    height: 50px;
-    margin: 0 auto 25px;
-  }
-  
-  .loading-text {
-    font-size: 18px;
-  }
-  
-  .loading-progress {
-    width: 240px;
-    margin-top: 25px;
-  }
-  
-  .loading-tips {
-    font-size: 13px;
-  }
-  
-  .loading-spinner::before {
-    width: 75px;
-    height: 75px;
-    margin: -37.5px 0 0 -37.5px;
-  }
-  
-  .loading-spinner::after {
-    width: 90px;
-    height: 90px;
-    margin: -45px 0 0 -45px;
-  }
+.loading-spinner::before {
+  margin: -37.5px 0 0 -37.5px;
+}
+
+.loading-spinner::after {
+  width: 90px;
+  height: 90px;
+  margin: -45px 0 0 -45px;
 }
 
 /* 页面加载样式 */
@@ -1152,33 +1128,30 @@ body {
   }
   
   .hero-title {
-    font-size: 32px; /* 手机端标题字体大小 */
+    font-size: 320px; /* 手机端标题字体大小放大10倍 */
     margin-bottom: 0.8rem;
   }
   
   .hero-description {
-    font-size: 24px; /* 手机端副标题字体大小 */
+    font-size: 240px; /* 手机端副标题字体大小放大10倍 */
+  }
+  
+  .hero-prev,
+  .hero-next {
+    font-size: 80rem; /* 手机端按钮放大10倍 */
+    width: 400px;
+    height: 400px;
+    background: transparent !important; /* 确保无背景 */
+  }
+  
+  .hero-prev:hover,
+  .hero-next:hover {
+    background: transparent !important; /* 悬停时也无背景 */
+    transform: scale(1.1);
   }
 }
 
-@media screen and (max-width: 480px) {
-  .hero-section {
-    height: 50vh; /* 进一步减少小屏幕封面高度 */
-  }
-  
-  .hero-title {
-    font-size: 28px; /* 小屏幕标题字体大小 */
-    margin-bottom: 0.6rem;
-  }
-  
-  .hero-description {
-    font-size: 20px; /* 小屏幕副标题字体大小 */
-  }
-  
-  .hero-content {
-    padding: 0 20px; /* 增加小屏幕内边距 */
-  }
-}
+
 
 .hero-overlay {
   position: absolute;
@@ -1372,7 +1345,7 @@ body {
   background: linear-gradient(180deg, rgba(10, 10, 10, 0.95) 0%, rgba(10, 10, 10, 0.98) 100%);
   backdrop-filter: blur(20px);
   border: none;
-  padding: 10px 0;
+  padding: 3px 0;
   margin: 0;
   margin-top: -1px;
   display: flex;
@@ -1710,7 +1683,7 @@ body {
   }
 
   .categories-nav-section {
-    padding: 15px 0;
+    padding: 2px 0;
   }
 
   .site-logo {
@@ -1733,80 +1706,7 @@ body {
   }
 }
 
-@media (max-width: 480px) {
-  .top-brand {
-    top: 15px;
-    left: 15px;
-  }
 
-  .top-actions {
-    top: 15px;
-    right: 15px;
-    gap: 8px;
-  }
-
-  .action-btn {
-    padding: 6px 12px;
-    font-size: 12px;
-  }
-
-  .categories-nav-section {
-    padding: 8px 0;
-  }
-
-  .site-logo {
-    width: 32px;
-    height: 32px;
-    margin-right: 10px;
-  }
-
-  .site-name {
-    font-size: 14px;
-  }
-
-  .categories-container {
-    padding: 0 10px;
-  }
-
-  .category-item {
-    padding: 6px 12px;
-    font-size: 14px;
-  }
-
-  .about-content {
-    padding: 30px 20px;
-    margin: 20px;
-  }
-
-  .about-content h2 {
-    font-size: 20px;
-  }
-
-  .hero-title {
-    font-size: 2.5rem;
-    margin-bottom: 0.5rem;
-  }
-
-  .hero-description {
-    font-size: 1.1rem;
-    line-height: 1.4;
-  }
-
-  .hero-controls {
-    padding: 0 15px;
-  }
-
-  .hero-prev,
-  .hero-next {
-    width: 40px;
-    height: 40px;
-    font-size: 1.2rem;
-  }
-  
-  .hero-content {
-    padding: 0 20px;
-  }
-}
 
 /* 隐藏滚动条 */
 ::-webkit-scrollbar {

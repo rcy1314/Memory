@@ -69,6 +69,7 @@ import {
   getDeviceType,
   getConnectionType
 } from '@/utils/imageOptimizer'
+import { generateOptimizedUrl, getCacheStats } from '@/utils/imagePreloader'
 
 const settingStore = useSettingStore()
 const thumbRef = ref(null)
@@ -157,6 +158,9 @@ const onImageError = () => {
 
 // 移除复杂的压缩逻辑
 
+// 使用统一的图片缓存管理
+// 缓存管理已移至imagePreloader工具
+
 const loadImage = (forceLoad = false) => {
   let imageUrl = null
   
@@ -167,43 +171,13 @@ const loadImage = (forceLoad = false) => {
   }
   
   if (imageUrl && (!imageSrc.value || forceLoad)) {
-    // 简化图片URL优化
-    const isMobile = window.innerWidth <= 768
-    let optimizedUrl = imageUrl
-    
-    // 优化缩略图尺寸和质量设置
-    if (imageUrl.includes('http') || imageUrl.includes('/api/')) {
-      const separator = imageUrl.includes('?') ? '&' : '?'
-      
-      // 根据屏幕尺寸调整缩略图参数
-      let quality, width, height
-      
-      if (isMobile) {
-        // 移动端：更小尺寸，适中质量
-        quality = 45
-        width = 200
-        height = 280
-      } else if (window.innerWidth <= 1280) {
-        // 中等屏幕：3列布局
-        quality = 55
-        width = 280
-        height = 380
-      } else {
-        // 大屏幕：4列布局
-        quality = 60
-        width = 320
-        height = 420
-      }
-      
-      optimizedUrl = `${imageUrl}${separator}w=${width}&h=${height}&fit=cover&q=${quality}`
-    }
-    
-    imageSrc.value = optimizedUrl
+    // 使用统一的图片优化工具
+    imageSrc.value = generateOptimizedUrl(imageUrl, 'thumbnail')
   }
 }
 
 onMounted(() => {
-  // 简化懒加载逻辑
+  // 优化懒加载逻辑
   if ('IntersectionObserver' in window && thumbRef.value) {
     observer = new IntersectionObserver(
       (entries) => {
@@ -217,8 +191,8 @@ onMounted(() => {
         })
       },
       {
-        rootMargin: '300px', // 增加预加载距离
-        threshold: 0.1
+        rootMargin: '400px', // 增加预加载距离，提前加载
+        threshold: 0.05 // 降低阈值，更早触发
       }
     )
     observer.observe(thumbRef.value)
@@ -241,16 +215,16 @@ onMounted(() => {
     })
   }
   
-  // 延迟检查是否需要立即加载（用于分页后的可见图片）
+  // 立即检查是否需要加载（用于分页后的可见图片）
   setTimeout(() => {
     if (thumbRef.value && !imageLoaded.value) {
       const rect = thumbRef.value.getBoundingClientRect()
       // 如果图片在视口内或接近视口，立即加载
-      if (rect.top < window.innerHeight + 100) {
+      if (rect.top < window.innerHeight + 200) {
         loadImage()
       }
     }
-  }, 100)
+  }, 50) // 减少延迟，更快响应
 })
 
 onUnmounted(() => {
@@ -426,13 +400,7 @@ onUnmounted(() => {
   }
 }
 
-@media (max-width: 480px) {
-  .thumb-image {
-    /* 移除min-height，让图片保持原始比例 */
-    object-fit: contain;
-    max-height: 300px;
-  }
-}
+
 
 .tags {
   list-style: none;

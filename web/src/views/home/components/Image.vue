@@ -328,15 +328,7 @@ onUnmounted(() => {
   }
 }
 
-@media screen and (max-width: 480px) {
-  .image-placeholder {
-    height: 120px;
-  }
-  
-  .image-container {
-    border-radius: 4px;
-  }
-}
+
 
 .placeholder-content {
   display: flex;
@@ -538,11 +530,7 @@ onUnmounted(() => {
   }
 }
 
-@media (max-width: 480px) {
-  .thumb-image {
-    min-height: 120px;
-  }
-}
+
 
 #blog-main .thumb:after {
   background-image: linear-gradient(to top, rgba(10, 17, 25, 0.35) 5%, rgba(10, 17, 25, 0) 35%);
@@ -627,12 +615,7 @@ onUnmounted(() => {
   }
 }
 
-@media screen and (max-width: 480px) {
-  #blog-main .thumb {
-    margin: 0 0 6px 0;
-    border-radius: 4px;
-  }
-}
+
 
 #blog-main .thumb:hover {
   transform: scale(0.98);
