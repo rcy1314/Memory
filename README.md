@@ -6,7 +6,7 @@
 
 ## 简介
 
-一个全屏瀑布流摄影图库程序，它是基于[Moment](https://github.com/Robert-Stackflow/Moment)二次开发的，基于[vue-fastapi-admin](https://github.com/mizhexiaoxiao/vue-fastapi-admin)使用 Vue+FastAPI 开发
+一个全屏瀑布流摄影图库，也是专为摄影师做的独立网络相册程序，它是基于[Moment](https://github.com/Robert-Stackflow/Moment)二次开发的，提供win、mac、docker三种使用使用方式，支持云端一键部署，加入了丰富个性化的一些功能，你可以本地使用或上传至oss存储，同样支持添加视频及一键备份等
 
 演示：https://memory.noisework.cn
 
@@ -17,6 +17,10 @@
 - 支持多种数据库的选择连接，支持一键迁移，一键备份本地数据库
 - 自适应瀑布流布局，参考pinterest
 - 支持首页多张封面大图的自定义设置
+- 支持相册合集，首页会有合集中图片数显示
+- 支持添加B站、YouTube、直链视频，可自动识别B站、YouTube链接并解析相关视频信息
+- 支持后台批量上传不同存储渠道
+- 支持上传图片前的压缩和一键转换为webp格式的功能
 
 ## 加载特性
 
@@ -91,7 +95,7 @@ docker run -d \
   noise233/memory:latest
 ```
 
-连接 Neon 免费数据库的 Docker 运行命令
+连接 [Neon 免费数据库](https://neon.com/)的 Docker 运行命令
 
 ```
 docker run -d \
@@ -184,13 +188,91 @@ podman build --platform linux/arm64 --manifest noise233/memory:dev .
 podman manifest push noise233/memory:dev
 ```
 
+## Docker下使用
 
-
-## 使用
-
-- 使用`<服务器IP地址>:9999`或`域名`访问相册
-- 后台管理：`<服务器IP地址>:9999/admin/`或`<域名>/admin`
+- 使用`<服务器IP地址>:4314`或`域名`访问相册
+- 后台管理：`<服务器IP地址>:4314/admin/`或`<域名>/admin`
 - 默认管理员账号：`admin`，密码：`123456`，请登录后及时修改用户名和密码
+
+## 后台配置使用指南
+
+- 系统设置
+
+  通用设置为后台工作台显示设置
+
+- 网站设置
+
+  支持icon、logo、网站名称、封面自定义设置
+
+- 内容设置
+
+  首页每次加载图片数为每一页加载显示的图片数，支持略缩图的后缀，但不要轻易设置
+
+- 存储设置
+
+  允许上传-选项很重要，打开才支持图片的上传设置（包括批量上传也依赖这个开关）
+
+  本地存储-默认路径为程序内的images文件夹，不要轻易设置url前缀，因为程序自动识别上传链接，如果你有自定义网址，可以当cdn加速前缀使用
+
+  备份相册-检测并打包下载本地上传的所有图片，如果本地上传过多图片速度会慢
+
+  备份数据库-仅限本地存储模式，可一键下载程序的数据库文件
+
+  云端存储-支持cloudflareR2\S3及兼容oss存储，以cloudflarer2为例：
+  前往https://cloudflare.com注册，并在账户主页找到“R2对象存储”，点击“创建存储桶”并设置存储桶名称并点击api设置管理密钥，再点击将r2和api配合使用面板记录账户ID
+
+  ![1754664940776](https://s2.loli.net/2025/08/08/7lDVdAZSaR2OXqJ.png)
+
+  ![222eq](https://s2.loli.net/2025/08/08/qmX75tv1frescgA.png)
+
+  点进新创建的存储桶，找到设置并点击可查看具体存储信息
+
+  回到后台页：
+
+  端点（Endpoint）-对应S3 API
+
+  区域-对应位置，只填写英文如APAC
+
+  访问ID-对应帐户ID,在api设置将r2和api配合使用面板中
+
+  访问密钥-API密钥
+
+  存储桶（Bucket）-存储桶名称
+
+  存储路径-默认按年月日路径：{year}/{month}/{timestamp}_{filename}
+
+  URL前缀-对应公共开发 URL或者自定义域名
+
+  URL后缀-非必要不用填写
+
+- Token设置
+
+  是为外部链接相册使用的，是为未来做插件而准备的，目前未完善
+
+- 数据库设置
+
+  你可以选择不同的数据库连接类型，支持本地SQlite、postgreSQL、mysql
+
+  以[Neon免费数据库](https://neon.com/)为例进入网站面板，点击Connect to your database，查看链接信息
+
+  比如：`postgresql://nedb_owner:n44g_fFkBjTxr6@ep-dark-wid-ae7n-pooler.c-2.us-est-2.aws.n.tech/neondb?sslmode=require&cha_binding=rire`
+  主机地址-为@后的直到/的地址（ep-dark-wid-ae7n-pooler.c-2.us-est-2.aws.n.tech）
+
+  端口-5432
+
+  数据库名-Database选项下你创建的数据库名
+
+  用户名-Role选项下显示的同时也是//之后:之前的nedb_owne
+
+  密码-为@符合之前的n44g_fFkBjTxr6
+
+  注意：点击测试连接需要最后保存，迁移数据库是增量迁移，如果字段相同不会覆盖，数据过多时花费时间会久
+
+- 内容管理
+
+  如果是本地上传的图片在列表页面点击删除时会一同删除源文件，链接图片则不会
+
+  使用批量上传前请确保已开启“图片上传”选项并选择了本地还是云端存储
 
 ![1754122928815](https://s2.loli.net/2025/08/02/md7fpJsbanRZGP1.png)
 
@@ -218,6 +300,20 @@ podman manifest push noise233/memory:dev
 ![1754126989821](https://s2.loli.net/2025/08/02/9Zz4ekyiqlYJFRD.png)
 
 ![1754127006714](https://s2.loli.net/2025/08/02/sWHKwyJu7kVqI5A.png)
+
+视频上传自动识别
+
+![image-20250808233729877](https://s2.loli.net/2025/08/08/yiJht7jOnLE6KVb.png)
+
+点击图片查看
+
+![1754544187757](https://s2.loli.net/2025/08/08/Fgix4YusQ8hRKOL.png)
+
+视频播放
+
+![1754543470663](https://s2.loli.net/2025/08/08/qgHzLv9XBejmFas.png)
+
+## 
 
 ## 🔨 构建说明
 
