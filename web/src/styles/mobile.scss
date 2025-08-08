@@ -280,6 +280,30 @@ $tablet-breakpoint: 1024px;
   }
 }
 
+/* Header右侧操作区域移动端优化 */
+@media (max-width: $mobile-breakpoint) {
+  .header-actions {
+    gap: 12px !important;
+    
+    .preview-btn,
+    .theme-mode,
+    .user-avatar {
+      margin-left: 8px !important;
+    }
+    
+    .user-avatar {
+      img {
+        margin-right: 8px !important;
+      }
+    }
+  }
+  
+  /* 确保header容器在移动端有足够的内边距 */
+  .header-container {
+    padding: 0 12px !important;
+  }
+}
+
 
 
 /* 横屏模式优化 */

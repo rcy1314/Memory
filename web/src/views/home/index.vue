@@ -623,7 +623,7 @@ onUnmounted(() => {
 body {
   margin: 0;
   padding: 0;
-  background: #0a0a0a;
+  background: #000000;
   color: #e0e0e0;
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
   line-height: 1.6;
@@ -632,7 +632,7 @@ body {
 
 .home-container {
   min-height: 100vh;
-  background: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 100%);
+  background: #000000;
   padding-top: 0;
   position: relative;
 }

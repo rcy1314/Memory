@@ -1,12 +1,15 @@
 from datetime import datetime, timedelta
 import time
 import boto3
-from fastapi import APIRouter, File, UploadFile, Request
+from fastapi import APIRouter, File, UploadFile, Request, Form
 from pydantic import BaseModel
 import urllib
 import os
 from pathlib import Path
 from urllib.parse import urlparse
+from PIL import Image, ExifTags
+import io
+from typing import Optional
 
 from app.controllers.user import UserController, user_controller
 from app.core.ctx import CTX_USER_ID
@@ -22,6 +25,89 @@ from app.utils.password import get_password_hash, verify_password
 from app.controllers.setting import setting_controller
 
 base_router = APIRouter()
+
+
+def process_image(image_file, compress_option: str = "none", output_format: str = "webp"):
+    """
+    处理图片：压缩和格式转换
+    compress_option: "80", "60", "lossless", "none"
+    output_format: "webp", "original"
+    """
+    try:
+        # 打开图片
+        image = Image.open(image_file)
+        
+        # 保留EXIF数据
+        exif_dict = {}
+        if hasattr(image, '_getexif') and image._getexif() is not None:
+            exif_dict = image._getexif()
+        
+        # 如果选择保持原格式且不压缩，直接返回
+        if compress_option == "none" and output_format == "original":
+            image_file.seek(0)
+            return image_file.read(), image.format.lower()
+        
+        # 转换为RGB模式（WebP需要）
+        if image.mode in ('RGBA', 'LA', 'P'):
+            # 保持透明度
+            if output_format == "webp":
+                pass  # WebP支持透明度
+            else:
+                # 其他格式转换为RGB
+                background = Image.new('RGB', image.size, (255, 255, 255))
+                if image.mode == 'P':
+                    image = image.convert('RGBA')
+                background.paste(image, mask=image.split()[-1] if image.mode == 'RGBA' else None)
+                image = background
+        elif image.mode != 'RGB' and output_format != "webp":
+            image = image.convert('RGB')
+        
+        # 设置压缩参数
+        save_kwargs = {}
+        if output_format == "webp":
+            if compress_option == "lossless":
+                save_kwargs = {'lossless': True, 'quality': 100}
+            elif compress_option == "80":
+                save_kwargs = {'quality': 80}
+            elif compress_option == "60":
+                save_kwargs = {'quality': 60}
+            else:
+                save_kwargs = {'quality': 95}
+            
+            # 保存EXIF数据到WebP
+            if exif_dict:
+                save_kwargs['exif'] = image.info.get('exif', b'')
+        else:
+            # 保持原格式
+            original_format = image.format or 'JPEG'
+            if compress_option == "80":
+                save_kwargs = {'quality': 80, 'optimize': True}
+            elif compress_option == "60":
+                save_kwargs = {'quality': 60, 'optimize': True}
+            elif compress_option == "lossless":
+                save_kwargs = {'quality': 100}
+            else:
+                save_kwargs = {'quality': 95}
+            
+            # 保存EXIF数据
+            if exif_dict and original_format.upper() in ['JPEG', 'JPG']:
+                save_kwargs['exif'] = image.info.get('exif', b'')
+            
+            output_format = original_format.lower()
+        
+        # 保存处理后的图片
+        output_buffer = io.BytesIO()
+        image.save(output_buffer, format=output_format.upper(), **save_kwargs)
+        output_buffer.seek(0)
+        
+        return output_buffer.getvalue(), output_format
+        
+    except Exception as e:
+        # 如果处理失败，返回原图片
+        image_file.seek(0)
+        original_format = Image.open(image_file).format or 'JPEG'
+        image_file.seek(0)
+        return image_file.read(), original_format.lower()
 
 
 @base_router.get("/user/info", summary="查看用户信息", dependencies=[DependAuth])
@@ -76,7 +162,12 @@ async def login_access_token(credentials: CredentialsSchema):
 
 
 @base_router.post("/upload", summary="上传图片", dependencies=[DependAuth])
-async def upload(request: Request, file: UploadFile = File()):
+async def upload(
+    request: Request, 
+    file: UploadFile = File(),
+    compress_option: Optional[str] = Form("none"),  # "80", "60", "lossless", "none"
+    output_format: Optional[str] = Form("original")  # "webp", "original"
+):
     storage_setting = (await setting_controller.get(id=1)).storage
     enableStorage = storage_setting.get("enable_storage", True)
     max_size = storage_setting.get("max_size", 32) or 32
@@ -89,12 +180,34 @@ async def upload(request: Request, file: UploadFile = File()):
 
     if not enableStorage:
         return Fail(msg="已禁止上传图片")
+    
+    # 处理图片压缩和格式转换
+    try:
+        processed_image_data, final_format = process_image(file.file, compress_option, output_format)
+        
+        # 更新文件名扩展名
+        original_name = os.path.splitext(file.filename)[0]
+        if output_format == "webp":
+            new_filename = f"{original_name}.webp"
+        else:
+            # 保持原扩展名或使用处理后的格式
+            original_ext = os.path.splitext(file.filename)[1]
+            if original_ext:
+                new_filename = file.filename
+            else:
+                new_filename = f"{original_name}.{final_format}"
+        
+        # 创建新的文件对象
+        processed_file = io.BytesIO(processed_image_data)
+        processed_file.seek(0)
+        
+    except Exception as e:
+        return Fail(msg=f"图片处理失败：{str(e)}")
 
     t = time.localtime()
     
     if storage_type == "local":
         # 本地存储逻辑
-        import os
         import shutil
         from pathlib import Path
         
@@ -107,13 +220,13 @@ async def upload(request: Request, file: UploadFile = File()):
         
         # 生成文件名
         timestamp = str(int(time.time()))
-        filename = f"{timestamp}_{file.filename}"
+        filename = f"{timestamp}_{new_filename}"
         file_path = upload_dir / filename
         
         try:
-            # 保存文件到本地
+            # 保存处理后的文件到本地
             with open(file_path, "wb") as buffer:
-                shutil.copyfileobj(file.file, buffer)
+                buffer.write(processed_image_data)
             
             # 获取URL前缀设置
             local_prefix = storage_setting.get("local_prefix", "")
@@ -144,7 +257,7 @@ async def upload(request: Request, file: UploadFile = File()):
             .replace("{month}", str(t.tm_mon).zfill(2))
             .replace("{day}", str(t.tm_mday).zfill(2))
             .replace("{timestamp}", str(int(time.time())))
-            .replace("{filename}", file.filename)
+            .replace("{filename}", new_filename)
         )
         if not access_key or not secret_key or not bucket_name or not endpoint_url:
             return Fail(msg="请在存储设置中完善相关参数")
@@ -158,7 +271,10 @@ async def upload(request: Request, file: UploadFile = File()):
                     "region_name": region,
                 }
             )
-            await storage.save_file(file, final_path)
+            # 创建临时文件对象用于上传
+            temp_file = io.BytesIO(processed_image_data)
+            temp_file.name = new_filename
+            await storage.save_file(temp_file, final_path)
         except Exception as e:
             return Fail(msg=f"云端上传失败：{str(e)}")
 

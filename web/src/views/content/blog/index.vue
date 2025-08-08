@@ -60,6 +60,15 @@ const imageForm = ref({
   metadata: null,
 })
 
+// 图片压缩选项
+const compressionOptions = ref({
+  compress_option: 'none', // "80", "60", "lossless", "none"
+  output_format: 'original' // "webp", "original"
+})
+
+// 压缩状态
+const compressing = ref(false)
+
 const activeTab = ref('images')
 
 // 编辑按钮点击
@@ -90,6 +99,75 @@ const updateOrder = () => {
   })
   modalForm.value.images = images
 }
+// 保存压缩设置到localStorage
+const saveCompressionSettings = () => {
+  try {
+    localStorage.setItem('singleUploadCompressionSettings', JSON.stringify(compressionOptions.value))
+    $message.success('压缩设置已保存')
+  } catch (error) {
+    console.error('保存压缩设置失败:', error)
+    $message.error('保存压缩设置失败')
+  }
+}
+
+// 从localStorage加载压缩设置
+const loadCompressionSettings = () => {
+  try {
+    const saved = localStorage.getItem('singleUploadCompressionSettings')
+    if (saved) {
+      const settings = JSON.parse(saved)
+      compressionOptions.value = { ...compressionOptions.value, ...settings }
+    }
+  } catch (error) {
+    console.error('加载压缩设置失败:', error)
+  }
+}
+
+// 压缩并保存图片
+const compressAndSaveImage = async () => {
+  if (!imageForm.value.image_url) {
+    $message.error('请先选择图片')
+    return
+  }
+  
+  if (compressionOptions.value.compress_option === 'none' && compressionOptions.value.output_format === 'original') {
+    $message.warning('当前设置不会对图片进行任何处理')
+    return
+  }
+  
+  compressing.value = true
+  
+  try {
+    // 创建FormData
+    const formData = new FormData()
+    
+    // 从URL获取图片文件
+    const response = await fetch(imageForm.value.image_url)
+    const blob = await response.blob()
+    const file = new File([blob], 'image.jpg', { type: blob.type })
+    
+    formData.append('file', file)
+    formData.append('compress_option', compressionOptions.value.compress_option)
+    formData.append('output_format', compressionOptions.value.output_format)
+    
+    // 调用上传API进行压缩
+    const result = await api.uploadImage(formData, {}, null, timeout_time)
+    
+    if (result.code === 200) {
+      // 更新图片URL为压缩后的URL
+      imageForm.value.image_url = result.data
+      $message.success('图片压缩保存成功')
+    } else {
+      $message.error(result.msg || '压缩失败')
+    }
+  } catch (error) {
+    console.error('压缩图片失败:', error)
+    $message.error('压缩图片失败：' + error.message)
+  } finally {
+    compressing.value = false
+  }
+}
+
 // 添加或保存图片
 const handleSaveImage = () => {
   if (!imageForm.value.image_url) return
@@ -149,6 +227,7 @@ onMounted(async () => {
   $table.value?.handleSearch()
   getTreeSelect()
   await getLocations()
+  loadCompressionSettings()
 })
 
 const categoryTreeOptions = ref([])
@@ -410,7 +489,7 @@ async function beforeUploadImage(data) {
   return true
 }
 
-const customRequest = ({
+const customRequest = async ({
   file,
   data,
   headers,
@@ -420,32 +499,73 @@ const customRequest = ({
   onError,
   onProgress,
 }) => {
-  const formData = new FormData()
-  if (data) {
-    Object.keys(data).forEach((key) => {
-      formData.append(key, data[key])
-    })
-  }
-  formData.append('file', file.file)
-  api
-    .uploadImage(
-      formData,
-      headers,
-      (progressEvent) => {
-        var percent = Math.round((progressEvent.loaded * 100) / progressEvent.total)
-        onProgress({ percent: Math.ceil(percent) })
-        $message.loading(t('views.content.label_uploading') + ` ${Math.ceil(percent)}%`)
-      },
-      timeout_time
-    )
-    .then((response) => {
-      $message.success(response.msg)
-      imageForm.value.image_url = response.data
+  try {
+    // 如果用户设置了压缩选项，先进行压缩
+    if (compressionOptions.value.compress_option !== 'none' || compressionOptions.value.output_format !== 'original') {
+      $message.loading('正在压缩图片...')
+      
+      const formData = new FormData()
+      if (data) {
+        Object.keys(data).forEach((key) => {
+          formData.append(key, data[key])
+        })
+      }
+      formData.append('file', file.file)
+      formData.append('compress_option', compressionOptions.value.compress_option)
+      formData.append('output_format', compressionOptions.value.output_format)
+      
+      // 先调用压缩API
+      const compressResult = await api.uploadImage(
+        formData,
+        headers,
+        (progressEvent) => {
+          var percent = Math.round((progressEvent.loaded * 100) / progressEvent.total)
+          onProgress({ percent: Math.ceil(percent * 0.8) }) // 压缩阶段占80%进度
+          $message.loading('正在压缩上传...' + ` ${Math.ceil(percent * 0.8)}%`)
+        },
+        timeout_time
+      )
+      
+      if (compressResult.code === 200) {
+        onProgress({ percent: 100 })
+        $message.success('图片压缩上传成功')
+        imageForm.value.image_url = compressResult.data
+        onFinish()
+      } else {
+        throw new Error(compressResult.msg || '压缩失败')
+      }
+    } else {
+      // 不压缩，直接上传原始图片
+      const formData = new FormData()
+      if (data) {
+        Object.keys(data).forEach((key) => {
+          formData.append(key, data[key])
+        })
+      }
+      formData.append('file', file.file)
+      formData.append('compress_option', 'none')
+      formData.append('output_format', 'original')
+      
+      const result = await api.uploadImage(
+        formData,
+        headers,
+        (progressEvent) => {
+          var percent = Math.round((progressEvent.loaded * 100) / progressEvent.total)
+          onProgress({ percent: Math.ceil(percent) })
+          $message.loading(t('views.content.label_uploading') + ` ${Math.ceil(percent)}%`)
+        },
+        timeout_time
+      )
+      
+      $message.success(result.msg)
+      imageForm.value.image_url = result.data
       onFinish()
-    })
-    .catch((error) => {
-      onError()
-    })
+    }
+  } catch (error) {
+    console.error('上传失败:', error)
+    $message.error('上传失败: ' + error.message)
+    onError()
+  }
 }
 api.getOrderOptionVisitor().then((res) => {
   if (res.code == 200) {
@@ -650,6 +770,55 @@ api.getOrderOptionVisitor().then((res) => {
             :show-icon="false"
           >
             <n-form :model="imageForm" label-width="60px" style="margin-top: 24px">
+              <!-- 图片压缩设置 -->
+              <div class="mb-4">
+                <div class="grid grid-cols-2 gap-3">
+                  <NFormItem label="压缩质量" label-width="70px">
+                    <NSelect
+                      v-model:value="compressionOptions.compress_option"
+                      :options="[
+                        { label: '不压缩', value: 'none' },
+                        { label: '80% 质量', value: '80' },
+                        { label: '60% 质量', value: '60' },
+                        { label: '无损压缩', value: 'lossless' }
+                      ]"
+                      placeholder="选择压缩质量"
+                      size="small"
+                    />
+                  </NFormItem>
+                  <NFormItem label="输出格式" label-width="70px">
+                    <NSelect
+                      v-model:value="compressionOptions.output_format"
+                      :options="[
+                        { label: '保持原格式', value: 'original' },
+                        { label: '转换为 WebP', value: 'webp' }
+                      ]"
+                      placeholder="选择输出格式"
+                      size="small"
+                    />
+                  </NFormItem>
+                </div>
+                
+                <div class="mt-2 flex gap-2">
+                  <NButton @click="saveCompressionSettings" type="primary" size="small">
+                    保存压缩设置
+                  </NButton>
+                  <n-button 
+                    v-if="imageForm.image_url"
+                    type="primary" 
+                    size="small" 
+                    :loading="compressing"
+                    @click="compressAndSaveImage"
+                    :disabled="!imageForm.image_url"
+                  >
+                    <template #icon>
+                      <TheIcon icon="material-symbols:compress" />
+                    </template>
+                    {{ compressing ? '压缩中...' : '重新压缩' }}
+                  </n-button>
+                </div>
+              </div>
+              
               <n-form-item
                 label="图片地址"
                 path="image_url"
@@ -699,8 +868,44 @@ api.getOrderOptionVisitor().then((res) => {
                   >
                     <n-button>上传图片</n-button>
                   </n-upload>
+                  
+
                 </div>
               </n-form-item>
+              
+              <!-- 图片压缩保存功能 -->
+              <div class="mb-4" v-if="imageForm.image_url">
+                <h4 class="text-sm font-medium mb-2 text-gray-800 dark:text-gray-200">图片压缩保存</h4>
+                <div class="grid grid-cols-2 gap-3">
+                  <NFormItem label="压缩质量" label-width="70px">
+                    <NSelect
+                      v-model:value="compressionOptions.compress_option"
+                      :options="[
+                        { label: '不压缩', value: 'none' },
+                        { label: '80% 质量', value: '80' },
+                        { label: '60% 质量', value: '60' },
+                        { label: '无损压缩', value: 'lossless' }
+                      ]"
+                      placeholder="选择压缩质量"
+                      size="small"
+                    />
+                  </NFormItem>
+                  <NFormItem label="输出格式" label-width="70px">
+                    <NSelect
+                      v-model:value="compressionOptions.output_format"
+                      :options="[
+                        { label: '保持原格式', value: 'original' },
+                        { label: '转换为 WebP', value: 'webp' }
+                      ]"
+                      placeholder="选择输出格式"
+                      size="small"
+                    />
+                  </NFormItem>
+                </div>
+                
+
+              </div>
+              
               <NFormItem label="标题" path="title">
                 <NInput
                   v-model:value="imageForm.title"
@@ -848,8 +1053,8 @@ api.getOrderOptionVisitor().then((res) => {
 }
 
 .image-grid {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
   gap: 10px;
 }
 
@@ -859,8 +1064,9 @@ api.getOrderOptionVisitor().then((res) => {
 }
 
 .image-card {
-  width: 120px;
+  width: 100%;
   height: 120px;
+  aspect-ratio: 1;
   border-radius: 8px;
   overflow: hidden;
   position: relative;
@@ -904,6 +1110,31 @@ api.getOrderOptionVisitor().then((res) => {
   background-color: #f1f1f1;
 }
 
+/* 桌面端查询栏优化 */
+.query-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: flex-end;
+}
+
+.query-bar-item {
+  flex: 1;
+  min-width: 200px;
+  margin-bottom: 0;
+}
+
+.query-bar-item.mobile-full-width {
+  flex: 1;
+  min-width: 250px;
+}
+
+.query-actions {
+  display: flex;
+  gap: 8px;
+  align-items: flex-end;
+}
+
 /* 移动端查询栏优化 */
 @media (max-width: 768px) {
   .mobile-query-bar {
@@ -915,6 +1146,8 @@ api.getOrderOptionVisitor().then((res) => {
   .query-bar-item {
     width: 100% !important;
     margin-bottom: 0 !important;
+    flex: none;
+    min-width: auto;
   }
   
   .query-actions {
@@ -942,23 +1175,68 @@ api.getOrderOptionVisitor().then((res) => {
 /* 移动端图片网格优化 */
 @media (max-width: 768px) {
   .image-grid {
-    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)) !important;
-    gap: 8px !important;
+    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+    gap: 8px;
   }
   
   .image-card {
-    width: 100px !important;
-    height: 100px !important;
+    width: 100%;
+    height: 100px;
+    aspect-ratio: 1;
   }
   
   .image-card .image-actions {
-    top: 2px !important;
-    right: 2px !important;
+    top: 2px;
+    right: 2px;
   }
   
   .image-card .image-action {
-    width: 24px !important;
-    height: 24px !important;
+    width: 24px;
+    height: 24px;
+  }
+}
+
+/* 分类选择器下拉菜单自适应优化 */
+:deep(.n-tree-select-menu) {
+  min-width: 300px !important;
+  max-width: 90vw !important;
+  width: auto !important;
+}
+
+@media (max-width: 768px) {
+  /* 移动端分类选择器下拉菜单优化 */
+  :deep(.n-tree-select-menu) {
+    min-width: 280px !important;
+    max-width: 95vw !important;
+    width: 95vw !important;
+    left: 2.5vw !important;
+    right: 2.5vw !important;
+    transform: none !important;
+    position: fixed !important;
+  }
+  
+  :deep(.n-tree-select-menu .n-tree) {
+    max-height: 60vh !important;
+    overflow-y: auto;
+    width: 100% !important;
+  }
+  
+  :deep(.n-tree-select-menu .n-tree-node) {
+    padding: 12px 16px !important;
+    font-size: 14px !important;
+    min-height: 44px !important;
+  }
+  
+  :deep(.n-tree-select-menu .n-tree-node-content) {
+    padding: 8px 0 !important;
+    width: 100% !important;
+  }
+  
+  :deep(.n-tree-select-menu .n-tree-node-content__text) {
+    flex: 1 !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
   }
 }
 

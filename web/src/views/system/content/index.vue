@@ -118,7 +118,7 @@ const infoFormRules = {}
       >
         <NFormItem :label="$t('views.setting.label_page_size')" path="page_size">
           <NInputNumber
-            v-model="infoForm.page_size"
+            v-model:value="infoForm.page_size"
             clearable
             :precision="0"
             :placeholder="$t('views.setting.placeholder_page_size')"

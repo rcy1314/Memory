@@ -1,5 +1,5 @@
 <template>
-  <article class="thumb img-area" ref="thumbRef">
+  <article class="thumb img-area" ref="thumbRef" @click="handleClick">
     <a class="thumb-a my-photo">
       <div class="image-container" :class="{ 'collection-stack': isCollection }">
         <!-- 简洁的加载提示 -->
@@ -95,7 +95,7 @@ const props = defineProps({
   },
 })
 
-const emit = defineEmits(['image-loaded'])
+const emit = defineEmits(['image-loaded', 'click'])
 
 // 判断是否为合集（包含多张图片）
 const isCollection = computed(() => {
@@ -174,6 +174,11 @@ const loadImage = (forceLoad = false) => {
     // 使用统一的图片优化工具
     imageSrc.value = generateOptimizedUrl(imageUrl, 'thumbnail')
   }
+}
+
+// 处理点击事件
+const handleClick = () => {
+  emit('click', props.data)
 }
 
 onMounted(() => {

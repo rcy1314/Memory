@@ -505,12 +505,14 @@ function onImageLoaded() {
   
   // 当所有图片加载完成时，隐藏加载提示
   if (loadedImageCount.value >= totalImageCount.value) {
+    // 立即隐藏加载提示，避免延迟导致的显示问题
+    isImagesLoading.value = false
+    console.log('所有图片加载完成，隐藏加载提示')
+    
+    // 延迟预加载下一页，避免影响当前页面性能
     setTimeout(() => {
-      isImagesLoading.value = false
-      console.log('所有图片加载完成，隐藏加载提示')
-      // 开始预加载下一页
       preloadNextPage()
-    }, 300) // 延迟300ms隐藏，让用户看到100%的进度
+    }, 500)
   }
 }
 
@@ -1083,6 +1085,10 @@ function onImageError() {
 async function getBlogs(silentError = false) {
   try {
     isLoading.value = true
+    // 重置图片加载状态，防止上次加载状态残留
+    isImagesLoading.value = false
+    loadedImageCount.value = 0
+    totalImageCount.value = 0
     
     var params = { page: page, page_size: page_size }
     if (isValueNotEmpty(current_category)) params.category = current_category
@@ -1107,6 +1113,21 @@ async function getBlogs(silentError = false) {
       totalImageCount.value = blogs.value.length
       loadedImageCount.value = 0
       isImagesLoading.value = totalImageCount.value > 0
+      
+      // 如果没有图片内容，立即清除图片加载状态
+      if (totalImageCount.value === 0) {
+        isImagesLoading.value = false
+      }
+      
+      // 设置超时机制，防止加载状态永远不消失
+      if (isImagesLoading.value) {
+        setTimeout(() => {
+          if (isImagesLoading.value) {
+            console.log('图片加载超时，强制隐藏加载提示')
+            isImagesLoading.value = false
+          }
+        }, 15000) // 15秒超时
+      }
       
       // 强制触发图片加载，特别是在分页时 - 优化版
       nextTick(() => {
@@ -1150,6 +1171,7 @@ async function getBlogs(silentError = false) {
     // 简化错误处理
     console.log('图片加载失败:', e)
     isLoading.value = false
+    isImagesLoading.value = false // 确保图片加载状态也被重置
     
     // 移动端快速重试一次
     if (page === 1 && blogs.value.length === 0 && !silentError) {

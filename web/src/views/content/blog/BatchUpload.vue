@@ -18,6 +18,7 @@ import {
   NGridItem,
   NAutoComplete,
   NModal,
+  NSelect,
   useMessage,
 } from 'naive-ui'
 import { useI18n } from 'vue-i18n'
@@ -74,6 +75,16 @@ const batchForm = ref({
   time: null
 })
 
+// 图片压缩选项
+const compressionOptions = ref({
+  compress_option: 'none', // "80", "60", "lossless", "none"
+  output_format: 'original' // "webp", "original"
+})
+
+// 批量压缩状态
+const batchCompressing = ref(false)
+const compressProgress = ref(0)
+
 // 分类选项
 const categoryTreeOptions = ref([])
 // 地点选项
@@ -104,68 +115,91 @@ async function getLocations() {
 }
 
 // 自定义上传请求
-const customRequest = ({ file, data, headers, action, onFinish, onError, onProgress }) => {
-  const formData = new FormData()
-  if (data) {
-    Object.keys(data).forEach(key => {
-      formData.append(key, data[key])
-    })
-  }
-  formData.append('file', file.file)
-  
+const customRequest = async ({ file, data, headers, action, onFinish, onError, onProgress }) => {
   const fileId = file.id
   uploadProgress.value[fileId] = 0
   
-  api.uploadImage(
-    formData,
-    headers,
-    (progressEvent) => {
-      const percent = Math.round((progressEvent.loaded * 100) / progressEvent.total)
-      uploadProgress.value[fileId] = percent
-      if (onProgress && typeof onProgress === 'function') {
-        onProgress({ percent })
-      }
-    },
-    timeoutTime.value
-  )
-  .then(response => {
-    console.log('Upload response:', response)
-    // 添加到已上传图片列表
-    // 自动使用文件名（去掉扩展名）作为标题
-    const fileName = file.name
-    const titleFromFileName = fileName.substring(0, fileName.lastIndexOf('.')) || fileName
+  try {
+    const formData = new FormData()
+    if (data) {
+      Object.keys(data).forEach(key => {
+        formData.append(key, data[key])
+      })
+    }
+    formData.append('file', file.file)
     
-    const newImage = {
-      id: Date.now() + Math.random(),
-      image_url: response.data || response.image_url,
-      title: titleFromFileName,
-      desc: '',
-      time: null,
-      location: '',
-      is_hidden: false,
-      metadata: '',
-      file_name: file.name,
-      file_size: file.file.size,
-      is_local: isLocalStorage.value
+    // 使用用户设置的压缩选项
+    formData.append('compress_option', compressionOptions.value.compress_option)
+    formData.append('output_format', compressionOptions.value.output_format)
+    
+    // 显示压缩状态信息
+    if (compressionOptions.value.compress_option !== 'none' || compressionOptions.value.output_format !== 'original') {
+      message.loading(`正在压缩上传 ${file.name}...`)
+    } else {
+      message.loading(`正在上传 ${file.name}...`)
     }
     
-    console.log('Adding image to list:', newImage)
-    uploadedImages.value.push(newImage)
-    // 初始化删除确认框状态
-    showDeleteConfirm.value[uploadedImages.value.length - 1] = false
-    console.log('Current uploadedImages:', uploadedImages.value)
+    const response = await api.uploadImage(
+      formData,
+      headers,
+      (progressEvent) => {
+        const percent = Math.round((progressEvent.loaded * 100) / progressEvent.total)
+        uploadProgress.value[fileId] = percent
+        if (onProgress && typeof onProgress === 'function') {
+          onProgress({ percent })
+        }
+      },
+      timeoutTime.value
+    )
     
-    delete uploadProgress.value[fileId]
-    onFinish()
-    message.success(`${file.name} 上传成功`)
-  })
-  .catch(error => {
+    console.log('Upload response:', response)
+    
+    if (response.code === 200) {
+      // 添加到已上传图片列表
+      // 自动使用文件名（去掉扩展名）作为标题
+      const fileName = file.name
+      const titleFromFileName = fileName.substring(0, fileName.lastIndexOf('.')) || fileName
+      
+      const newImage = {
+        id: Date.now() + Math.random(),
+        image_url: response.data || response.image_url,
+        title: titleFromFileName,
+        desc: '',
+        time: null,
+        location: '',
+        is_hidden: false,
+        metadata: '',
+        file_name: file.name,
+        file_size: file.file.size,
+        is_local: isLocalStorage.value
+      }
+      
+      console.log('Adding image to list:', newImage)
+      uploadedImages.value.push(newImage)
+      // 初始化删除确认框状态
+      showDeleteConfirm.value[uploadedImages.value.length - 1] = false
+      console.log('Current uploadedImages:', uploadedImages.value)
+      
+      // 显示成功消息
+      if (compressionOptions.value.compress_option !== 'none' || compressionOptions.value.output_format !== 'original') {
+        message.success(`${file.name} 压缩上传成功`)
+      } else {
+        message.success(`${file.name} 上传成功`)
+      }
+      
+      delete uploadProgress.value[fileId]
+      onFinish()
+    } else {
+      throw new Error(response.msg || '上传失败')
+    }
+  } catch (error) {
+    console.error('Upload error:', error)
+    message.error(`${file.name} 上传失败: ` + error.message)
     delete uploadProgress.value[fileId]
     if (onError && typeof onError === 'function') {
       onError()
     }
-    message.error(`${file.name} 上传失败`)
-  })
+  }
 }
 
 // 删除已上传的图片
@@ -281,6 +315,84 @@ const applyBatchSettings = () => {
     }
   })
   message.success('批量设置应用成功')
+}
+
+// 保存压缩设置到localStorage
+const saveCompressionSettings = () => {
+  try {
+    localStorage.setItem('batchUploadCompressionSettings', JSON.stringify(compressionOptions.value))
+    message.success('压缩设置已保存')
+  } catch (error) {
+    console.error('保存压缩设置失败:', error)
+    message.error('保存压缩设置失败')
+  }
+}
+
+// 从localStorage加载压缩设置
+const loadCompressionSettings = () => {
+  try {
+    const saved = localStorage.getItem('batchUploadCompressionSettings')
+    if (saved) {
+      const settings = JSON.parse(saved)
+      compressionOptions.value = { ...compressionOptions.value, ...settings }
+    }
+  } catch (error) {
+    console.error('加载压缩设置失败:', error)
+  }
+}
+
+// 批量压缩并保存图片
+const batchCompressAndSave = async () => {
+  if (uploadedImages.value.length === 0) {
+    message.warning('没有可压缩的图片')
+    return
+  }
+
+  batchCompressing.value = true
+  compressProgress.value = 0
+  
+  try {
+    for (let i = 0; i < uploadedImages.value.length; i++) {
+      const image = uploadedImages.value[i]
+      
+      try {
+        // 创建FormData
+        const formData = new FormData()
+        
+        // 从图片URL获取文件
+        const response = await fetch(image.image_url)
+        const blob = await response.blob()
+        const file = new File([blob], `image_${i}.jpg`, { type: blob.type })
+        
+        formData.append('file', file)
+        formData.append('compress_option', compressionOptions.value.compress_option)
+        formData.append('output_format', compressionOptions.value.output_format)
+        
+        // 调用压缩API
+        const result = await api.uploadImage(formData)
+        
+        if (result.code === 200) {
+          // 更新图片URL
+          image.image_url = result.data.image_url
+          compressProgress.value = i + 1
+          message.success(`第 ${i + 1} 张图片压缩完成`)
+        } else {
+          message.error(`第 ${i + 1} 张图片压缩失败: ${result.message}`)
+        }
+      } catch (error) {
+        console.error(`压缩第 ${i + 1} 张图片时出错:`, error)
+        message.error(`第 ${i + 1} 张图片压缩失败`)
+      }
+    }
+    
+    message.success('批量压缩完成！')
+  } catch (error) {
+    console.error('批量压缩过程中出错:', error)
+    message.error('批量压缩失败')
+  } finally {
+    batchCompressing.value = false
+    compressProgress.value = 0
+  }
 }
 
 // 保存所有图片为独立博客文章
@@ -417,6 +529,7 @@ const emit = defineEmits(['refresh', 'close'])
 onMounted(() => {
   getTreeSelect()
   getLocations()
+  loadCompressionSettings()
 })
 </script>
 
@@ -535,11 +648,18 @@ onMounted(() => {
         <div style="margin-bottom: 12px">
           <TheIcon icon="material-symbols:cloud-upload" :size="48" color="#409eff" />
         </div>
-        <div class="text-4xl font-medium mb-2">点击或拖拽文件到此区域上传</div>
+        <div class="text-4xl font-medium mb-4">点击或拖拽文件到此区域上传</div>
         <div class="text-2xl text-gray-500">
           支持单个或批量上传，支持 JPG、PNG、GIF、WebP 等格式
           <br>
           当前存储方式：{{ isLocalStorage ? '本地存储' : '云端存储' }}
+        </div>
+        
+        <!-- 上传提示信息 -->
+        <div class="mt-4 p-3 bg-green-50 dark:bg-green-900/20 rounded border border-green-200 dark:border-green-800">
+          <div class="text-lg text-green-700 dark:text-green-300">
+            💡 所有图片将使用上方设置的压缩选项进行处理
+          </div>
         </div>
       </NUploadDragger>
     </NUpload>
@@ -550,8 +670,62 @@ onMounted(() => {
     </div>
 
 
+    <!-- 图片压缩设置 -->
+    <NCard title="图片压缩设置" size="small" class="mb-4">
+      <div class="mb-4">
+        <NGrid :cols="2" :x-gap="12">
+          <NGridItem>
+            <NFormItem label="压缩质量">
+              <NSelect
+                v-model:value="compressionOptions.compress_option"
+                :options="[
+                  { label: '不压缩', value: 'none' },
+                  { label: '80% 质量', value: '80' },
+                  { label: '60% 质量', value: '60' },
+                  { label: '无损压缩', value: 'lossless' }
+                ]"
+                placeholder="选择压缩质量"
+              />
+            </NFormItem>
+          </NGridItem>
+          <NGridItem>
+            <NFormItem label="输出格式">
+              <NSelect
+                v-model:value="compressionOptions.output_format"
+                :options="[
+                  { label: '保持原格式', value: 'original' },
+                  { label: '转换为 WebP', value: 'webp' }
+                ]"
+                placeholder="选择输出格式"
+              />
+            </NFormItem>
+          </NGridItem>
+        </NGrid>
+        
+        <div class="mt-3 flex gap-2">
+          <NButton @click="saveCompressionSettings" type="primary" size="small">
+            保存压缩设置
+          </NButton>
+          <n-button 
+            v-if="uploadedImages.length > 0"
+            type="primary" 
+            :loading="batchCompressing"
+            @click="batchCompressAndSave"
+            :disabled="uploadedImages.length === 0"
+            size="small"
+          >
+            <template #icon>
+              <TheIcon icon="material-symbols:compress" />
+            </template>
+            {{ batchCompressing ? `压缩中... (${compressProgress}/${uploadedImages.length})` : '重新压缩所有图片' }}
+          </n-button>
+        </div>
+      </div>
+    </NCard>
+
     <!-- 统一分类设置 -->
     <NCard title="统一参数设置" size="small" class="mb-4">
+
 
       <NForm :model="batchForm" label-placement="left" :label-width="80">
         <NGrid :cols="2" :x-gap="12">
@@ -634,7 +808,7 @@ onMounted(() => {
      </NCard>
      
      <!-- 底部操作按钮 -->
-     <div class="flex justify-end gap-3 mt-6">
+     <div class="flex justify-end gap-3 mt-6 mb-6 p-4 sticky bottom-0 z-10">
        <NButton size="large" @click="$emit('close')">
          取消
        </NButton>
@@ -726,8 +900,7 @@ onMounted(() => {
 <style scoped>
 .batch-upload-container {
   min-height: 100vh;
-  max-height: 100vh;
-  overflow-y: auto;
+  padding-bottom: 80px;
   overflow-x: hidden;
 }
 
@@ -763,7 +936,7 @@ onMounted(() => {
 .n-upload-dragger {
   border: 2px dashed #d9d9d9;
   border-radius: 8px;
-  padding: 40px 20px;
+  padding: 20px 15px;
   text-align: center;
   transition: border-color 0.3s ease;
 }
