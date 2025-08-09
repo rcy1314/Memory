@@ -1,6 +1,6 @@
 {
   "productName": "Memory-Photo-Album",
-  "version": "1.0.9",
+  "version": "2.0.0",
   "identifier": "com.memory.app",
   "build": {
     "beforeDevCommand": "vite --mode tauri",
