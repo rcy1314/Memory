@@ -88,7 +88,7 @@
             <n-button size="small" @click="editVideo(video, index)" class="mobile-action-btn">
               编辑
             </n-button>
-            <n-button size="small" type="error" @click="deleteVideo(index)" class="mobile-action-btn">
+            <n-button size="small" type="error" @click="confirmDelete(index)" class="mobile-action-btn">
               删除
             </n-button>
           </div>
