@@ -32,11 +32,11 @@
       >
         <NFormItem label="数据库类型" path="database_type">
           <NSelect
-            v-model:value="formData.database_type"
-            :options="databaseTypeOptions"
-            placeholder="请选择数据库类型"
-            @update:value="onDatabaseTypeChange"
-          />
+          v-model:value="formData.database_type"
+          :options="databaseTypeOptions"
+          placeholder="请选择数据库类型"
+          @update:value="onDatabaseTypeChange"
+        />
         </NFormItem>
 
         <!-- SQLite 配置 -->
@@ -53,11 +53,11 @@
           </NFormItem>
           <NFormItem label="端口" path="neon_port">
             <NInputNumber
-              v-model:value="formData.neon_port"
-              placeholder="请输入端口号"
-              :min="1"
-              :max="65535"
-            />
+          v-model:value="formData.neon_port"
+          placeholder="请输入端口号"
+          :min="1"
+          :max="65535"
+        />
           </NFormItem>
           <NFormItem label="数据库名" path="neon_database">
             <NInput v-model:value="formData.neon_database" placeholder="请输入数据库名称" />
@@ -67,11 +67,11 @@
           </NFormItem>
           <NFormItem label="密码" path="neon_password">
             <NInput
-              v-model:value="formData.neon_password"
-              type="password"
-              placeholder="请输入密码"
-              show-password-on="click"
-            />
+          v-model:value="formData.neon_password"
+          type="password"
+          placeholder="请输入密码"
+          show-password-on="click"
+        />
           </NFormItem>
           <NFormItem label="启用SSL" path="neon_ssl">
             <NSwitch v-model:value="formData.neon_ssl" />
@@ -85,11 +85,11 @@
           </NFormItem>
           <NFormItem label="端口" path="postgresql_port">
             <NInputNumber
-              v-model:value="formData.postgresql_port"
-              placeholder="请输入端口号"
-              :min="1"
-              :max="65535"
-            />
+          v-model:value="formData.postgresql_port"
+          placeholder="请输入端口号"
+          :min="1"
+          :max="65535"
+        />
           </NFormItem>
           <NFormItem label="数据库名" path="postgresql_database">
             <NInput v-model:value="formData.postgresql_database" placeholder="请输入数据库名称" />
@@ -392,6 +392,11 @@ const getDatabaseSettings = async () => {
   try {
     const res = await api.getDatabaseSetting()
     if (res.data) {
+      // 检查是否为Neon数据库配置
+      // 如果database_type是postgresql但存在neon_*字段，则认为是Neon配置
+      if (res.data.database_type === 'postgresql' && res.data.neon_host) {
+        res.data.database_type = 'neon'
+      }
       Object.assign(formData, res.data)
     }
   } catch (error) {
@@ -406,8 +411,36 @@ const saveSettings = async () => {
     await formRef.value?.validate()
     saving.value = true
 
-    await api.updateDatabaseSetting({ database: formData })
-    message.success('数据库设置保存成功')
+    // 将前端字段映射到后端期望的字段
+    const saveData = {
+      database_type: formData.database_type === 'neon' ? 'postgresql' : formData.database_type,
+      sqlite_path: formData.database_type === 'sqlite' ? formData.sqlite_path : null,
+      neon_host: formData.database_type === 'neon' ? formData.neon_host : null,
+      neon_port: formData.database_type === 'neon' ? formData.neon_port : null,
+      neon_database: formData.database_type === 'neon' ? formData.neon_database : null,
+      neon_username: formData.database_type === 'neon' ? formData.neon_username : null,
+      neon_password: formData.database_type === 'neon' ? formData.neon_password : null,
+      neon_ssl: formData.database_type === 'neon' ? formData.neon_ssl : null,
+      postgresql_host: formData.database_type === 'postgresql' ? formData.postgresql_host : null,
+      postgresql_port: formData.database_type === 'postgresql' ? formData.postgresql_port : null,
+      postgresql_database: formData.database_type === 'postgresql' ? formData.postgresql_database : null,
+      postgresql_username: formData.database_type === 'postgresql' ? formData.postgresql_username : null,
+      postgresql_password: formData.database_type === 'postgresql' ? formData.postgresql_password : null,
+      postgresql_ssl: formData.database_type === 'postgresql' ? formData.postgresql_ssl : null,
+      mysql_host: formData.database_type === 'mysql' ? formData.mysql_host : null,
+      mysql_port: formData.database_type === 'mysql' ? formData.mysql_port : null,
+      mysql_database: formData.database_type === 'mysql' ? formData.mysql_database : null,
+      mysql_username: formData.database_type === 'mysql' ? formData.mysql_username : null,
+      mysql_password: formData.database_type === 'mysql' ? formData.mysql_password : null,
+      mysql_ssl: formData.database_type === 'mysql' ? formData.mysql_ssl : null,
+      connection_pool_size: formData.connection_pool_size,
+      connection_timeout: formData.connection_timeout
+    }
+
+    await api.updateDatabaseSetting({ database: saveData })
+    message.success('数据库设置保存成功，数据库连接已重新初始化。如果是桌面端，建议重启应用以确保所有功能正常工作。', {
+      duration: 8000
+    })
   } catch (error) {
     console.error('保存数据库设置失败:', error)
     if (error.message) {
@@ -585,7 +618,9 @@ const migrateData = async () => {
     migrationProgress.value.text = '数据迁移完成！'
     migrationProgress.value.status = 'success'
     
-    message.success('数据迁移成功，数据库配置已自动更新')
+    message.success('数据迁移成功，数据库配置已自动更新。如果是桌面端，建议重启应用以确保所有功能正常工作。', {
+      duration: 8000
+    })
     
     // 重新加载数据库设置以显示最新配置
     await getDatabaseSettings()

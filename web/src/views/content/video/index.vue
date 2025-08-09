@@ -15,7 +15,7 @@
       <div class="filter-bar">
         <n-space vertical>
           <n-tree-select
-            v-model="selectedCategoryIds"
+            v-model:value="selectedCategoryIds"
             :options="categoryOptions"
             placeholder="选择分类筛选"
             multiple
@@ -24,7 +24,7 @@
             @update:value="onCategoryFilter"
           />
           <n-select
-            v-model="selectedVideoType"
+            v-model:value="selectedVideoType"
             :options="videoTypeFilterOptions"
             placeholder="选择视频类型"
             clearable
@@ -32,7 +32,7 @@
             @update:value="onVideoTypeFilter"
           />
           <n-input
-            v-model="searchKeyword"
+            v-model:value="searchKeyword"
             placeholder="搜索视频标题"
             clearable
             style="min-width: 200px"
@@ -733,11 +733,19 @@ const getVideoList = async () => {
       videoList.value = videoData
       filterVideoList() // 应用筛选
     } else {
-      message.error('获取视频列表失败: ' + (response.message || '未知错误'))
+      // 如果是blog_video表不存在的错误，不显示错误提示
+      const errorMessage = response.message || '未知错误'
+      if (!errorMessage.includes('blog_video') && !errorMessage.includes('does not exist')) {
+        message.error('获取视频列表失败: ' + errorMessage)
+      }
     }
   } catch (error) {
     console.error('获取视频列表失败:', error)
-    message.error('获取视频列表失败: ' + (error.response?.data?.message || error.message || '网络错误'))
+    const errorMessage = error.response?.data?.message || error.message || '网络错误'
+    // 如果是blog_video表不存在的错误，不显示错误提示
+    if (!errorMessage.includes('blog_video') && !errorMessage.includes('does not exist')) {
+      message.error('获取视频列表失败: ' + errorMessage)
+    }
   }
 }
 

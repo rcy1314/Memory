@@ -96,7 +96,7 @@
       <span>已加载所有内容</span>
     </div>
     <VueFinalModal
-      v-model="show"
+      v-model:value="show"
       content-class="lightbox"
       :overlay-transition="'vfm-fade'"
       :content-transition="'vfm-fade'"
