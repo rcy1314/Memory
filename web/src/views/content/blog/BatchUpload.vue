@@ -224,6 +224,13 @@ const removeUploadedImage = async (index) => {
 // 获取图片EXIF信息
 const fetchImageMetadata = async (image) => {
   try {
+    // 检查是否为WebP格式
+    if (image.image_url.toLowerCase().includes('.webp') || 
+        compressionOptions.value.output_format === 'webp') {
+      message.warning('WebP格式图片不支持EXIF信息读取，请使用原格式上传以保留EXIF信息')
+      return
+    }
+    
     // 对于跨域图片，尝试通过代理或直接访问
     let imageUrl = image.image_url
     
@@ -402,13 +409,22 @@ const saveBatchImages = async () => {
     return
   }
   
+  // 防止重复提交
+  if (uploading.value) {
+    message.warning('正在保存中，请稍候...')
+    return
+  }
+  
   try {
     uploading.value = true
     let successCount = 0
     let failCount = 0
     
+    // 创建图片副本以避免在保存过程中被修改
+    const imagesToSave = [...uploadedImages.value]
+    
     // 为每张图片创建独立的博客文章
-    for (const image of uploadedImages.value) {
+    for (const image of imagesToSave) {
       try {
         const blogData = {
           title: image.title || '未命名图片',
@@ -446,6 +462,7 @@ const saveBatchImages = async () => {
       
       // 清空图片列表
       uploadedImages.value = []
+      showDeleteConfirm.value = {}
       
       // 重置批量表单
       batchForm.value = {
@@ -656,9 +673,16 @@ onMounted(() => {
         </div>
         
         <!-- 上传提示信息 -->
-        <div class="mt-4 p-3 bg-green-50 dark:bg-green-900/20 rounded border border-green-200 dark:border-green-800">
-          <div class="text-lg text-green-700 dark:text-green-300">
-            💡 所有图片将使用上方设置的压缩选项进行处理
+        <div class="mt-4 space-y-2">
+          <div class="p-3 bg-green-50 dark:bg-green-900/20 rounded border border-green-200 dark:border-green-800">
+            <div class="text-lg text-green-700 dark:text-green-300">
+              💡 所有图片将使用上方设置的压缩选项进行处理
+            </div>
+          </div>
+          <div v-if="compressionOptions.output_format === 'webp'" class="p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded border border-yellow-200 dark:border-yellow-800">
+            <div class="text-lg text-yellow-700 dark:text-yellow-300">
+              ⚠️ WebP格式不支持EXIF信息读取，如需保留拍摄参数请选择"保持原格式"
+            </div>
           </div>
         </div>
       </NUploadDragger>
@@ -845,7 +869,7 @@ onMounted(() => {
           <NInput
             v-model:value="editingImage.title"
             placeholder="图片标题"
-            maxlength="50"
+            maxlength="100"
             show-count
           />
         </NFormItem>
@@ -899,10 +923,12 @@ onMounted(() => {
 
 <style scoped>
 .batch-upload-container {
-  min-height: 100vh;
+  height: auto;
+  max-height: 100vh;
   padding-bottom: 80px;
   overflow-x: hidden;
   overflow-y: auto;
+  position: relative;
 }
 
 /* 自定义滚动条样式 */
@@ -949,16 +975,18 @@ onMounted(() => {
 .image-grid {
   display: flex;
   flex-wrap: wrap;
-  gap: 10px;
+  gap: 12px;
+  align-items: flex-start;
 }
 
 .image-card {
-  width: 120px;
-  height: 120px;
+  width: 140px;
+  height: 140px;
   border-radius: 8px;
   overflow: hidden;
   position: relative;
   background-color: #f8f8f8;
+  flex-shrink: 0;
 }
 
 .image-card .image-actions {

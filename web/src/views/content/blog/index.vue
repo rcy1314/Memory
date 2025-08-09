@@ -26,7 +26,7 @@ import CrudModal from '@/components/table/CrudModal.vue'
 import CrudTable from '@/components/table/CrudTable.vue'
 import TheIcon from '@/components/icon/TheIcon.vue'
 import { useI18n } from 'vue-i18n'
-import { formatDate, renderIcon, isValueNotEmpty } from '@/utils'
+import { formatDate, renderIcon, isValueNotEmpty, debounce } from '@/utils'
 import { useCRUD } from '@/composables'
 import api from '@/api'
 import { request } from '@/utils'
@@ -174,6 +174,19 @@ const handleSaveImage = () => {
   if (!modalForm.value.images) {
     modalForm.value.images = []
   }
+  
+  // 防止重复添加相同的图片
+  if (editIndex.value === null) {
+    const existingImageIndex = modalForm.value.images.findIndex(
+      img => img.image_url === imageForm.value.image_url
+    )
+    
+    if (existingImageIndex !== -1) {
+      $message.warning('该图片已存在，请勿重复添加')
+      return
+    }
+  }
+  
   if (editIndex.value !== null) {
     modalForm.value.images[editIndex.value] = { ...imageForm.value }
   } else {
@@ -220,7 +233,7 @@ const {
   doCreate: api.createBlog,
   doDelete: api.deleteBlog,
   doUpdate: api.updateBlog,
-  refresh: () => $table.value?.handleSearch(),
+  refresh: debounce(() => $table.value?.handleSearch(), 300),
 })
 
 onMounted(async () => {
@@ -245,8 +258,54 @@ const columns = [
   {
     title: '图片',
     key: 'images',
-    width: 80,
+    width: 120,
     render(row) {
+      if (!row.images || row.images.length === 0) {
+        return h(NImage, {
+          width: 80,
+          height: 60,
+          class: 'table-image',
+          lazy: true,
+          src: '/assets/error.svg',
+          style: 'border-radius:8px',
+        })
+      }
+      
+      // 如果只有一张图片，显示单张图片
+      if (row.images.length === 1) {
+        return h(
+          NPopover,
+          {
+            trigger: 'hover',
+            'keep-alive-on-hover': false,
+          },
+          {
+            default: () =>
+              h(NImage, {
+                width: 200,
+                class: 'table-image',
+                lazy: true,
+                src: row.images[0].image_url + thumbnail_suffix,
+                previewSrc: row.images[0].image_url + detail_suffix,
+                'show-toolbar-tooltip': true,
+                style: 'border-radius:8px',
+              }),
+            trigger: () =>
+              h(NImage, {
+                width: 80,
+                height: 60,
+                class: 'table-image',
+                lazy: true,
+                src: row.images[0].image_url + thumbnail_suffix,
+                previewSrc: row.images[0].image_url + detail_suffix,
+                'show-toolbar-tooltip': true,
+                style: 'border-radius:8px',
+              }),
+          }
+        )
+      }
+      
+      // 如果有多张图片，显示合集样式
       return h(
         NPopover,
         {
@@ -254,27 +313,50 @@ const columns = [
           'keep-alive-on-hover': false,
         },
         {
-          default: () =>
-            h(NImage, {
-              width: 200,
-              class: 'table-image',
-              lazy: true,
-              src: (row.images && row.images[0] && row.images[0].image_url) ? row.images[0].image_url + thumbnail_suffix : '/assets/error.svg',
-              previewSrc: (row.images && row.images[0] && row.images[0].image_url) ? row.images[0].image_url + detail_suffix : '/assets/error.svg',
-              'show-toolbar-tooltip': true,
-              style: 'border-radius:8px',
-            }),
-          trigger: () =>
-            h(NImage, {
-              width: 80,
-              height: 60,
-              class: 'table-image',
-              lazy: true,
-              src: (row.images && row.images[0] && row.images[0].image_url) ? row.images[0].image_url + thumbnail_suffix : '/assets/error.svg',
-              previewSrc: (row.images && row.images[0] && row.images[0].image_url) ? row.images[0].image_url + detail_suffix : '/assets/error.svg',
-              'show-toolbar-tooltip': true,
-              style: 'border-radius:8px',
-            }),
+          default: () => {
+            // 在弹出层中显示所有图片的网格
+            const imageElements = row.images.slice(0, 9).map((img, index) => 
+              h(NImage, {
+                key: index,
+                width: 60,
+                height: 60,
+                class: 'table-image',
+                lazy: true,
+                src: img.image_url + thumbnail_suffix,
+                previewSrc: img.image_url + detail_suffix,
+                'show-toolbar-tooltip': true,
+                style: 'border-radius:4px; margin:2px;',
+              })
+            )
+            
+            return h('div', {
+              style: 'display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; max-width: 200px;'
+            }, imageElements)
+          },
+          trigger: () => {
+            // 显示合集样式的缩略图
+            return h('div', {
+              style: 'position: relative; width: 80px; height: 60px; border-radius: 8px; overflow: hidden;'
+            }, [
+              // 主图片
+              h(NImage, {
+                width: 80,
+                height: 60,
+                class: 'table-image',
+                lazy: true,
+                src: row.images[0].image_url + thumbnail_suffix,
+                previewSrc: row.images[0].image_url + detail_suffix,
+                'show-toolbar-tooltip': true,
+                style: 'border-radius:8px',
+              }),
+              // 图片数量标签
+              h(NTag, {
+                size: 'small',
+                type: 'info',
+                style: 'position: absolute; top: 2px; right: 2px; font-size: 10px; padding: 1px 4px; background: rgba(0,0,0,0.7); color: white; border: none;'
+              }, `${row.images.length}`)
+            ])
+          }
         }
       )
     },
@@ -832,11 +914,11 @@ api.getOrderOptionVisitor().then((res) => {
                   >
                     <template #trigger>
                       <NInput
-                    v-model:value="imageForm.image_url"
-                    type="text"
-                    placeholder="请输入图片地址"
-                    clearable
-                  />
+                        v-model:value="imageForm.image_url"
+                        type="text"
+                        placeholder="请输入图片地址"
+                        clearable
+                      />
                     </template>
                     <NImage
                       v-if="imageForm.image_url != undefined && imageForm.image_url != ''"
@@ -902,7 +984,7 @@ api.getOrderOptionVisitor().then((res) => {
                 <NInput
                   v-model:value="imageForm.title"
                   placeholder="可选，留空则使用帖子标题"
-                  maxlength="50"
+                  maxlength="100"
                   show-count
                   clearable
                 />
@@ -920,7 +1002,7 @@ api.getOrderOptionVisitor().then((res) => {
               >
                 <NFormItem label="时间" path="time" style="flex: 1">
                   <NDatePicker
-                    v-model:formatted-value="imageForm.time"
+                    v-model:value="imageForm.time"
                     type="datetime"
                     placeholder="可选，留空则使用帖子时间"
                     value-format="yyyy-MM-dd HH:mm:ss"
@@ -947,11 +1029,11 @@ api.getOrderOptionVisitor().then((res) => {
                   style="width: 100%; flex-wrap: nowrap; flex-direction: row; column-gap: 10px"
                 >
                   <NInput
-                    v-model:value="imageForm.metadata"
-                    type="textarea"
-                    placeholder="图片附带的EXIF信息"
-                    style="flex: 3"
-                  />
+                      v-model:value="imageForm.metadata"
+                      type="textarea"
+                      placeholder="图片附带的EXIF信息"
+                      style="flex: 3"
+                    />
                   <div
                     flex
                     style="
@@ -982,15 +1064,15 @@ api.getOrderOptionVisitor().then((res) => {
         </NTabs>
         <NFormItem label="描述" path="desc">
           <NInput
-            v-model:value="modalForm.desc"
-            type="textarea"
-            placeholder="请输入描述（将会展示在图片详情页面）"
-          />
+                v-model:value="modalForm.desc"
+                type="textarea"
+                placeholder="请输入描述（将会展示在图片详情页面）"
+              />
         </NFormItem>
         <div flex style="width: 100%; flex-wrap: nowrap; flex-direction: row; column-gap: 10px">
           <NFormItem label="时间" path="time" style="flex: 1">
             <NDatePicker
-              v-model:formatted-value="modalForm.time"
+              v-model:value="modalForm.time"
               type="datetime"
               placeholder="请输入时间"
               value-format="yyyy-MM-dd HH:mm:ss"
@@ -1048,11 +1130,22 @@ api.getOrderOptionVisitor().then((res) => {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
   gap: 10px;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .image-draggable {
   display: contents;
   /* 让 draggable 元素不破坏 grid 布局 */
+}
+
+/* 确保拖拽容器不影响网格布局 */
+.image-grid .sortable-ghost {
+  opacity: 0.5;
+}
+
+.image-grid .sortable-chosen {
+  transform: scale(1.05);
 }
 
 .image-card {

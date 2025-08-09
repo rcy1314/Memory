@@ -53,13 +53,19 @@ async def list_blog(query: BlogQuery):
         if t["value"] == query.order_option:
             order = [t["order"]]
             break
-    total, blog_objs = await blog_controller.list(
-        page=query.page,
-        page_size=query.page_size,
-        search=q,
-        order=order,
-        prefetch_fields=["images"],
-    )
+    
+    # 使用distinct()去除重复记录
+    from tortoise.models import Model
+    queryset = blog_controller.model.filter(q).prefetch_related("images", "categories")
+    if order:
+        queryset = queryset.order_by(*order)
+    
+    # 获取去重后的总数
+    total = await queryset.distinct().count()
+    
+    # 分页查询去重后的结果
+    blog_objs = await queryset.distinct().offset((query.page - 1) * query.page_size).limit(query.page_size)
+    
     data = [await obj.to_dict_with_images(m2m=True) for obj in blog_objs]
     for blog in data:
         blog["category_ids"] = [item["id"] for item in blog["categories"]]

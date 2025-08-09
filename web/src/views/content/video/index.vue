@@ -153,6 +153,9 @@
           <n-input
             v-model:value="videoForm.title"
             placeholder="视频标题（自动解析或手动输入）"
+            maxlength="100"
+            show-count
+            clearable
           />
         </n-form-item>
         
@@ -356,10 +359,16 @@ const videoFormRules = {
     required: true,
     message: '请选择视频类型'
   },
-  title: {
-    required: true,
-    message: '请输入视频标题'
-  }
+  title: [
+    {
+      required: true,
+      message: '请输入视频标题'
+    },
+    {
+      max: 100,
+      message: '视频标题不能超过100个字符'
+    }
+  ]
 }
 
 // 处理封面图片URL，使用代理解决跨域问题

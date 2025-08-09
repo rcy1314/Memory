@@ -23,7 +23,7 @@ services:
     networks:
       - memory-network
     healthcheck:
-      test: ["CMD", "python", "-c", "import requests; requests.get('http://localhost:9999/health')"]
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:9999/api/v1/health')"]
       interval: 30s
       timeout: 10s
       retries: 3

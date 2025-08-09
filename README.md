@@ -605,6 +605,10 @@ jobs:
    npm install
    ```
 
+## [API 使用说明](./API_DOCUMENTATION.md)
+
+请访问查看API_DOCUMENTATION.md文件，比较多，是为未来的插件和扩展而准备的
+
 ## 其它
 
 [Docker 环境下外部数据库连接配置指南](https://github.com/rcy1314/Memory/blob/main/DOCKER_DATABASE_SETUP.md)

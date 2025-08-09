@@ -231,10 +231,25 @@ async def upload(
             # 获取URL前缀设置
             local_prefix = storage_setting.get("local_prefix", "")
             
-            # 如果没有设置前缀，使用程序运行地址作为默认前缀
+            # 如果没有设置前缀，尝试使用网站设置中的site_url
             if not local_prefix:
-                base_url = str(request.base_url).rstrip('/')
-                file_url = f"{base_url}/{local_path}/{year_month}/{filename}"
+                # 获取网站设置
+                try:
+                    setting = await setting_controller.get(1)
+                    site_url = setting.meta.get('site_url', '') if setting.meta else ''
+                    if site_url:
+                        # 使用网站设置中的site_url
+                        file_url = f"{site_url.rstrip('/')}/{local_path}/{year_month}/{filename}"
+                    else:
+                        # 回退到动态生成URL
+                        scheme = request.url.scheme
+                        host = request.headers.get('host', request.url.netloc)
+                        file_url = f"{scheme}://{host}/{local_path}/{year_month}/{filename}"
+                except Exception as e:
+                    # 如果获取设置失败，回退到动态生成URL
+                    scheme = request.url.scheme
+                    host = request.headers.get('host', request.url.netloc)
+                    file_url = f"{scheme}://{host}/{local_path}/{year_month}/{filename}"
             else:
                 # 使用自定义前缀组成完整URL
                 file_url = f"{local_prefix.rstrip('/')}/{local_path}/{year_month}/{filename}"

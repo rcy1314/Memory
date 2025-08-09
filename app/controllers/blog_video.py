@@ -71,4 +71,78 @@ class BlogVideoController(CRUDBase[BlogVideo, BlogVideoCreate, BlogVideoUpdate])
 
         return result
 
+    async def batch_create_videos(self, blog_id: int, videos_data: List[Dict[str, Any]]) -> Dict[str, Any]:
+        """批量创建视频"""
+        created_videos = []
+        failed_videos = []
+        
+        try:
+            for i, video_data in enumerate(videos_data):
+                try:
+                    # 设置博客ID
+                    video_data["blog_id"] = blog_id
+                    
+                    # 创建视频
+                    new_video = await self.create(obj_in=video_data)
+                    created_videos.append({
+                        'index': i,
+                        'video_id': new_video.id,
+                        'title': new_video.title or '无标题'
+                    })
+                    
+                    logger.info(f"批量创建视频成功: {new_video.title or '无标题'} (ID: {new_video.id})")
+                    
+                except Exception as e:
+                    logger.error(f"批量创建视频失败 (索引 {i}): {str(e)}")
+                    failed_videos.append({
+                        'index': i,
+                        'error': str(e),
+                        'data': video_data
+                    })
+            
+            return {
+                'success_count': len(created_videos),
+                'failed_count': len(failed_videos),
+                'created_videos': created_videos,
+                'failed_videos': failed_videos
+            }
+            
+        except Exception as e:
+            logger.error(f"批量创建视频失败: {str(e)}")
+            raise
+
+    async def update_blog_videos(self, blog_id: int, videos_data: List[Dict[str, Any]]) -> Dict[str, Any]:
+        """更新博客的视频"""
+        try:
+            # 使用现有的update_for_blog方法
+            result = await self.update_for_blog(blog_id, videos_data)
+            return {
+                'success_count': len(result),
+                'failed_count': 0,
+                'updated_videos': result,
+                'failed_videos': []
+            }
+        except Exception as e:
+            logger.error(f"更新博客视频失败: {str(e)}")
+            raise
+
+    async def delete_blog_videos(self, blog_id: int) -> Dict[str, Any]:
+        """删除博客的所有视频"""
+        try:
+            # 获取要删除的视频
+            videos = await self.model.filter(blog_id=blog_id).all()
+            video_count = len(videos)
+            
+            # 删除视频
+            await self.model.filter(blog_id=blog_id).delete()
+            
+            logger.info(f"删除博客视频成功: 博客ID {blog_id}, 删除 {video_count} 个视频")
+            return {
+                'success_count': video_count,
+                'failed_count': 0
+            }
+        except Exception as e:
+            logger.error(f"删除博客视频失败: {str(e)}")
+            raise
+
 blog_video_controller = BlogVideoController()

@@ -12,6 +12,9 @@ from .api_token import api_token_router
 from .test_api_token import test_api_token_router
 from .database import database_router
 from .health import router as health_router
+from .batch import batch_router
+from .webdav import webdav_router
+from .webhook import webhook_router
 
 v1_router = APIRouter()
 
@@ -32,3 +35,6 @@ v1_router.include_router(database_router, prefix="/admin/database")
 v1_router.include_router(api_token_router, prefix="/admin/api-token")
 v1_router.include_router(test_api_token_router, prefix="/api-test")
 v1_router.include_router(visitor_router, prefix="/visitor")
+v1_router.include_router(batch_router, prefix="/batch")
+v1_router.include_router(webdav_router, prefix="/webdav")
+v1_router.include_router(webhook_router, prefix="/webhook")
