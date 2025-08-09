@@ -39,7 +39,7 @@ fn start_backend() {
         // 在开发模式下，后端在项目根目录
         // 动态检测路径，支持应用包和直接运行两种情况
         let (backend_path, working_dir) = if cfg!(debug_assertions) {
-            (exe_dir.join("../../run.py"), exe_dir.join("../.."))
+            (exe_dir.join("../../../../run.py"), exe_dir.join("../../../.."))
         } else {
             // 首先尝试应用包路径
             let app_bundle_path = exe_dir.join("../Resources/_up_/_up_/run.py");
@@ -78,13 +78,22 @@ fn start_backend() {
         
         cmd.current_dir(&working_dir);
         
-        match cmd.stdout(Stdio::piped())
-           .stderr(Stdio::piped())
+        match cmd.stdout(Stdio::inherit())
+           .stderr(Stdio::inherit())
            .spawn() {
-            Ok(child) => {
+            Ok(mut child) => {
                 println!("Backend server started successfully with PID: {}", child.id());
-                // 保持子进程运行
-                std::mem::forget(child);
+                // 在后台线程中等待子进程
+                thread::spawn(move || {
+                    match child.wait() {
+                        Ok(status) => {
+                            println!("Backend process exited with status: {}", status);
+                        },
+                        Err(e) => {
+                            eprintln!("Error waiting for backend process: {}", e);
+                        }
+                    }
+                });
             },
             Err(e) => {
                 eprintln!("Failed to start backend server: {}", e);
