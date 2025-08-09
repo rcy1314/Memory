@@ -902,6 +902,7 @@ onMounted(() => {
   min-height: 100vh;
   padding-bottom: 80px;
   overflow-x: hidden;
+  overflow-y: auto;
 }
 
 /* 自定义滚动条样式 */
