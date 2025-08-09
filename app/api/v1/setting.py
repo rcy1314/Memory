@@ -12,8 +12,8 @@ from app.controllers.setting import setting_controller
 from app.schemas.base import Fail, Success, SuccessExtra
 from app.schemas.setting import *
 from app.core.dependency import DependPermisson
+from app.core.database import init_db
 from app.utils.config import settings
-
 from app.utils.logger import logger
 
 setting_router = APIRouter()
@@ -94,7 +94,16 @@ async def update_database(
     setting_in: SettingUpdateDatabase,
 ):
     await setting_controller.update(id=1, obj_in=setting_in)
-    return Success(msg="Database Settings Updated Successfully")
+    
+    # 重新初始化数据库连接
+    try:
+        await init_db()
+        logger.info("数据库连接已重新初始化")
+    except Exception as e:
+        logger.error(f"重新初始化数据库连接失败: {str(e)}")
+        return Fail(msg=f"数据库设置更新成功，但重新初始化连接失败: {str(e)}")
+    
+    return Success(msg="数据库设置更新成功，数据库连接已重新初始化")
 
 
 @setting_router.get("/backup/photos")
