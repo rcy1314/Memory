@@ -292,13 +292,14 @@
 
 <script setup>
 import { ref, reactive, onMounted } from 'vue'
-import { useMessage } from 'naive-ui'
+import { useMessage, useDialog } from 'naive-ui'
 import { Add as AddIcon, Videocam as VideoIcon, Play as PlayIcon, Search as SearchIcon } from '@vicons/ionicons5'
 import api from '@/api'
 import { request } from '@/utils'
 import { formatDateTime } from '@/utils'
 
 const message = useMessage()
+const dialog = useDialog()
 
 // 响应式数据
 const videoList = ref([])
@@ -733,19 +734,11 @@ const getVideoList = async () => {
       videoList.value = videoData
       filterVideoList() // 应用筛选
     } else {
-      // 如果是blog_video表不存在的错误，不显示错误提示
-      const errorMessage = response.message || '未知错误'
-      if (!errorMessage.includes('blog_video') && !errorMessage.includes('does not exist')) {
-        message.error('获取视频列表失败: ' + errorMessage)
-      }
+      message.error('获取视频列表失败: ' + (response.message || '未知错误'))
     }
   } catch (error) {
     console.error('获取视频列表失败:', error)
-    const errorMessage = error.response?.data?.message || error.message || '网络错误'
-    // 如果是blog_video表不存在的错误，不显示错误提示
-    if (!errorMessage.includes('blog_video') && !errorMessage.includes('does not exist')) {
-      message.error('获取视频列表失败: ' + errorMessage)
-    }
+    message.error('获取视频列表失败: ' + (error.response?.data?.message || error.message || '网络错误'))
   }
 }
 

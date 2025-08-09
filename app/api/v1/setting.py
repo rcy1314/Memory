@@ -93,17 +93,47 @@ async def update_storage(
 async def update_database(
     setting_in: SettingUpdateDatabase,
 ):
-    await setting_controller.update(id=1, obj_in=setting_in)
+    # 保存原始数据库配置
+    original_setting = None
+    try:
+        original_setting = await setting_controller.get(id=1)
+        original_db_config = original_setting.database
+        logger.info("已保存原始数据库配置")
+    except Exception as e:
+        logger.error(f"获取原始数据库配置失败: {str(e)}")
+        return Fail(msg=f"无法获取当前数据库配置: {str(e)}")
+    
+    # 更新数据库配置
+    try:
+        await setting_controller.update(id=1, obj_in=setting_in)
+        logger.info("数据库配置已更新")
+    except Exception as e:
+        logger.error(f"更新数据库配置失败: {str(e)}")
+        return Fail(msg=f"更新数据库配置失败: {str(e)}")
     
     # 重新初始化数据库连接
     try:
         await init_db()
         logger.info("数据库连接已重新初始化")
+        return Success(msg="数据库设置更新成功，数据库连接已重新初始化")
     except Exception as e:
         logger.error(f"重新初始化数据库连接失败: {str(e)}")
-        return Fail(msg=f"数据库设置更新成功，但重新初始化连接失败: {str(e)}")
-    
-    return Success(msg="数据库设置更新成功，数据库连接已重新初始化")
+        
+        # 恢复原始数据库配置
+        try:
+            from app.schemas.setting import SettingUpdateDatabase
+            restore_setting = SettingUpdateDatabase(database=original_db_config)
+            await setting_controller.update(id=1, obj_in=restore_setting)
+            logger.info("已恢复原始数据库配置")
+            
+            # 尝试重新初始化原始数据库连接
+            await init_db()
+            logger.info("已恢复原始数据库连接")
+            
+            return Fail(msg=f"新数据库连接失败，已恢复到原始配置: {str(e)}")
+        except Exception as restore_error:
+            logger.error(f"恢复原始数据库配置失败: {str(restore_error)}")
+            return Fail(msg=f"数据库连接失败且无法恢复原始配置: 连接错误={str(e)}, 恢复错误={str(restore_error)}")
 
 
 @setting_router.get("/backup/photos")

@@ -30,9 +30,9 @@
       <transition-group v-if="blogs.length > 0" name="fade-slide" tag="div" class="images-container" :class="{ 'images-loading': isLoading || isImagesLoading }">
         <template v-for="blog in blogs">
           <!-- 图片内容 -->
-          <ImageOptimized v-if="blog.content_type === 'image'" :key="blog.id" :data="blog" @click="showImage(blog)" @image-loaded="onImageLoaded" />
+          <ImageOptimized v-if="blog.content_type === 'image'" :key="'img-' + blog.id" :data="blog" @click="showImage(blog)" @image-loaded="onImageLoaded" />
           <!-- 视频内容 -->
-          <VideoOptimized v-else-if="blog.content_type === 'video'" :key="blog.id" :data="blog" @click="showVideo(blog)" @video-loaded="onVideoLoaded" />
+          <VideoOptimized v-else-if="blog.content_type === 'video'" :key="'video-' + blog.id" :data="blog" @click="showVideo(blog)" @video-loaded="onVideoLoaded" />
         </template>
       </transition-group>
       
@@ -96,7 +96,7 @@
       <span>已加载所有内容</span>
     </div>
     <VueFinalModal
-      v-model:value="show"
+      v-model="show"
       content-class="lightbox"
       :overlay-transition="'vfm-fade'"
       :content-transition="'vfm-fade'"
@@ -139,7 +139,7 @@
             <!-- 视频显示 -->
             <iframe
               v-if="currentBlog && currentBlog.content_type === 'video' && (currentBlog.video_type === 'bilibili' || currentBlog.video_url.includes('bilibili.com'))"
-              :key="imageSrc"
+              :key="'bilibili-' + imageSrc"
               :src="imageSrc"
               :style="['vertical-align: bottom; border: none;', imageVisible ? '' : 'display: none;']"
               class="video-player"
@@ -151,7 +151,7 @@
             </iframe>
             <iframe
               v-else-if="currentBlog && currentBlog.content_type === 'video' && (currentBlog.video_type === 'youtube' || currentBlog.video_url.includes('youtube.com') || currentBlog.video_url.includes('youtu.be'))"
-              :key="imageSrc"
+              :key="'youtube-' + imageSrc"
               :src="imageSrc"
               :style="['vertical-align: bottom; border: none;', imageVisible ? '' : 'display: none;']"
               class="video-player"
@@ -163,7 +163,7 @@
             </iframe>
             <video
               v-else-if="currentBlog && currentBlog.content_type === 'video'"
-              :key="imageSrc"
+              :key="'video-' + imageSrc"
               :src="imageSrc"
               :style="['vertical-align: bottom;', imageVisible ? '' : 'display: none;']"
               class="video-player"

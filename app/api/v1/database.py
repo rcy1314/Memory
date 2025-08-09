@@ -346,6 +346,17 @@ async def migrate_database_data(
     """
     从当前数据库迁移数据到新数据库
     """
+    # 保存原始数据库配置
+    original_setting = None
+    original_db_config = None
+    try:
+        original_setting = await setting_controller.get(id=1)
+        original_db_config = original_setting.database
+        logger.info("已保存原始数据库配置")
+    except Exception as e:
+        logger.error(f"获取原始数据库配置失败: {str(e)}")
+        return Fail(msg=f"无法获取当前数据库配置: {str(e)}")
+    
     try:
         # 获取当前数据库设置
         current_setting = await setting_controller.get(id=1)
@@ -1168,12 +1179,19 @@ async def migrate_database_data(
         except Exception as config_error:
             logger.error(f"更新数据库配置失败: {str(config_error)}")
             try:
-                # 配置更新失败时，恢复原来的数据库连接
+                # 配置更新失败时，恢复原始数据库配置
+                from app.schemas.setting import SettingUpdateDatabase
+                restore_setting = SettingUpdateDatabase(database=original_db_config)
+                await setting_controller.update(id=1, obj_in=restore_setting)
+                logger.info("已恢复原始数据库配置")
+                
+                # 重新初始化原始数据库连接
                 await init_db()
-                logger.info("已恢复原数据库连接")
+                logger.info("已恢复原始数据库连接")
+                
             except Exception as restore_error:
-                logger.error(f"恢复原数据库连接失败: {str(restore_error)}")
-            return Fail(msg=f"数据迁移完成，但配置更新失败: {str(config_error)}。请手动保存数据库设置。")
+                logger.error(f"恢复原始数据库配置失败: {str(restore_error)}")
+            return Fail(msg=f"数据迁移完成，但配置更新失败: {str(config_error)}。已尝试恢复原始配置。")
         
         return Success(msg="数据迁移完成，数据库配置已自动更新")
         
@@ -1182,9 +1200,20 @@ async def migrate_database_data(
         try:
             # 关闭迁移过程中的连接
             await Tortoise.close_connections()
-            # 重新初始化原来的数据库连接
+            
+            # 确保恢复到原始数据库配置
+            if original_db_config:
+                try:
+                    from app.schemas.setting import SettingUpdateDatabase
+                    restore_setting = SettingUpdateDatabase(database=original_db_config)
+                    await setting_controller.update(id=1, obj_in=restore_setting)
+                    logger.info("已恢复原始数据库配置")
+                except Exception as config_restore_error:
+                    logger.error(f"恢复原始数据库配置失败: {str(config_restore_error)}")
+            
+            # 重新初始化原始数据库连接
             await init_db()
-            logger.info("已恢复原数据库连接")
+            logger.info("已恢复原始数据库连接")
         except Exception as restore_error:
-            logger.error(f"恢复原数据库连接失败: {str(restore_error)}")
+            logger.error(f"恢复原始数据库连接失败: {str(restore_error)}")
         return Fail(msg=f"数据迁移失败: {str(e)}")
