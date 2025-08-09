@@ -3,7 +3,7 @@
   "version": "1.0.9",
   "identifier": "com.memory.app",
   "build": {
-    "beforeDevCommand": "npm run dev",
+    "beforeDevCommand": "vite --mode tauri",
     "beforeBuildCommand": "npm run build",
     "frontendDist": "../../dist"
   },
@@ -48,13 +48,6 @@
     "shell": {
       "open": true
     },
-    "http": {
-      "all": true,
-      "request": true,
-      "scope": [
-        "http://127.0.0.1:9999/**",
-        "http://localhost:9999/**"
-      ]
-    }
+    "http": null
   }
 }

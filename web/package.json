@@ -11,7 +11,7 @@
     "lint:fix": "eslint --fix --ext .js,.vue .",
     "lint:staged": "lint-staged",
     "prettier": "npx prettier --write .",
-    "tauri": "tauri",
+    "tauri": "tauri dev",
     "tauri:dev": "tauri dev",
     "tauri:build": "node -e \"require('fs').copyFileSync('.env.tauri', '.env.production')\" && tauri build",
     "tauri:android:init": "tauri android init",
