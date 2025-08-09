@@ -16,5 +16,6 @@ setuptools==68.2.2
 mangum==0.17.0
 aiomysql==0.2.0
 asyncpg==0.29.0
+aiosqlite==0.20.0
 requests==2.31.0
 Pillow==10.2.0

@@ -297,34 +297,46 @@ async def test_database_connection(
         else:
             raise HTTPException(status_code=400, detail="不支持的数据库类型")
         
-        # 测试连接 - 只测试连接，不加载模型
-        test_config = {
-            "connections": {
-                "test": db_url
-            },
-            "apps": {
-                "models": {
-                    "models": [],  # 空模型列表，只测试连接
-                    "default_connection": "test",
-                }
-            },
-        }
+        # 使用独立的连接测试，避免加载任何模型
+        import asyncpg
+        import aiomysql
+        import aiosqlite
         
-        await Tortoise.init(config=test_config)
-        # 尝试执行一个简单的查询来验证连接
-        from tortoise import connections
-        conn = connections.get("test")
-        await conn.execute_query("SELECT 1")
-        await Tortoise.close_connections()
+        if connection_data.db_type == "sqlite":
+            # SQLite连接测试
+            async with aiosqlite.connect(connection_data.db_path) as conn:
+                await conn.execute("SELECT 1")
+                
+        elif connection_data.db_type == "postgresql":
+            # PostgreSQL连接测试
+            conn = await asyncpg.connect(
+                host=connection_data.host,
+                port=connection_data.port,
+                user=connection_data.username,
+                password=connection_data.password,
+                database=connection_data.database
+            )
+            await conn.fetchval("SELECT 1")
+            await conn.close()
+            
+        elif connection_data.db_type == "mysql":
+            # MySQL连接测试
+            conn = await aiomysql.connect(
+                host=connection_data.host,
+                port=connection_data.port,
+                user=connection_data.username,
+                password=connection_data.password,
+                db=connection_data.database
+            )
+            async with conn.cursor() as cursor:
+                await cursor.execute("SELECT 1")
+            conn.close()
         
         return Success(msg="数据库连接测试成功")
         
-    except DBConnectionError as e:
+    except Exception as e:
         logger.error(f"数据库连接失败: {str(e)}")
         return Fail(msg=f"数据库连接失败: {str(e)}")
-    except Exception as e:
-        logger.error(f"测试连接时发生错误: {str(e)}")
-        return Fail(msg=f"测试连接时发生错误: {str(e)}")
 
 
 @database_router.post("/migrate", summary="迁移数据库数据", dependencies=[DependPermisson])
