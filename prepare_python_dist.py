@@ -12,39 +12,39 @@ import platform
 from pathlib import Path
 
 def create_python_dist():
-    """创建Python分发包"""
-    print("开始创建Python分发包...")
+    """Create Python distribution package"""
+    print("Starting to create Python distribution package...")
     
-    # 获取项目根目录
+    # Get project root directory
     project_root = Path(__file__).parent
     dist_dir = project_root / "python-dist"
     
-    # 清理旧的分发目录
+    # Clean old distribution directory
     if dist_dir.exists():
         shutil.rmtree(dist_dir)
     
-    # 创建分发目录结构
+    # Create distribution directory structure
     dist_dir.mkdir(exist_ok=True)
     bin_dir = dist_dir / "bin"
     lib_dir = dist_dir / "lib"
     bin_dir.mkdir(exist_ok=True)
     lib_dir.mkdir(exist_ok=True)
     
-    # 创建虚拟环境
+    # Create virtual environment
     create_virtual_env(dist_dir, bin_dir, lib_dir)
     
-    print(f"Python分发包创建完成: {dist_dir}")
+    print(f"Python distribution package created: {dist_dir}")
 
 def create_virtual_env(dist_dir, bin_dir, lib_dir):
-    """创建虚拟环境并安装依赖"""
-    print("创建虚拟环境...")
+    """Create virtual environment and install dependencies"""
+    print("Creating virtual environment...")
     
     try:
-        # 创建虚拟环境
+        # Create virtual environment
         venv_dir = dist_dir / "venv"
         subprocess.run([sys.executable, "-m", "venv", str(venv_dir)], check=True)
         
-        # 确定虚拟环境中的Python和pip路径
+        # Determine Python and pip paths in virtual environment
         system = platform.system().lower()
         if system == "windows":
             venv_python = venv_dir / "Scripts" / "python.exe"
@@ -57,29 +57,29 @@ def create_virtual_env(dist_dir, bin_dir, lib_dir):
             python_target = bin_dir / "python3"
             pip_target = bin_dir / "pip3"
         
-        # 升级pip
+        # Upgrade pip
         subprocess.run([str(venv_python), "-m", "pip", "install", "--upgrade", "pip"], check=True)
         
-        # 安装依赖
+        # Install dependencies
         requirements_file = Path(__file__).parent / "requirements.txt"
         if requirements_file.exists():
-            print("安装Python依赖...")
+            print("Installing Python dependencies...")
             subprocess.run([str(venv_pip), "install", "-r", str(requirements_file)], check=True)
         
-        # 复制Python可执行文件到bin目录
+        # Copy Python executable to bin directory
         shutil.copy2(venv_python, python_target)
         shutil.copy2(venv_pip, pip_target)
         
-        # 在非Windows系统上设置执行权限
+        # Set execution permissions on non-Windows systems
         if system != "windows":
             os.chmod(python_target, 0o755)
             os.chmod(pip_target, 0o755)
         
-        # 复制site-packages到lib目录
+        # Copy site-packages to lib directory
         if system == "windows":
             site_packages = venv_dir / "Lib" / "site-packages"
         else:
-            # 查找正确的site-packages路径
+            # Find correct site-packages path
             lib_python_dir = venv_dir / "lib"
             python_version_dirs = [d for d in lib_python_dir.iterdir() if d.is_dir() and d.name.startswith("python")]
             if python_version_dirs:
@@ -88,42 +88,42 @@ def create_virtual_env(dist_dir, bin_dir, lib_dir):
                 site_packages = lib_python_dir / f"python{sys.version_info.major}.{sys.version_info.minor}" / "site-packages"
         
         if site_packages.exists():
-            print(f"复制site-packages: {site_packages} -> {lib_dir / 'site-packages'}")
+            print(f"Copying site-packages: {site_packages} -> {lib_dir / 'site-packages'}")
             shutil.copytree(site_packages, lib_dir / "site-packages")
         
-        # 创建启动脚本
+        # Create launcher script
         create_launcher_script(bin_dir)
         
-        print("Python环境准备完成")
+        print("Python environment preparation completed")
         
     except subprocess.CalledProcessError as e:
-        print(f"创建Python环境失败: {e}")
+        print(f"Failed to create Python environment: {e}")
         sys.exit(1)
     except Exception as e:
-        print(f"意外错误: {e}")
+        print(f"Unexpected error: {e}")
         sys.exit(1)
 
 def create_launcher_script(bin_dir):
-    """创建Python启动脚本"""
+    """Create Python launcher script"""
     launcher_content = '''
 #!/usr/bin/env python3
 import sys
 import os
 from pathlib import Path
 
-# 获取脚本所在目录
+# Get script directory
 script_dir = Path(__file__).parent
 lib_dir = script_dir.parent / "lib" / "site-packages"
 
-# 添加lib目录到Python路径
+# Add lib directory to Python path
 if lib_dir.exists():
     sys.path.insert(0, str(lib_dir))
 
-# 设置环境变量
+# Set environment variables
 os.environ["PYTHONPATH"] = str(lib_dir) + os.pathsep + os.environ.get("PYTHONPATH", "")
 
 if __name__ == "__main__":
-    # 运行传入的Python脚本
+    # Run the passed Python script
     if len(sys.argv) > 1:
         script_path = sys.argv[1]
         with open(script_path, 'r') as f:
