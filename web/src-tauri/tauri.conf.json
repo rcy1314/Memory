@@ -47,6 +47,14 @@
   "plugins": {
     "shell": {
       "open": true
+    },
+    "http": {
+      "all": true,
+      "request": true,
+      "scope": [
+        "http://127.0.0.1:9999/**",
+        "http://localhost:9999/**"
+      ]
     }
   }
 }

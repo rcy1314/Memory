@@ -104,6 +104,7 @@ fn main() {
     
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
+        .plugin(tauri_plugin_http::init())
         .invoke_handler(tauri::generate_handler![greet, toggle_fullscreen, is_fullscreen])
         .setup(|app| {
             let window = app.get_webview_window("main").unwrap();
