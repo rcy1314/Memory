@@ -23,6 +23,11 @@ jobs:
           cache: 'npm'
           cache-dependency-path: web/package-lock.json
           
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+          
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
         with:
@@ -36,6 +41,15 @@ jobs:
       - name: Install frontend dependencies
         working-directory: ./web
         run: npm ci
+        
+      - name: Install Python dependencies
+        run: pip install -r requirements.txt
+        
+      - name: Start backend server
+        run: |
+          Start-Process -FilePath "python" -ArgumentList "run.py" -NoNewWindow
+          Start-Sleep -Seconds 5
+        shell: powershell
         
       - name: Build frontend
         working-directory: ./web
