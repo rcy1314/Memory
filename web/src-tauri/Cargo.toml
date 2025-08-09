@@ -30,6 +30,10 @@ default = [ "custom-protocol" ]
 # DO NOT remove this
 custom-protocol = [ "tauri/custom-protocol" ]
 
+[lib]
+name = "memory_app"
+crate-type = ["cdylib"]
+
 [[bin]]
 name = "memory-app"
 path = "src/main.rs"

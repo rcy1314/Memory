@@ -13,13 +13,8 @@
     "prettier": "npx prettier --write .",
     "tauri": "tauri dev",
     "tauri:dev": "tauri dev",
-    "tauri:build": "node -e \"require('fs').copyFileSync('.env.tauri', '.env.production')\" && tauri build",
-    "tauri:android:init": "tauri android init",
-    "tauri:android:dev": "tauri android dev",
-    "tauri:android:build": "tauri android build",
-    "tauri:android:build:aarch64": "tauri android build --target aarch64",
-    "tauri:android:build:armv7": "tauri android build --target armv7",
-    "tauri:android:build:x86_64": "tauri android build --target x86_64"
+    "tauri:build": "node -e \"require('fs').copyFileSync('.env.tauri', '.env.production')\" && cd .. && python3 prepare_python_dist.py && cd web && tauri build",
+    "tauri:build:no-python": "node -e \"require('fs').copyFileSync('.env.tauri', '.env.production')\" && tauri build"
   },
   "dependencies": {
     "@iconify/json": "^2.2.101",

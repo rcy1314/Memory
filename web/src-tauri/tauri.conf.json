@@ -33,16 +33,8 @@
       "icons/icon.icns",
       "icons/icon.ico"
     ],
-    "resources": [
-      "../../run.py",
-      "../../app/**/*",
-      "../../requirements.txt",
-      "../../migrations/**/*",
-      "../../uvicorn_loggin_config.json"
-    ],
-    "android": {
-      "minSdkVersion": 24
-    }
+    "resources": [],
+    "externalBin": []
   },
   "plugins": {
     "shell": {

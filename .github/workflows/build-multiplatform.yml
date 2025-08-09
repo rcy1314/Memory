@@ -79,10 +79,18 @@ jobs:
       - name: Install Python dependencies
         run: pip install -r requirements.txt
         
-      - name: Start backend server
+      - name: Prepare Python distribution for packaging
+        run: |
+          python3 prepare_python_dist.py
+        env:
+          PYTHONPATH: ${{ github.workspace }}
+          
+      - name: Test backend server (optional)
         run: |
           python3 run.py &
+          BACKEND_PID=$!
           sleep 5
+          kill $BACKEND_PID || true
         env:
           PYTHONPATH: ${{ github.workspace }}
         

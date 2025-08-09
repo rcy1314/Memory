@@ -27,7 +27,7 @@ async fn is_fullscreen(window: tauri::Window) -> Result<bool, String> {
     window.is_fullscreen().map_err(|e| e.to_string())
 }
 
-// 启动FastAPI后端服务器
+// 启动后端服务器
 fn start_backend() {
     thread::spawn(|| {
         // 获取当前可执行文件的目录
@@ -38,20 +38,32 @@ fn start_backend() {
         
         // 在开发模式下，后端在项目根目录
         // 动态检测路径，支持应用包和直接运行两种情况
-        let (backend_path, working_dir) = if cfg!(debug_assertions) {
-            (exe_dir.join("../../../../run.py"), exe_dir.join("../../../.."))
+        let (backend_path, working_dir, python_path) = if cfg!(debug_assertions) {
+            (exe_dir.join("../../../../run.py"), exe_dir.join("../../../.."), "python3".to_string())
         } else {
             // 首先尝试应用包路径
             let app_bundle_path = exe_dir.join("../Resources/_up_/_up_/run.py");
             let app_bundle_working = exe_dir.join("../Resources/_up_/_up_");
+            let app_python_path = exe_dir.join("../Resources/_up_/_up_/python-dist/bin/python3");
             
             // 如果应用包路径不存在，尝试直接运行路径
             if app_bundle_path.exists() {
-                (app_bundle_path, app_bundle_working)
+                let python_exe = if app_python_path.exists() {
+                    app_python_path.to_string_lossy().to_string()
+                } else {
+                    "python3".to_string()
+                };
+                (app_bundle_path, app_bundle_working, python_exe)
             } else {
                 let direct_path = exe_dir.join("./_up_/_up_/run.py");
                 let direct_working = exe_dir.join("./_up_/_up_");
-                (direct_path, direct_working)
+                let direct_python_path = exe_dir.join("./_up_/_up_/python-dist/bin/python3");
+                let python_exe = if direct_python_path.exists() {
+                    direct_python_path.to_string_lossy().to_string()
+                } else {
+                    "python3".to_string()
+                };
+                (direct_path, direct_working, python_exe)
             }
         };
         
@@ -63,12 +75,24 @@ fn start_backend() {
             println!("Data directory created/verified: {:?}", data_dir);
         }
         
+        // 设置Python环境变量
+        let python_env = if python_path.contains("python-dist") {
+            let lib_path = working_dir.join("python-dist/lib/site-packages");
+            if lib_path.exists() {
+                Some(lib_path.to_string_lossy().to_string())
+            } else {
+                None
+            }
+        } else {
+            None
+        };
+        
         let mut cmd = if cfg!(target_os = "windows") {
             let mut cmd = Command::new("cmd");
-            cmd.args(["/C", "python", backend_path.to_str().unwrap()]);
+            cmd.args(["/C", &python_path, backend_path.to_str().unwrap()]);
             cmd
         } else {
-            let mut cmd = Command::new("python3");
+            let mut cmd = Command::new(&python_path);
             cmd.arg(backend_path.to_str().unwrap());
             cmd
         };
@@ -77,6 +101,12 @@ fn start_backend() {
         println!("Working directory: {:?}", working_dir);
         
         cmd.current_dir(&working_dir);
+        
+        // 设置Python环境变量
+        if let Some(python_lib_path) = python_env {
+            cmd.env("PYTHONPATH", &python_lib_path);
+            println!("Set PYTHONPATH to: {}", python_lib_path);
+        }
         
         match cmd.stdout(Stdio::inherit())
            .stderr(Stdio::inherit())
@@ -105,10 +135,7 @@ fn start_backend() {
 }
 
 fn main() {
-    // 启动后端服务器
     start_backend();
-    
-    // 等待后端服务器启动
     thread::sleep(Duration::from_secs(2));
     
     tauri::Builder::default()
@@ -116,9 +143,9 @@ fn main() {
         .plugin(tauri_plugin_http::init())
         .invoke_handler(tauri::generate_handler![greet, toggle_fullscreen, is_fullscreen])
         .setup(|app| {
-            let window = app.get_webview_window("main").unwrap();
-            // 设置窗口标题
-            window.set_title("Memory-不负时光相册程序").unwrap();
+            if let Some(window) = app.get_webview_window("main") {
+                let _ = window.set_title("Memory-不负时光相册程序");
+            }
             Ok(())
         })
         .run(tauri::generate_context!())
