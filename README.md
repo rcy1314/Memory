@@ -6,7 +6,7 @@
 
 ## 简介
 
-一个全屏瀑布流摄影图库，也是专为摄影师做的独立网络相册程序，它是基于[Moment](https://github.com/Robert-Stackflow/Moment)二次开发的，提供win、mac、docker三种使用使用方式，支持云端一键部署，加入了丰富个性化的一些功能，你可以本地使用或上传至oss存储，同样支持添加视频及一键备份等
+一个瀑布流摄影图库，也是专为摄影师做的独立网络相册程序，它是基于[Moment](https://github.com/Robert-Stackflow/Moment)二次开发的，提供前后端分离、docker部署方式，支持云端一键部署，加入了丰富个性化的一些功能，你可以本地使用或上传至oss存储，同样支持添加视频及一键备份等
 
 演示：https://memory.noisework.cn
 
@@ -111,6 +111,12 @@ docker run -d \
 
 由于桌面版和docker后端api有冲突，docker请使用/api/v1，如果你想自己构建docker：
 
+先web目录下构建静态页
+
+```
+cd web && npm install 
+```
+
 `web/.env.productuon`请修改为
 
 ```
@@ -142,6 +148,42 @@ VITE_BASE_API = '/api/v1'
 
 ```
 docker-compose up -d
+```
+
+构建跨平台桌面端时
+
+`web/.env.productuon`请修改为
+
+```
+# Tauri桌面端环境配置
+# 资源公共路径,需要以 /开头和结尾
+VITE_PUBLIC_PATH = '/'
+
+# 桌面端API配置 - 指向本地后端服务
+VITE_BASE_API = 'http://127.0.0.1:9999/api/v1'
+
+# 桌面端不使用代理
+VITE_USE_PROXY = false
+
+# 是否启用压缩
+VITE_USE_COMPRESS = true
+
+# 压缩类型
+VITE_COMPRESS_TYPE = gzip
+```
+
+`web/.env.development`请修改为
+
+```
+# Docker环境下的前端配置
+# 资源公共路径,需要以 /开头和结尾
+VITE_PUBLIC_PATH = '/'
+
+# 是否启用代理
+VITE_USE_PROXY = true
+
+# base api
+VITE_BASE_API = 'http://127.0.0.1:9999/api/v1'
 ```
 
 ## 🚀 一键部署
@@ -313,9 +355,10 @@ podman manifest push noise233/memory:dev
 
 ![1754543470663](https://s2.loli.net/2025/08/08/qgHzLv9XBejmFas.png)
 
-## 
-
 ## 🔨 构建说明
+
+<details>
+<summary>✅ 【点击展开】</summary>
 
 ### 桌面应用构建
 
@@ -605,6 +648,10 @@ jobs:
    npm install
    ```
 
+
+
+</details>
+
 ## [API 使用说明](./API_DOCUMENTATION.md)
 
 请访问查看API_DOCUMENTATION.md文件，比较多，是为未来的插件和扩展而准备的
@@ -617,9 +664,11 @@ jobs:
 
 ## 桌面版运行报错
 
-如果你运行后首页显示Network eroor的情况属于后端未运行，在最新版本的软件包内实际有后端文件，如果未自动运行，可手动运行解决报错，或者下载源码后执行后端命令，后端：`python run.py`
+如果你运行后首页显示Network eroor的情况属于后端未运行，在最新版本的软件包内实际有后端文件，如果未自动运行，可手动运行解决报错，或者下载源码后执行后端命令，后端：`python3 run.py`
 
+仓库根目录中有很多python脚本是我用来测试api的非必要可删除文件
 
+如果云端使用请上传压缩或webp格式图片，避免加载慢
 
 ## To do
 
