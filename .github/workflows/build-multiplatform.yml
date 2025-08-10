@@ -85,12 +85,23 @@ jobs:
         env:
           PYTHONPATH: ${{ github.workspace }}
           
-      - name: Test backend server (optional)
+      - name: Test backend server (optional) - Unix
+        if: matrix.platform != 'windows-latest'
         run: |
           python3 run.py &
           BACKEND_PID=$!
           sleep 5
           kill $BACKEND_PID || true
+        env:
+          PYTHONPATH: ${{ github.workspace }}
+          
+      - name: Test backend server (optional) - Windows
+        if: matrix.platform == 'windows-latest'
+        run: |
+          $process = Start-Process -FilePath "python" -ArgumentList "run.py" -PassThru -NoNewWindow
+          Start-Sleep -Seconds 5
+          Stop-Process -Id $process.Id -Force -ErrorAction SilentlyContinue
+        shell: powershell
         env:
           PYTHONPATH: ${{ github.workspace }}
         
