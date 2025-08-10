@@ -6,6 +6,7 @@
 use std::process::{Command, Stdio};
 use std::thread;
 use std::time::Duration;
+use std::path::PathBuf;
 use tauri::Manager;
 use std::env;
 
@@ -36,6 +37,8 @@ fn start_backend() {
             .and_then(|path| path.parent().map(|p| p.to_path_buf()))
             .unwrap_or_else(|| std::path::PathBuf::from("."));
         
+        println!("Current executable directory: {:?}", exe_dir);
+        
         // 在开发模式下，后端在项目根目录
         // 动态检测路径，支持应用包和直接运行两种情况
         let (backend_path, working_dir, python_path) = if cfg!(debug_assertions) {
@@ -50,13 +53,23 @@ fn start_backend() {
             println!("App bundle working dir: {:?}", app_bundle_working);
             println!("App python path: {:?}", app_python_path);
             
+            // 检查各个路径是否存在
+            println!("App bundle path exists: {}", app_bundle_path.exists());
+            println!("App bundle working dir exists: {}", app_bundle_working.exists());
+            println!("App python path exists: {}", app_python_path.exists());
+            
             // 如果应用包路径不存在，尝试直接运行路径
-            if app_bundle_path.exists() {
+            if app_bundle_path.exists() && app_python_path.exists() {
+                println!("Using app bundle paths");
                 (app_bundle_path, app_bundle_working, app_python_path.to_string_lossy().to_string())
             } else {
+                println!("App bundle paths not found, trying direct paths");
                 let direct_path = exe_dir.join("./python-dist/run.py");
                 let direct_working = exe_dir.join("./python-dist");
                 let direct_python = exe_dir.join("./python-dist/bin/python3");
+                println!("Direct path: {:?}", direct_path);
+                println!("Direct working: {:?}", direct_working);
+                println!("Direct python: {:?}", direct_python);
                 (direct_path, direct_working, direct_python.to_string_lossy().to_string())
             }
         };
@@ -79,11 +92,24 @@ fn start_backend() {
             }
         };
         
+        // 确保Python可执行文件有执行权限（Unix系统）
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            if let Ok(metadata) = std::fs::metadata(&python_path) {
+                let mut perms = metadata.permissions();
+                perms.set_mode(0o755);
+                let _ = std::fs::set_permissions(&python_path, perms);
+            }
+        }
+        
         let mut cmd = if cfg!(target_os = "windows") {
+            // Windows下使用cmd执行
             let mut cmd = Command::new("cmd");
             cmd.args(["/C", &python_path, backend_path.to_str().unwrap()]);
             cmd
         } else {
+            // Unix系统直接执行Python
             let mut cmd = Command::new(&python_path);
             cmd.arg(backend_path.to_str().unwrap());
             cmd
@@ -91,6 +117,11 @@ fn start_backend() {
         
         println!("Attempting to start backend at: {:?}", backend_path);
         println!("Working directory: {:?}", working_dir);
+        println!("Python executable: {}", python_path);
+        
+        // 检查关键文件是否存在
+        println!("Backend script exists: {}", backend_path.exists());
+        println!("Working directory exists: {}", working_dir.exists());
         
         cmd.current_dir(&working_dir);
         
@@ -100,28 +131,68 @@ fn start_backend() {
             println!("Set PYTHONPATH to: {}", python_lib_path);
         }
         
-        match cmd.stdout(Stdio::inherit())
-           .stderr(Stdio::inherit())
-           .spawn() {
-            Ok(mut child) => {
-                println!("Backend server started successfully with PID: {}", child.id());
-                // 在后台线程中等待子进程
-                thread::spawn(move || {
-                    match child.wait() {
-                        Ok(status) => {
-                            println!("Backend process exited with status: {}", status);
+        println!("About to execute command: {:?}", cmd);
+        
+        // 尝试启动后端，如果失败则重试
+        let mut attempts = 0;
+        let max_attempts = 3;
+        
+        while attempts < max_attempts {
+            attempts += 1;
+            println!("Backend start attempt {} of {}", attempts, max_attempts);
+            
+            match cmd.stdout(Stdio::inherit())
+               .stderr(Stdio::inherit())
+               .spawn() {
+                Ok(mut child) => {
+                    println!("Backend server started successfully with PID: {}", child.id());
+                    
+                    // 等待一小段时间确认进程没有立即退出
+                    thread::sleep(Duration::from_millis(500));
+                    
+                    match child.try_wait() {
+                        Ok(Some(status)) => {
+                            eprintln!("Backend process exited immediately with status: {}", status);
+                            if attempts < max_attempts {
+                                println!("Retrying backend start...");
+                                thread::sleep(Duration::from_secs(1));
+                                continue;
+                            }
+                        },
+                        Ok(None) => {
+                            println!("Backend process is running successfully");
+                            // 在后台线程中等待子进程
+                            thread::spawn(move || {
+                                match child.wait() {
+                                    Ok(status) => {
+                                        println!("Backend process exited with status: {}", status);
+                                    },
+                                    Err(e) => {
+                                        eprintln!("Error waiting for backend process: {}", e);
+                                    }
+                                }
+                            });
+                            break;
                         },
                         Err(e) => {
-                            eprintln!("Error waiting for backend process: {}", e);
+                            eprintln!("Error checking backend process status: {}", e);
                         }
                     }
-                });
-            },
-            Err(e) => {
-                eprintln!("Failed to start backend server: {}", e);
-                eprintln!("Backend path: {:?}", backend_path);
-                eprintln!("Working dir: {:?}", working_dir);
-            },
+                },
+                Err(e) => {
+                    eprintln!("Failed to start backend server (attempt {}): {}", attempts, e);
+                    eprintln!("Backend path: {:?}", backend_path);
+                    eprintln!("Working dir: {:?}", working_dir);
+                    eprintln!("Python path: {}", python_path);
+                    
+                    if attempts < max_attempts {
+                        println!("Retrying in 2 seconds...");
+                        thread::sleep(Duration::from_secs(2));
+                    } else {
+                        eprintln!("All backend start attempts failed!");
+                    }
+                },
+            }
         }
     });
 }
