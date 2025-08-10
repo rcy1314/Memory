@@ -3,11 +3,13 @@
     windows_subsystem = "windows"
 )]
 
-use std::process::{Command, Stdio};
+use std::process::{Command, Stdio, Child};
 use std::thread;
 use std::time::Duration;
-use tauri::Manager;
+use tauri::{Manager, AppHandle, State};
 use std::env;
+use std::sync::{Arc, Mutex};
+use std::sync::atomic::{AtomicBool, Ordering};
 
 // Learn more about Tauri commands at https://tauri.app/v1/guides/features/command
 #[tauri::command]
@@ -27,9 +29,25 @@ async fn is_fullscreen(window: tauri::Window) -> Result<bool, String> {
     window.is_fullscreen().map_err(|e| e.to_string())
 }
 
+// 后端进程状态管理
+struct BackendState {
+    process: Arc<Mutex<Option<Child>>>,
+    is_running: Arc<AtomicBool>,
+}
+
+impl BackendState {
+    fn new() -> Self {
+        Self {
+            process: Arc::new(Mutex::new(None)),
+            is_running: Arc::new(AtomicBool::new(false)),
+        }
+    }
+}
+
 // 启动FastAPI后端服务器
-fn start_backend() {
-    thread::spawn(|| {
+fn start_backend(backend_state: Arc<BackendState>) {
+    let state_clone = backend_state.clone();
+    thread::spawn(move || {
         // 获取当前可执行文件的目录
         let exe_dir = env::current_exe()
             .ok()
@@ -103,19 +121,47 @@ fn start_backend() {
         
         cmd.current_dir(&working_dir);
         
-        match cmd.stdout(Stdio::inherit())
-           .stderr(Stdio::inherit())
+        match cmd.stdout(Stdio::piped())
+           .stderr(Stdio::piped())
            .spawn() {
             Ok(mut child) => {
                 println!("Backend server started successfully with PID: {}", child.id());
-                // 在后台线程中等待子进程
+                state_clone.is_running.store(true, Ordering::SeqCst);
+                
+                // 存储进程句柄
+                if let Ok(mut process_guard) = state_clone.process.lock() {
+                    *process_guard = Some(child);
+                }
+                
+                // 监控进程状态
+                let state_monitor = state_clone.clone();
                 thread::spawn(move || {
-                    match child.wait() {
-                        Ok(status) => {
-                            println!("Backend process exited with status: {}", status);
-                        },
-                        Err(e) => {
-                            eprintln!("Error waiting for backend process: {}", e);
+                    loop {
+                        thread::sleep(Duration::from_secs(5));
+                        
+                        if let Ok(mut process_guard) = state_monitor.process.lock() {
+                            if let Some(ref mut child) = *process_guard {
+                                match child.try_wait() {
+                                    Ok(Some(status)) => {
+                                        println!("Backend process exited with status: {}", status);
+                                        state_monitor.is_running.store(false, Ordering::SeqCst);
+                                        *process_guard = None;
+                                        break;
+                                    },
+                                    Ok(None) => {
+                                        // 进程仍在运行
+                                        continue;
+                                    },
+                                    Err(e) => {
+                                        eprintln!("Error checking backend process: {}", e);
+                                        state_monitor.is_running.store(false, Ordering::SeqCst);
+                                        *process_guard = None;
+                                        break;
+                                    }
+                                }
+                            } else {
+                                break;
+                            }
                         }
                     }
                 });
@@ -124,26 +170,89 @@ fn start_backend() {
                 eprintln!("Failed to start backend server: {}", e);
                 eprintln!("Backend path: {:?}", backend_path);
                 eprintln!("Working dir: {:?}", working_dir);
+                eprintln!("Python path: {}", python_path);
+                state_clone.is_running.store(false, Ordering::SeqCst);
             },
         }
     });
 }
 
+// Tauri 命令：获取后端状态
+#[tauri::command]
+fn get_backend_status(state: State<BackendState>) -> bool {
+    state.is_running.load(Ordering::SeqCst)
+}
+
+// Tauri 命令：重启后端
+#[tauri::command]
+fn restart_backend(state: State<BackendState>) -> Result<String, String> {
+    // 先停止现有进程
+    if let Ok(mut process_guard) = state.process.lock() {
+        if let Some(mut child) = process_guard.take() {
+            let _ = child.kill();
+            let _ = child.wait();
+        }
+    }
+    
+    state.is_running.store(false, Ordering::SeqCst);
+    
+    // 重新启动
+    let state_arc = Arc::new(BackendState {
+        process: state.process.clone(),
+        is_running: state.is_running.clone(),
+    });
+    
+    start_backend(state_arc);
+    
+    // 等待启动
+    thread::sleep(Duration::from_millis(1000));
+    
+    if state.is_running.load(Ordering::SeqCst) {
+        Ok("Backend restarted successfully".to_string())
+    } else {
+        Err("Failed to restart backend".to_string())
+    }
+}
+
 fn main() {
+    // 创建后端状态管理
+    let backend_state = Arc::new(BackendState::new());
+    
     // 启动后端服务器
-    start_backend();
+    start_backend(backend_state.clone());
     
     // 等待后端服务器启动
-    thread::sleep(Duration::from_secs(2));
+    thread::sleep(Duration::from_secs(3));
     
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_http::init())
-        .invoke_handler(tauri::generate_handler![greet, toggle_fullscreen, is_fullscreen])
+        .manage(BackendState {
+            process: backend_state.process.clone(),
+            is_running: backend_state.is_running.clone(),
+        })
+        .invoke_handler(tauri::generate_handler![greet, toggle_fullscreen, is_fullscreen, get_backend_status, restart_backend])
         .setup(|app| {
             let window = app.get_webview_window("main").unwrap();
             // 设置窗口标题
             window.set_title("Memory-不负时光相册程序").unwrap();
+            
+            // 设置窗口关闭事件处理
+            let app_handle = app.handle().clone();
+            window.on_window_event(move |event| {
+                if let tauri::WindowEvent::CloseRequested { .. } = event {
+                    // 清理后端进程
+                    if let Ok(backend_state) = app_handle.state::<BackendState>().try_lock() {
+                        if let Ok(mut process_guard) = backend_state.process.lock() {
+                            if let Some(mut child) = process_guard.take() {
+                                let _ = child.kill();
+                                let _ = child.wait();
+                            }
+                        }
+                    }
+                }
+            });
+            
             Ok(())
         })
         .run(tauri::generate_context!())

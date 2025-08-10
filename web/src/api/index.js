@@ -1,4 +1,5 @@
 import { request, imageRequest, migrationRequest } from '@/utils'
+import { invoke } from '@tauri-apps/api/tauri'
 
 export default {
   uploadApi: import.meta.env.VITE_BASE_API + '/admin/base/upload',
@@ -71,4 +72,21 @@ export default {
   getCategoriesVisitor: (params = {}) => request.get('/visitor/category/list', { params }),
   getCategoryByAliasVisitor: (params = {}) =>
     request.get('/visitor/category/get/alias', { params }),
+  // Tauri 桌面应用后端管理
+  getBackendStatus: async () => {
+    try {
+      return await invoke('get_backend_status')
+    } catch (error) {
+      console.error('Failed to get backend status:', error)
+      return false
+    }
+  },
+  restartBackend: async () => {
+    try {
+      return await invoke('restart_backend')
+    } catch (error) {
+      console.error('Failed to restart backend:', error)
+      throw error
+    }
+  },
 }
