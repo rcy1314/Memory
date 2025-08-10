@@ -36,74 +36,87 @@ def create_python_dist():
     print(f"Python distribution package created: {dist_dir}")
 
 def create_virtual_env(dist_dir, bin_dir, lib_dir):
-    """Create Python distribution without virtual environment"""
-    print("Using system Python environment...")
+    """Create a proper virtual environment for distribution"""
+    print("Creating virtual environment...")
     
     try:
+        # Create virtual environment using venv module
+        venv_path = dist_dir
+        print(f"Creating virtual environment at: {venv_path}")
+        
+        # Create virtual environment
+        subprocess.run([
+            sys.executable, "-m", "venv", 
+            str(venv_path),
+            "--copies"  # Use copies instead of symlinks for better portability
+        ], check=True)
+        
         # Determine system type and set paths
         system = platform.system().lower()
         if system == "windows":
-            python_target = bin_dir / "python3.exe"
-            pip_target = bin_dir / "pip3.exe"
+            python_executable = venv_path / "Scripts" / "python.exe"
+            pip_executable = venv_path / "Scripts" / "pip.exe"
         else:
-            python_target = bin_dir / "python3"
-            pip_target = bin_dir / "pip3"
+            python_executable = venv_path / "bin" / "python"
+            pip_executable = venv_path / "bin" / "pip"
         
-        # Copy Python executable to bin directory
-        shutil.copy2(sys.executable, python_target)
+        # Verify Python executable exists and works
+        if not python_executable.exists():
+            raise FileNotFoundError(f"Python executable not found: {python_executable}")
         
-        # Create a simple pip script
-        pip_content = f'''#!/usr/bin/env python3
-import sys
-import subprocess
-sys.exit(subprocess.call([sys.executable, "-m", "pip"] + sys.argv[1:]))'''
-        with open(pip_target, 'w') as f:
-            f.write(pip_content)
+        # Test the Python executable
+        result = subprocess.run([str(python_executable), "--version"], 
+                              capture_output=True, text=True, check=True)
+        print(f"Virtual environment Python version: {result.stdout.strip()}")
         
-        # Set execution permissions on non-Windows systems
-        if system != "windows":
-            os.chmod(python_target, 0o755)
-            os.chmod(pip_target, 0o755)
+        # Upgrade pip in virtual environment
+        print("Upgrading pip in virtual environment...")
+        subprocess.run([
+            str(python_executable), "-m", "pip", "install", "--upgrade", "pip"
+        ], check=True)
         
-        # Install required packages using pip
-        target_site_packages = lib_dir / "site-packages"
-        target_site_packages.mkdir(parents=True, exist_ok=True)
-        
-        # Install packages from requirements.txt using the created Python executable
+        # Install packages from requirements.txt
         requirements_file = Path("requirements.txt")
         if requirements_file.exists():
-            print(f"Installing packages from requirements.txt using bundled Python...")
+            print(f"Installing packages from requirements.txt...")
             try:
-                # Use the bundled Python to install packages
                 subprocess.run([
-                    str(python_target), "-m", "pip", "install", 
+                    str(python_executable), "-m", "pip", "install", 
                     "-r", str(requirements_file),
-                    "--target", str(target_site_packages),
                     "--no-warn-script-location"
                 ], check=True, cwd=str(Path.cwd()))
                 print("Successfully installed all required packages")
             except subprocess.CalledProcessError as e:
-                print(f"Failed to install packages: {e}")
-                # Fallback: copy essential packages from system
-                print("Falling back to copying essential packages from system...")
-                copy_essential_packages(target_site_packages)
+                print(f"Failed to install some packages: {e}")
+                print("Continuing with available packages...")
         else:
             print("Warning: requirements.txt not found")
         
-        # Set proper permissions
+        # Create symlinks for easier access (Unix systems)
         if system != "windows":
-            subprocess.run(["chmod", "-R", "755", str(target_site_packages)], check=False)
-        
-        # Create launcher script
-        create_launcher_script(bin_dir)
+            # Create python3 symlink
+            python3_link = bin_dir / "python3"
+            if python3_link.exists():
+                python3_link.unlink()
+            python3_link.symlink_to(python_executable)
+            
+            # Create pip3 symlink  
+            pip3_link = bin_dir / "pip3"
+            if pip3_link.exists():
+                pip3_link.unlink()
+            pip3_link.symlink_to(pip_executable)
+            
+            # Set proper permissions
+            os.chmod(python_executable, 0o755)
+            os.chmod(pip_executable, 0o755)
         
         # Copy application files
         copy_application_files(dist_dir)
         
-        print("Python environment preparation completed")
+        print("Python virtual environment created successfully")
         
     except subprocess.CalledProcessError as e:
-        print(f"Failed to create Python environment: {e}")
+        print(f"Failed to create virtual environment: {e}")
         sys.exit(1)
     except Exception as e:
         print(f"Unexpected error: {e}")
