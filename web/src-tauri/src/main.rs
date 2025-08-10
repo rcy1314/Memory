@@ -9,7 +9,6 @@ use std::time::Duration;
 use std::path::PathBuf;
 use tauri::Manager;
 use std::env;
-use std::io::Read;
 use std::net::TcpStream;
 
 // Learn more about Tauri commands at https://tauri.app/v1/guides/features/command
@@ -64,9 +63,23 @@ fn start_backend() {
         
         // 在开发模式下，后端在项目根目录
         // 动态检测路径，支持应用包和直接运行两种情况
-        let (backend_path, working_dir, python_path) = if cfg!(debug_assertions) {
-            (exe_dir.join("../../../../run.py"), exe_dir.join("../../../.."), "python3".to_string())
+        let (backend_path, working_dir, python_path, use_executable) = if cfg!(debug_assertions) {
+            let project_root = exe_dir.join("_up_").join("_up_");
+            let python_dist = project_root.join("python-dist");
+            let python_exe = python_dist.join("bin").join("python");
+            let python_path = if python_exe.exists() {
+                python_exe.to_string_lossy().to_string()
+            } else {
+                "python3".to_string()
+            };
+            (python_dist.join("run.py"), python_dist.clone(), python_path, false)
         } else {
+            // 首先检查是否有独立可执行文件
+            let executable_path = exe_dir.join("../Resources/memory-backend");
+            if executable_path.exists() {
+                println!("Found standalone executable: {:?}", executable_path);
+                (executable_path.clone(), exe_dir.join("../Resources"), executable_path.to_string_lossy().to_string(), true)
+            } else {
             // 应用包路径：从MacOS目录到Resources目录
             let app_bundle_path = exe_dir.join("../Resources/python-dist/run.py");
             let app_bundle_working = exe_dir.join("../Resources/python-dist");
@@ -132,14 +145,15 @@ fn start_backend() {
             // 如果应用包路径不存在，尝试直接运行路径
             if app_bundle_path.exists() {
                 println!("Using app bundle paths");
-                (app_bundle_path, app_bundle_working, python_path)
+                (app_bundle_path, app_bundle_working, python_path, false)
             } else {
                 println!("App bundle paths not found, trying direct paths");
                 let direct_path = exe_dir.join("./python-dist/run.py");
                 let direct_working = exe_dir.join("./python-dist");
                 println!("Direct path: {:?}", direct_path);
                 println!("Direct working: {:?}", direct_working);
-                (direct_path, direct_working, python_path)
+                (direct_path, direct_working, python_path, false)
+            }
             }
         };
         
@@ -151,8 +165,15 @@ fn start_backend() {
             println!("Data directory created/verified: {:?}", data_dir);
         }
         
+        // 如果使用可执行文件，跳过Python环境设置
+        if use_executable {
+            println!("Using standalone executable, skipping Python environment setup");
+        }
+        
         // 设置Python环境变量 - 总是尝试使用虚拟环境的site-packages
-         let python_env = {
+         let python_env = if use_executable {
+             None // 可执行文件不需要Python环境变量
+         } else {
              // 尝试多个可能的site-packages路径
              let possible_paths = vec![
                  working_dir.join("lib/python3.13/site-packages"),
@@ -237,29 +258,45 @@ fn start_backend() {
             println!("Backend start attempt {} of {}", attempts, max_attempts);
             
             // 每次重试都创建新的Command对象
-            let mut cmd = if cfg!(target_os = "windows") {
-                // Windows下使用cmd执行
+            let mut cmd = if use_executable {
+                // 使用独立可执行文件
+                println!("Using standalone executable: {}", python_path);
+                let mut cmd = Command::new(&python_path);
+                cmd.current_dir(&working_dir);
+                cmd
+            } else if cfg!(target_os = "windows") {
+                // Windows下使用cmd执行Python脚本
                 let mut cmd = Command::new("cmd");
                 cmd.args(["/C", &python_path, backend_path.to_str().unwrap()]);
+                cmd.current_dir(&working_dir);
+                
+                // 设置Python环境变量
+                if let Some(ref python_lib_path) = python_env {
+                    cmd.env("PYTHONPATH", python_lib_path);
+                    println!("Set PYTHONPATH to: {}", python_lib_path);
+                }
+                
+                // 添加更多环境变量以确保Python运行环境正确
+                cmd.env("PYTHONUNBUFFERED", "1");
+                cmd.env("PYTHONDONTWRITEBYTECODE", "1");
                 cmd
             } else {
-                // Unix系统直接执行Python
+                // Unix系统直接执行Python脚本
                 let mut cmd = Command::new(&python_path);
                 cmd.arg(backend_path.to_str().unwrap());
+                cmd.current_dir(&working_dir);
+                
+                // 设置Python环境变量
+                if let Some(ref python_lib_path) = python_env {
+                    cmd.env("PYTHONPATH", python_lib_path);
+                    println!("Set PYTHONPATH to: {}", python_lib_path);
+                }
+                
+                // 添加更多环境变量以确保Python运行环境正确
+                cmd.env("PYTHONUNBUFFERED", "1");
+                cmd.env("PYTHONDONTWRITEBYTECODE", "1");
                 cmd
             };
-            
-            cmd.current_dir(&working_dir);
-            
-            // 设置Python环境变量
-            if let Some(ref python_lib_path) = python_env {
-                cmd.env("PYTHONPATH", python_lib_path);
-                println!("Set PYTHONPATH to: {}", python_lib_path);
-            }
-            
-            // 添加更多环境变量以确保Python运行环境正确
-            cmd.env("PYTHONUNBUFFERED", "1");
-            cmd.env("PYTHONDONTWRITEBYTECODE", "1");
             
             println!("About to execute command: {:?}", cmd);
             
