@@ -6,7 +6,7 @@
 use std::process::{Command, Stdio, Child};
 use std::thread;
 use std::time::Duration;
-use tauri::{Manager, AppHandle, State};
+use tauri::{Manager, State};
 use std::env;
 use std::sync::{Arc, Mutex};
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -124,7 +124,7 @@ fn start_backend(backend_state: Arc<BackendState>) {
         match cmd.stdout(Stdio::piped())
            .stderr(Stdio::piped())
            .spawn() {
-            Ok(mut child) => {
+            Ok(child) => {
                 println!("Backend server started successfully with PID: {}", child.id());
                 state_clone.is_running.store(true, Ordering::SeqCst);
                 
@@ -242,12 +242,11 @@ fn main() {
             window.on_window_event(move |event| {
                 if let tauri::WindowEvent::CloseRequested { .. } = event {
                     // 清理后端进程
-                    if let Ok(backend_state) = app_handle.state::<BackendState>().try_lock() {
-                        if let Ok(mut process_guard) = backend_state.process.lock() {
-                            if let Some(mut child) = process_guard.take() {
-                                let _ = child.kill();
-                                let _ = child.wait();
-                            }
+                    let backend_state = app_handle.state::<BackendState>();
+                    if let Ok(mut process_guard) = backend_state.process.lock() {
+                        if let Some(mut child) = process_guard.take() {
+                            let _ = child.kill();
+                            let _ = child.wait();
                         }
                     }
                 }
