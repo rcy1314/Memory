@@ -45,11 +45,20 @@ jobs:
       - name: Install Python dependencies
         run: pip install -r requirements.txt
         
-      - name: Start backend server
+      - name: Prepare Python distribution for packaging
         run: |
-          Start-Process -FilePath "python" -ArgumentList "run.py" -NoNewWindow
+          python prepare_python_dist.py
+        env:
+          PYTHONPATH: ${{ github.workspace }}
+          
+      - name: Test backend server (optional)
+        run: |
+          $process = Start-Process -FilePath "python" -ArgumentList "run.py" -PassThru -NoNewWindow
           Start-Sleep -Seconds 5
+          Stop-Process -Id $process.Id -Force -ErrorAction SilentlyContinue
         shell: powershell
+        env:
+          PYTHONPATH: ${{ github.workspace }}
         
       - name: Build frontend
         working-directory: ./web

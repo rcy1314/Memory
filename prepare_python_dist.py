@@ -36,63 +36,69 @@ def create_python_dist():
     print(f"Python distribution package created: {dist_dir}")
 
 def create_virtual_env(dist_dir, bin_dir, lib_dir):
-    """Create virtual environment and install dependencies"""
-    print("Creating virtual environment...")
+    """Create Python distribution without virtual environment"""
+    print("Using system Python environment...")
     
     try:
-        # Create virtual environment
-        venv_dir = dist_dir / "venv"
-        subprocess.run([sys.executable, "-m", "venv", str(venv_dir)], check=True)
-        
-        # Determine Python and pip paths in virtual environment
+        # Determine system type and set paths
         system = platform.system().lower()
         if system == "windows":
-            venv_python = venv_dir / "Scripts" / "python.exe"
-            venv_pip = venv_dir / "Scripts" / "pip.exe"
             python_target = bin_dir / "python3.exe"
             pip_target = bin_dir / "pip3.exe"
         else:
-            venv_python = venv_dir / "bin" / "python"
-            venv_pip = venv_dir / "bin" / "pip"
             python_target = bin_dir / "python3"
             pip_target = bin_dir / "pip3"
         
-        # Upgrade pip
-        subprocess.run([str(venv_python), "-m", "pip", "install", "--upgrade", "pip"], check=True)
-        
-        # Install dependencies
-        requirements_file = Path(__file__).parent / "requirements.txt"
-        if requirements_file.exists():
-            print("Installing Python dependencies...")
-            subprocess.run([str(venv_pip), "install", "-r", str(requirements_file)], check=True)
-        
         # Copy Python executable to bin directory
-        shutil.copy2(venv_python, python_target)
-        shutil.copy2(venv_pip, pip_target)
+        shutil.copy2(sys.executable, python_target)
+        
+        # Create a simple pip script
+        pip_content = f'''#!/usr/bin/env python3
+import sys
+import subprocess
+sys.exit(subprocess.call([sys.executable, "-m", "pip"] + sys.argv[1:]))'''
+        with open(pip_target, 'w') as f:
+            f.write(pip_content)
         
         # Set execution permissions on non-Windows systems
         if system != "windows":
             os.chmod(python_target, 0o755)
             os.chmod(pip_target, 0o755)
         
-        # Copy site-packages to lib directory
-        if system == "windows":
-            site_packages = venv_dir / "Lib" / "site-packages"
-        else:
-            # Find correct site-packages path
-            lib_python_dir = venv_dir / "lib"
-            python_version_dirs = [d for d in lib_python_dir.iterdir() if d.is_dir() and d.name.startswith("python")]
-            if python_version_dirs:
-                site_packages = python_version_dirs[0] / "site-packages"
-            else:
-                site_packages = lib_python_dir / f"python{sys.version_info.major}.{sys.version_info.minor}" / "site-packages"
+        # Install required packages using pip
+        target_site_packages = lib_dir / "site-packages"
+        target_site_packages.mkdir(parents=True, exist_ok=True)
         
-        if site_packages.exists():
-            print(f"Copying site-packages: {site_packages} -> {lib_dir / 'site-packages'}")
-            shutil.copytree(site_packages, lib_dir / "site-packages")
+        # Install packages from requirements.txt using the created Python executable
+        requirements_file = Path("requirements.txt")
+        if requirements_file.exists():
+            print(f"Installing packages from requirements.txt using bundled Python...")
+            try:
+                # Use the bundled Python to install packages
+                subprocess.run([
+                    str(python_target), "-m", "pip", "install", 
+                    "-r", str(requirements_file),
+                    "--target", str(target_site_packages),
+                    "--no-warn-script-location"
+                ], check=True, cwd=str(Path.cwd()))
+                print("Successfully installed all required packages")
+            except subprocess.CalledProcessError as e:
+                print(f"Failed to install packages: {e}")
+                # Fallback: copy essential packages from system
+                print("Falling back to copying essential packages from system...")
+                copy_essential_packages(target_site_packages)
+        else:
+            print("Warning: requirements.txt not found")
+        
+        # Set proper permissions
+        if system != "windows":
+            subprocess.run(["chmod", "-R", "755", str(target_site_packages)], check=False)
         
         # Create launcher script
         create_launcher_script(bin_dir)
+        
+        # Copy application files
+        copy_application_files(dist_dir)
         
         print("Python environment preparation completed")
         
@@ -102,6 +108,65 @@ def create_virtual_env(dist_dir, bin_dir, lib_dir):
     except Exception as e:
         print(f"Unexpected error: {e}")
         sys.exit(1)
+
+
+def copy_essential_packages(target_site_packages):
+    """Create minimal site-packages with just __init__.py"""
+    # Create a minimal site-packages directory
+    target_site_packages.mkdir(parents=True, exist_ok=True)
+    
+    # Create __init__.py to make it a valid Python package directory
+    init_file = target_site_packages / "__init__.py"
+    with open(init_file, 'w') as f:
+        f.write("# Minimal site-packages directory for Tauri app\n")
+    
+    print("Created minimal site-packages directory")
+
+
+def copy_application_files(dist_dir):
+    """Copy application files to distribution directory"""
+    try:
+        # Copy main application files
+        files_to_copy = [
+            'run.py',
+            'Memory_api.py',
+            'requirements.txt',
+            'uvicorn_loggin_config.json'
+        ]
+        
+        for file_name in files_to_copy:
+            src_file = Path(file_name)
+            if src_file.exists():
+                dst_file = dist_dir / file_name
+                shutil.copy2(src_file, dst_file)
+                print(f"Copied {file_name} to distribution")
+        
+        # Copy directories
+        dirs_to_copy = ['app', 'migrations', 'data']
+        for dir_name in dirs_to_copy:
+            src_dir = Path(dir_name)
+            if src_dir.exists():
+                dst_dir = dist_dir / dir_name
+                if dst_dir.exists():
+                    shutil.rmtree(dst_dir)
+                shutil.copytree(src_dir, dst_dir)
+                print(f"Copied {dir_name}/ directory to distribution")
+        
+        # Copy frontend dist directory
+        frontend_dist = Path('dist')
+        if frontend_dist.exists():
+            dst_dist = dist_dir / 'dist'
+            if dst_dist.exists():
+                shutil.rmtree(dst_dist)
+            shutil.copytree(frontend_dist, dst_dist)
+            print(f"Copied dist/ directory to distribution")
+        
+        # Ensure data directory exists
+        data_dir = dist_dir / "data"
+        data_dir.mkdir(exist_ok=True)
+        
+    except Exception as e:
+        print(f"Error copying application files: {e}")
 
 def create_launcher_script(bin_dir):
     """Create Python launcher script"""

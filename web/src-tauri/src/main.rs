@@ -41,29 +41,19 @@ fn start_backend() {
         let (backend_path, working_dir, python_path) = if cfg!(debug_assertions) {
             (exe_dir.join("../../../../run.py"), exe_dir.join("../../../.."), "python3".to_string())
         } else {
-            // 首先尝试应用包路径
-            let app_bundle_path = exe_dir.join("../Resources/_up_/_up_/run.py");
-            let app_bundle_working = exe_dir.join("../Resources/_up_/_up_");
+            // 应用包路径：资源在Resources目录下的嵌套_up_目录中
+            let app_bundle_path = exe_dir.join("../Resources/_up_/_up_/python-dist/run.py");
+            let app_bundle_working = exe_dir.join("../Resources/_up_/_up_/python-dist");
             let app_python_path = exe_dir.join("../Resources/_up_/_up_/python-dist/bin/python3");
             
             // 如果应用包路径不存在，尝试直接运行路径
             if app_bundle_path.exists() {
-                let python_exe = if app_python_path.exists() {
-                    app_python_path.to_string_lossy().to_string()
-                } else {
-                    "python3".to_string()
-                };
-                (app_bundle_path, app_bundle_working, python_exe)
+                (app_bundle_path, app_bundle_working, app_python_path.to_string_lossy().to_string())
             } else {
-                let direct_path = exe_dir.join("./_up_/_up_/run.py");
-                let direct_working = exe_dir.join("./_up_/_up_");
-                let direct_python_path = exe_dir.join("./_up_/_up_/python-dist/bin/python3");
-                let python_exe = if direct_python_path.exists() {
-                    direct_python_path.to_string_lossy().to_string()
-                } else {
-                    "python3".to_string()
-                };
-                (direct_path, direct_working, python_exe)
+                let direct_path = exe_dir.join("./python-dist/run.py");
+                let direct_working = exe_dir.join("./python-dist");
+                let direct_python = exe_dir.join("./python-dist/bin/python3");
+                (direct_path, direct_working, direct_python.to_string_lossy().to_string())
             }
         };
         
@@ -75,16 +65,14 @@ fn start_backend() {
             println!("Data directory created/verified: {:?}", data_dir);
         }
         
-        // 设置Python环境变量
-        let python_env = if python_path.contains("python-dist") {
-            let lib_path = working_dir.join("python-dist/lib/site-packages");
+        // 设置Python环境变量 - 总是尝试使用打包的site-packages
+        let python_env = {
+            let lib_path = working_dir.join("lib/site-packages");
             if lib_path.exists() {
                 Some(lib_path.to_string_lossy().to_string())
             } else {
                 None
             }
-        } else {
-            None
         };
         
         let mut cmd = if cfg!(target_os = "windows") {
