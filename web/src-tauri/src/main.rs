@@ -9,6 +9,8 @@ use std::time::Duration;
 use std::path::PathBuf;
 use tauri::Manager;
 use std::env;
+use std::io::Read;
+use std::net::TcpStream;
 
 // Learn more about Tauri commands at https://tauri.app/v1/guides/features/command
 #[tauri::command]
@@ -28,6 +30,27 @@ async fn is_fullscreen(window: tauri::Window) -> Result<bool, String> {
     window.is_fullscreen().map_err(|e| e.to_string())
 }
 
+// 检查后端服务器是否启动
+fn check_backend_health(max_attempts: u32) -> bool {
+    for attempt in 1..=max_attempts {
+        println!("Health check attempt {} of {}", attempt, max_attempts);
+        
+        match TcpStream::connect("127.0.0.1:9999") {
+            Ok(_) => {
+                println!("Backend health check successful!");
+                return true;
+            },
+            Err(e) => {
+                println!("Backend health check failed (attempt {}): {}", attempt, e);
+                if attempt < max_attempts {
+                    thread::sleep(Duration::from_secs(2));
+                }
+            }
+        }
+    }
+    false
+}
+
 // 启动后端服务器
 fn start_backend() {
     thread::spawn(|| {
@@ -45,8 +68,8 @@ fn start_backend() {
             (exe_dir.join("../../../../run.py"), exe_dir.join("../../../.."), "python3".to_string())
         } else {
             // 应用包路径：从MacOS目录到Resources目录
-            let app_bundle_path = exe_dir.join("../Resources/_up_/_up_/python-dist/run.py");
-            let app_bundle_working = exe_dir.join("../Resources/_up_/_up_/python-dist");
+            let app_bundle_path = exe_dir.join("../Resources/python-dist/run.py");
+            let app_bundle_working = exe_dir.join("../Resources/python-dist");
             
             // 检查虚拟环境中的Python路径
              let venv_python_path = if cfg!(target_os = "windows") {
@@ -321,8 +344,20 @@ fn start_backend() {
 }
 
 fn main() {
+    println!("Starting Memory Photo Album application...");
+    
     start_backend();
-    thread::sleep(Duration::from_secs(2));
+    
+    // 等待后端启动并进行健康检查
+    println!("Waiting for backend to start...");
+    thread::sleep(Duration::from_secs(3));
+    
+    if check_backend_health(10) {
+        println!("Backend is ready, starting frontend...");
+    } else {
+        eprintln!("Warning: Backend health check failed, but continuing with frontend startup");
+        eprintln!("The application may show Network Error until backend is ready");
+    }
     
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
