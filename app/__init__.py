@@ -134,8 +134,11 @@ async def lifespan(app: FastAPI):
     except:
         local_path = "images"
     
-    # 确保图片目录存在
-    images_dir = Path(local_path)
+    # 确保图片目录存在，使用DATA_DIR作为基础路径
+    if os.path.isabs(local_path):
+        images_dir = Path(local_path)
+    else:
+        images_dir = Path(settings.DATA_DIR) / local_path
     images_dir.mkdir(parents=True, exist_ok=True)
     
     # 挂载图片静态文件服务
