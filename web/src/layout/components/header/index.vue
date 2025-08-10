@@ -7,6 +7,7 @@
     <div ml-auto flex items-center class="header-actions">
       <Preview class="preview-btn" />
       <!-- <Languages /> -->
+      <BackendControl class="backend-control" />
       <ThemeMode class="theme-mode" />
       <UserAvatar class="user-avatar" />
     </div>
@@ -17,6 +18,7 @@
 import BreadCrumb from './components/BreadCrumb.vue'
 import MenuCollapse from './components/MenuCollapse.vue'
 import Preview from './components/Preview.vue'
+import BackendControl from './components/BackendControl.vue'
 import UserAvatar from './components/UserAvatar.vue'
 import ThemeMode from './components/ThemeMode.vue'
 </script>
