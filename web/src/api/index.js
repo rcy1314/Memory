@@ -1,5 +1,17 @@
 import { request, imageRequest, migrationRequest } from '@/utils'
-import { invoke } from '@tauri-apps/api/tauri'
+
+// Tauri API 动态加载函数
+const getTauriInvoke = async () => {
+  try {
+    if (typeof window !== 'undefined' && window.__TAURI__) {
+      const { invoke } = await import('@tauri-apps/api/tauri')
+      return invoke
+    }
+  } catch (error) {
+    console.warn('Tauri API not available:', error)
+  }
+  return null
+}
 
 export default {
   uploadApi: import.meta.env.VITE_BASE_API + '/admin/base/upload',
@@ -75,6 +87,11 @@ export default {
   // Tauri 桌面应用后端管理
   getBackendStatus: async () => {
     try {
+      const invoke = await getTauriInvoke()
+      if (!invoke) {
+        // 如果不在Tauri环境中，返回默认状态
+        return false
+      }
       return await invoke('get_backend_status')
     } catch (error) {
       console.error('Failed to get backend status:', error)
@@ -83,6 +100,10 @@ export default {
   },
   restartBackend: async () => {
     try {
+      const invoke = await getTauriInvoke()
+      if (!invoke) {
+        throw new Error('Not in Tauri environment')
+      }
       return await invoke('restart_backend')
     } catch (error) {
       console.error('Failed to restart backend:', error)
