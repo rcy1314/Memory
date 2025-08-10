@@ -242,8 +242,7 @@ fn main() {
             window.on_window_event(move |event| {
                 if let tauri::WindowEvent::CloseRequested { .. } = event {
                     // 清理后端进程
-                    let backend_state = app_handle.state::<BackendState>();
-                    if let Ok(mut process_guard) = backend_state.process.lock() {
+                    if let Ok(mut process_guard) = app_handle.state::<BackendState>().process.lock() {
                         if let Some(mut child) = process_guard.take() {
                             let _ = child.kill();
                             let _ = child.wait();
