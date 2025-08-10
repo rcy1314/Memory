@@ -1689,8 +1689,8 @@ jobs:
 ## 技术支持
 
 如有问题或建议，请通过以下方式联系：
-- GitHub Issues: [项目地址](https://github.com/your-repo/memory)
-- 邮箱: support@example.com
+- GitHub Issues: [项目地址](https://github.com/rcy1314/memory)
+- 邮箱: 1129159201@qq.com
 
 ---
 

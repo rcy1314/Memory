@@ -615,7 +615,11 @@ jobs:
 
 二次开发时请注意该项目使用v-model:value语法编写
 
-运行docker时web目录下的env.production端口必须和docker-compose.yml下的端口一致
+## 桌面版运行报错
+
+如果你运行后首页显示Network eroor的情况属于后端未运行，在最新版本的软件包内实际有后端文件，如果未自动运行，可手动运行解决报错，或者下载源码后执行后端命令，后端：`python run.py`
+
+
 
 ## To do
 

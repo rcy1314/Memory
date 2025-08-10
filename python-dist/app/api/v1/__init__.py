@@ -1,0 +1,40 @@
+from fastapi import APIRouter
+
+from app.core.dependency import DependPermisson
+
+from .base import base_router
+from .setting import setting_router
+from .category import category_router
+from .blog import blog_router, blog_public_router
+from .video import video_router
+from .visitor import visitor_router
+from .api_token import api_token_router
+from .test_api_token import test_api_token_router
+from .database import database_router
+from .health import router as health_router
+from .batch import batch_router
+from .webdav import webdav_router
+from .webhook import webhook_router
+
+v1_router = APIRouter()
+
+v1_router.include_router(health_router)  # 健康检查，无前缀
+v1_router.include_router(base_router, prefix="/admin/base")
+v1_router.include_router(
+    category_router, prefix="/admin/category", dependencies=[DependPermisson]
+)
+v1_router.include_router(
+    blog_router, prefix="/admin/blog", dependencies=[DependPermisson]
+)
+v1_router.include_router(
+    video_router, prefix="/admin/video", dependencies=[DependPermisson]
+)
+v1_router.include_router(blog_public_router, prefix="/blog")  # 公共 blog API，无需权限
+v1_router.include_router(setting_router, prefix="/admin/setting")
+v1_router.include_router(database_router, prefix="/admin/database")
+v1_router.include_router(api_token_router, prefix="/admin/api-token")
+v1_router.include_router(test_api_token_router, prefix="/api-test")
+v1_router.include_router(visitor_router, prefix="/visitor")
+v1_router.include_router(batch_router, prefix="/batch")
+v1_router.include_router(webdav_router, prefix="/webdav")
+v1_router.include_router(webhook_router, prefix="/webhook")
