@@ -41,10 +41,14 @@ fn start_backend() {
         let (backend_path, working_dir, python_path) = if cfg!(debug_assertions) {
             (exe_dir.join("../../../../run.py"), exe_dir.join("../../../.."), "python3".to_string())
         } else {
-            // 应用包路径：资源在Resources目录下的嵌套_up_目录中
+            // 应用包路径：从MacOS目录到Resources目录
             let app_bundle_path = exe_dir.join("../Resources/_up_/_up_/python-dist/run.py");
             let app_bundle_working = exe_dir.join("../Resources/_up_/_up_/python-dist");
             let app_python_path = exe_dir.join("../Resources/_up_/_up_/python-dist/bin/python3");
+            
+            println!("Checking app bundle path: {:?}", app_bundle_path);
+            println!("App bundle working dir: {:?}", app_bundle_working);
+            println!("App python path: {:?}", app_python_path);
             
             // 如果应用包路径不存在，尝试直接运行路径
             if app_bundle_path.exists() {
